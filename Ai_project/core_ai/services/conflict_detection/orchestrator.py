@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional
 from .schemas import ConflictAnalysisResult
 from .ast_unifier import ASTUnifier
 from .structural_diff import StructuralDiff
+from .body_comparer import BodyComparer
 from .semantic_analyzer import SemanticAnalyzer
 from .code_doc_consistency import CodeDocConsistencyChecker
 from .report_generator import ReportGenerator
@@ -22,6 +23,10 @@ class ConflictOrchestrator:
         diagram_b = ASTUnifier.from_tree_sitter(analysis_b)
 
         structural = StructuralDiff.compare(diagram_a, diagram_b)
+        # الخطوة 8: مقارنة الأجسام — معلومة بالتقرير (body_changes)، مش تنبيه
+        renames = {(c.class_name, c.old_value): c.new_value
+                   for c in structural if c.category == "method_renamed" and c.old_value and c.new_value}
+        body_changes = BodyComparer.compare_diagrams(diagram_a, diagram_b, renames)
         semantic   = SemanticAnalyzer().analyze(
             diagram_a.model_dump(), diagram_b.model_dump()
         )
@@ -29,7 +34,7 @@ class ConflictOrchestrator:
         version_a = str(analysis_a.get("_id", "version_a"))
         version_b = str(analysis_b.get("_id", "version_b"))
 
-        return ReportGenerator.generate(
+        result = ReportGenerator.generate(
             analysis_type="code_vs_code",
             version_a=version_a,
             version_b=version_b,
@@ -39,6 +44,8 @@ class ConflictOrchestrator:
             semantic_conflicts=semantic,
             metadata=metadata
         )
+        result.body_changes = body_changes
+        return result
 
     @staticmethod
     def run_code_vs_doc(

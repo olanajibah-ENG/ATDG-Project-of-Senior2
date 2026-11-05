@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خطة الخطوة 8</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1f2328; --muted:#57606a; --card:#f6f8fa; --accent:#1f5fa8; --ok:#1a7f37; --okbg:#e9f6ef;
+          --bad:#b3261e; --badbg:#fdecea; --warn:#8a5a00; --warnbg:#fff6e0; --border:#d0d7de; --code:#f4f6f8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+          --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; } }
+  :root[data-theme="dark"] { --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; }
+  body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",Tahoma,Arial,sans-serif; line-height:1.9; margin:0; padding:24px 16px; }
+  main { max-width:880px; margin:auto; }
+  h1 { font-size:1.5rem; margin-bottom:4px; } h2 { font-size:1.2rem; color:var(--accent); margin-top:2.2em; border-bottom:2px solid var(--accent); padding-bottom:4px; }
+  h3 { font-size:1.05rem; margin:1.4em 0 .3em; }
+  .sub { color:var(--muted); }
+  .wrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 14px; font-size:.95rem; }
+  th, td { border:1px solid var(--border); padding:7px 9px; text-align:right; vertical-align:top; }
+  th { background:var(--card); }
+  code { font-family:Consolas,monospace; direction:ltr; unicode-bidi:isolate; background:var(--code); padding:0 4px; border-radius:3px; font-size:.9em; }
+  pre { direction:ltr; text-align:left; background:var(--code); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-family:Consolas,monospace; font-size:.85rem; white-space:pre-wrap; margin:6px 0; }
+  .box { border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:12px 0; }
+  .ok { background:var(--okbg); } .warn { background:var(--warnbg); } .info { background:var(--card); }
+  .flow { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; margin:10px 0; }
+  .step { flex:1 1 140px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:8px; font-size:.9rem; }
+  .step b { display:block; color:var(--accent); }
+  .now { border:2px solid var(--accent); }
+  .arrow { align-self:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>الخطوة 8: مقارنة أجسام الدوال</h1>
+<p class="sub">بـ Code vs Code. شو تغيّر <b>جوا</b> الدالة، مش بس بتوقيعها. وما بتحتاج ذكاء اصطناعي.</p>
+
+<h2>1. ليش منحتاجها</h2>
+<p>ثلثين بيانات NPM (922 تعديل من 1363) هي <b>تغييرات سلوكية</b>: التوقيع نفسه، بس الدالة صارت تعمل شي تاني. وأنواعها حسب الورقة:</p>
+<div class="wrap"><table>
+  <tr><th>نوع التغيير السلوكي بالورقة</th><th>العدد</th><th>مثال</th></tr>
+  <tr><td>طريقة التعامل مع الخيارات (option handling)</td><td>233</td><td>خيار صار يتجاهل، أو صار إله معنى تاني</td></tr>
+  <tr><td>تغيير القيمة الافتراضية (change default)</td><td>203</td><td><code>timeout = 1000</code> صار <code>timeout = 5000</code></td></tr>
+  <tr><td>تغيير القيمة المرجّعة (change return)</td><td>76</td><td>صارت ترجّع <code>null</code> بدل ما ترمي خطأ</td></tr>
+  <tr><td>التعامل مع الأخطاء (error handling)</td><td>42</td><td>صارت ترمي خطأ، أو بطّلت</td></tr>
+</table></div>
+<p>هلق النظام <b>ما بيقارن الأجسام أبداً</b>. يلي انكشف من هالتعديلات (0.28) انكشف بالصدفة، لأنه كان في تغيير بنيوي بنفس التعديل. والذكاء الاصطناعي بيوصله أسماء الدوال بس، فما بيقدر يشوف شي.</p>
+
+<h2>2. وين الخطوة 8 من باقي الخطوات</h2>
+<div class="flow">
+  <div class="step"><b>7 (خلصت)</b>التوقيع: شو تغيّر برّا الدالة</div><div class="arrow">←</div>
+  <div class="step now"><b>8 (هلق)</b>الجسم: شو تغيّر جوا الدالة، وشو نوع التغيير</div><div class="arrow">←</div>
+  <div class="step"><b>9</b>منجمع 7 و 8 بقرار واحد لكل دالة</div><div class="arrow">←</div>
+  <div class="step"><b>10</b>قديش خطير (الدوال الداخلية أقل)</div><div class="arrow">←</div>
+  <div class="step"><b>11</b>منبعت للذكاء الاصطناعي بس يلي جسمها تغيّر، مع الفرق</div>
+</div>
+<p><b>يعني الخطوة 8 بتجهّز المعلومات، وما بتطلّع تنبيهات لحالها.</b> السبب: تقريباً كل تعديل، حتى السليم، بيغيّر جسم دالة ما. فلو كل تغيير بالجسم صار تنبيه، الإنذارات الكاذبة بتصير بكل مكان. القرار بيصير بالخطوات 9 و 10 و 11.</p>
+
+<h2>3. شو بتعمل بالتفصيل</h2>
+<h3>أ. هل الجسم تغيّر فعلاً؟</h3>
+<p>عنا من الخطوة 1 <b>بصمة للجسم</b> (<code>body_hash</code>) بتتجاهل التعليقات والمسافات. فإذا البصمة نفسها بالنسختين، يعني التغيير شكلي بس (تعليق أو ترتيب أسطر)، وما في داعي ندوّر أكتر.</p>
+<div class="wrap"><table>
+  <tr><th>الحالة</th><th>المعنى</th></tr>
+  <tr><td><code>unchanged</code></td><td>البصمة نفسها، حتى لو التعليقات أو المسافات تغيّرت</td></tr>
+  <tr><td><code>changed</code></td><td>البصمة تغيّرت، يعني في تغيير فعلي بالمنطق</td></tr>
+  <tr><td><code>unknown</code></td><td>واحد من الجسمين مش موجود (دالة abstract أو interface، أو تحليل قديم قبل الخطوة 1)، أو مقصوص لأنه أطول من 20 ألف حرف</td></tr>
+</table></div>
+
+<h3>ب. شو الأسطر يلي تغيّرت؟</h3>
+<p>منحسب الفرق سطر سطر (متل <code>git diff</code>)، بعد ما نشيل التعليقات والمسافات الزيادة: كم سطر انضاف، وكم انشال، ونص الفرق نفسه. وهاد الفرق هو يلي رح نبعته للذكاء الاصطناعي بالخطوة 11، بدل الجسم كله، فبيصير الطلب أصغر وأوضح.</p>
+
+<h3>ج. إشارات سلوكية (بدون ذكاء اصطناعي)</h3>
+<p>من الأسطر يلي تغيّرت، منطلّع <b>إشارات</b> بتدل على نوع التغيير. كل إشارة مربوطة بنوع من أنواع NPM فوق:</p>
+<div class="wrap"><table>
+  <tr><th>الإشارة</th><th>شو بتعني</th><th>مثال</th><th>نوعها بـ NPM</th></tr>
+  <tr><td><code>return_changed</code></td><td>سطر <code>return</code> تغيّر، أو انضاف، أو انشال</td><td><code>return x</code> صارت <code>return x ?? null</code></td><td>change return</td></tr>
+  <tr><td><code>throw_added</code> / <code>throw_removed</code></td><td>صار في <code>throw</code> / <code>raise</code>، أو انشال</td><td><code>throw new Error(...)</code> انضاف</td><td>error handling</td></tr>
+  <tr><td><code>literal_changed</code></td><td>قيمة ثابتة تغيّرت بنفس السطر تقريباً</td><td><code>1000</code> صارت <code>5000</code>، و <code>true</code> صارت <code>false</code></td><td>change default</td></tr>
+  <tr><td><code>option_access_changed</code></td><td>تغيّر شي بالقراءة من الخيارات</td><td><code>options.strict</code>، و <code>opts?.x ?? 5</code>، و <code>config.get('x')</code></td><td>option handling</td></tr>
+  <tr><td><code>condition_changed</code></td><td>شرط <code>if</code> أو <code>?:</code> تغيّر</td><td><code>if (a &gt; 0)</code> صارت <code>if (a &gt;= 0)</code></td><td>عام</td></tr>
+  <tr><td><code>call_added</code> / <code>call_removed</code></td><td>استدعاء دالة انضاف أو انشال</td><td><code>validate(x)</code> انشالت</td><td>عام</td></tr>
+</table></div>
+<p class="sub">الإشارات مبنية على شكل الأسطر (patterns)، مش على فهم كامل للكود. يعني ممكن تغلط أحياناً، ولهيك ما منستعملها كتنبيه مباشر، بس كمعلومة للخطوات الجاية.</p>
+
+<h3>د. وين بتنحفظ النتيجة</h3>
+<p>لكل دالة موجودة بالنسختين (وكمان يلي تغيّر اسمها)، منطلّع نتيجة فيها: الحالة، والأسطر يلي انضافت وانشالت، والفرق، والإشارات. وبتنحفظ بتقرير المقارنة كإحصائية، وما بتظهر بقائمة التنبيهات. الواجهة ما بتتغيّر.</p>
+
+<h2>4. الملفات</h2>
+<div class="wrap"><table>
+  <tr><th>الملف</th><th>شو بيتغيّر</th></tr>
+  <tr><td><code>body_comparer.py</code> (جديد)</td><td>المقارنة: الحالة، والفرق، والإشارات</td></tr>
+  <tr><td><code>structural_diff.py</code> أو <code>orchestrator.py</code></td><td>بيشغّل المقارنة على الدوال المشتركة، وبيحط النتيجة بالتقرير كإحصائية</td></tr>
+  <tr><td><code>tests/test_body_comparer.py</code> (جديد)</td><td>تعليق ومسافات بس يعني <code>unchanged</code>. وكل إشارة لحالها بـ JS و TS و Python و Java. وجسم مقصوص أو ناقص يعني <code>unknown</code>. وتقرير md</td></tr>
+  <tr><td><code>evaluate_npm.py</code></td><td>تحليل جديد للإشارات (القسم 5)</td></tr>
+</table></div>
+
+<h2>5. كيف منقيسها، إذا ما بتطلّع تنبيهات؟</h2>
+<p>منحلّل كل NPM (ببلاش، بدون ذكاء اصطناعي)، ومنجاوب على 3 أسئلة مهمين للخطوات الجاية:</p>
+<ol>
+  <li><b>السقف:</b> من التعديلات السلوكية يلي بتكسر، بكم واحد <b>منشوف فعلاً</b> جسم دالة تغيّر؟ إذا التغيير مثلاً بكود برّا الدوال، أو بملف ما منقراه، فلا الخطوة 11 ولا أي ذكاء اصطناعي رح يقدر يكشفه. هالرقم بيقلّنا أعلى كشف ممكن نوصله.</li>
+  <li><b>قديش كل إشارة بتفرّق:</b> كم مرة بتظهر كل إشارة بالتعديلات يلي بتكسر، مقابل التعديلات السليمة؟ مثلاً إذا <code>throw_added</code> بتظهر بـ 30% من يلي بتكسر وبـ 5% بس من السليم، فهي إشارة قوية.</li>
+  <li><b>كم طلب بدّنا بالخطوة 11:</b> كم دالة جسمها تغيّر بكل تعديل؟ هاد بيقلّنا قديش رح يكلّف الذكاء الاصطناعي بالحد المجاني.</li>
+</ol>
+<p>وكل هالأرقام بتطلع على قسم التطوير بس. ومنقرّر على أساسها كيف نبني الخطوات 9 و 10 و 11.</p>
+
+<div class="box warn"><b>صراحة:</b> الخطوة 8 لحالها <b>ما رح تغيّر</b> أرقام الكشف ولا الإنذارات الكاذبة، لأنها ما بتطلّع تنبيهات. نتيجتها هي الأرقام فوق، وتجهيز الفرق للخطوة 11.</div>
+
+<div class="box info"><b>بدي منك:</b> موافقة على الخطوة 8 متل ما هي، أو إذا بدك إنه الإشارات القوية (يلي منلاقيها بالقسم 5) تصير تنبيهات من هلق بدل ما ننطر الخطوة 9.</div>
+</main>
+</body>
+</html>

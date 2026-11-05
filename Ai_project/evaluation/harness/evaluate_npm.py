@@ -131,8 +131,10 @@ def run_commit(system: str, commit: Dict[str, Any]) -> Dict[str, Any]:
         r = runner("code_vs_code", p)
         items = (r.get("structural_conflicts") or []) + (r.get("semantic_conflicts") or [])
         llm_calls += r.get("llm_call_count", 0)
+        bodies = [{k: b.get(k) for k in ("class_name", "member", "status", "lines_added", "lines_removed", "signals")}
+                  for b in (r.get("body_changes") or [])]
         files.append({"file": p["id"].split(":", 1)[1], "status": r["status"], "error": r.get("error"),
-                      "conflicts": _brief(items),
+                      "conflicts": _brief(items), "bodies": bodies,
                       "flagged": any(i.get("type") in FLAG_TYPES for i in items)})
     ok = [f for f in files if f["status"] == "ok"]
     return {"id": commit["id"], "label": commit["label"], "categories": commit["categories"],
@@ -163,8 +165,41 @@ def score(results: List[Dict[str, Any]]) -> Dict[str, Any]:
             "recall_by_group": {g: {"found": a, "total": b, "recall": div(a, b)} for g, (a, b) in by_group.items()},
             "recall_by_category": {c: {"found": a, "total": b, "recall": div(a, b)}
                                    for c, (a, b) in sorted(by_cat.items(), key=lambda x: -x[1][1])},
+            "body_analysis": body_analysis(checked),
             "file_errors": sum(r["files_error"] for r in results),
             "llm_calls": sum(r["llm_calls"] for r in results)}
+
+
+SIGNALS = ("return_changed", "throw_added", "throw_removed", "literal_changed", "option_access_changed",
+           "condition_changed", "call_added", "call_removed")
+
+
+def body_analysis(checked: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    الخطوة 8 (ما بتطلّع تنبيهات، فمنقيس المعلومات نفسها):
+    - ceiling: من التعديلات بكل مجموعة، كم واحد فيه جسم دالة تغيّر فعلاً (أعلى كشف ممكن للخطوة 11)
+    - signals: نسبة التعديلات يلي فيها كل إشارة، بالتعديلات يلي بتكسر (بنيوي / سلوكي) مقابل السليمة
+    - changed_bodies_per_commit: كم دالة جسمها تغيّر بالتعديل (كلفة الخطوة 11 بالطلبات)
+    """
+    if not checked or "bodies" not in (checked[0]["files"] or [{}])[0]:
+        return {}
+    group = lambda r: ("clean" if r["label"] == "clean" else
+                       "behavioral" if set(r["categories"]) <= {"change_behavior"} else "structural")
+    by = defaultdict(list)
+    for r in checked:
+        changed = [b for f in r["files"] for b in f.get("bodies", []) if b["status"] == "changed"]
+        by[group(r)].append(changed)
+    out = {}
+    for g, rows in by.items():
+        n = len(rows)
+        counts = sorted(len(c) for c in rows)
+        out[g] = {"commits": n,
+                  "with_changed_body": round(sum(bool(c) for c in rows) / n, 3),
+                  "changed_bodies_per_commit": {"mean": round(sum(counts) / n, 2), "median": counts[n // 2],
+                                                "max": counts[-1]},
+                  "signals": {s: round(sum(any(s in b["signals"] for b in c) for c in rows) / n, 3)
+                              for s in SIGNALS}}
+    return out
 
 
 def main() -> None:

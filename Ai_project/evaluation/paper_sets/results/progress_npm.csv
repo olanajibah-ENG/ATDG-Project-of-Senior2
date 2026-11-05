@@ -5,3 +5,4 @@ baseline (offline),npm_all,current,offline,1636,464,55,899,218,0.894,0.34,0.799,
 "baseline (LLM, 22 single-file commits)",npm_dev_limit22,legacy,poolside/laguna-s-2.1:free,22,3,0,14,5,1.0,0.176,1.0,0.136,22,0.286,0.1,20261030T082834Z
 after step 7 v1 (return type = warning),npm_all,current,offline,1636,506,54,857,219,0.904,0.371,0.802,0.342,16827,0.578,0.27,20261105T185141Z
 after step 7 (offline),npm_all,current,offline,1636,518,55,845,218,0.904,0.38,0.799,0.35,16827,0.594,0.276,20261105T191341Z
+after step 8 (offline),npm_all,current,offline,1636,518,55,845,218,0.904,0.38,0.799,0.35,16827,0.594,0.276,20261105T200521Z

@@ -236,6 +236,19 @@ class ConflictItem(BaseModel):
 # 6. ConflictAnalysisResult
 # ─────────────────────────────────────────────────────────────────────────────
 
+class BodyChange(BaseModel):
+    """مقارنة جسم دالة بين نسختين (الخطوة 8). معلومة للخطوات 9-11، مش تنبيه."""
+    class_name:     str
+    member:         str
+    new_member:     Optional[str] = None        # إذا الدالة تغيّر اسمها
+    status:         str                          # unchanged | changed | unknown
+    lines_added:    int = 0
+    lines_removed:  int = 0
+    diff:           str = ""                     # الفرق بعد شيل التعليقات والمسافات
+    truncated:      bool = False                 # جسم أطول من الحد → الفرق ناقص (البصمة كاملة)
+    signals:        List[str] = Field(default_factory=list)
+
+
 class ConflictAnalysisResult(BaseModel):
     model_config = {"use_enum_values": True}
 
@@ -257,6 +270,7 @@ class ConflictAnalysisResult(BaseModel):
     structural_conflicts: List[ConflictItem] = Field(default_factory=list)
     semantic_conflicts:   List[ConflictItem] = Field(default_factory=list)
     doc_conflicts:        List[ConflictItem] = Field(default_factory=list)
+    body_changes:         List[BodyChange]   = Field(default_factory=list)   # Code vs Code (الخطوة 8)
 
     conflicts: Optional[Dict[str, List[ConflictItem]]] = None
 
