@@ -1,11 +1,12 @@
 # core_ai/services/conflict_detection/structural_diff.py
+from difflib import SequenceMatcher
 from typing import List, Dict
 from .schemas import (
     UnifiedClassDiagram, ClassDetail, ConflictItem,
-    ChangeType, SeverityLevel, MODULE_CLASS
+    ChangeType, SeverityLevel, MODULE_CLASS, RiskLevel
 )
 from .fingerprint_builder import FingerprintBuilder
-from .rename_detector import RenameDetector
+from .signature_comparer import SignatureComparer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -108,40 +109,9 @@ class StructuralDiff:
             conflicts.extend(StructuralDiff._compare_relationships(cls_a, cls_b))
             conflicts.extend(StructuralDiff._compare_constraints(cls_a, cls_b))
 
-        # ──────────────────────────────────────────────────────────────
-        # 4. Rename Detection عبر RenameDetector
-        # ──────────────────────────────────────────────────────────────
-        methods_list_a = []
-        methods_list_b = []
-        for cls in diagram_a.classes:
-            for m in cls.methods:
-                methods_list_a.append({
-                    "class_name": cls.name,
-                    "name": m.name,
-                    "signature": m.signature,
-                    "parameters": [p.model_dump() for p in (m.parameters or [])]
-                })
-        for cls in diagram_b.classes:
-            for m in cls.methods:
-                methods_list_b.append({
-                    "class_name": cls.name,
-                    "name": m.name,
-                    "signature": m.signature,
-                    "parameters": [p.model_dump() for p in (m.parameters or [])]
-                })
-
-        rename_result = RenameDetector.detect(methods_list_a, methods_list_b)
-        for r in rename_result.get("renames", []):
-            conflicts.append(ConflictItem(
-                type=ChangeType.RENAMED,
-                severity=SeverityLevel.MEDIUM,
-                class_name=r.get("class_name", "unknown"),
-                member=r.get("old_name"),
-                description=f"Renamed from {r['old_name']} to {r['new_name']}",
-                old_value=r.get("old_name"),
-                new_value=r.get("new_name"),
-                ai_confidence=r.get("confidence", 0.9)
-            ))
+        # إعادة التسمية بتنكشف بـ _compare_methods بس (جوا نفس الكلاس، بين دالة انحذفت ودالة انضافت).
+        # كان في كمان مرور عام بـ RenameDetector على كل الملف: كان يكرر نفس التنبيه، ويعتبر أي
+        # دالتين إلهن نفس الشكل "إعادة تسمية" حتى لو التنتين لسا موجودين (الخطوة 7).
 
         logger.info(f"✅ Structural comparison done: {len(conflicts)} items")
         return conflicts
@@ -164,41 +134,48 @@ class StructuralDiff:
         added   = set(methods_b) - set(methods_a)
         common  = set(methods_a) & set(methods_b)
 
-        # ── Rename Detection — يعتمد على FingerprintBuilder المحسّن ──
+        # ── Rename Detection (الخطوة 7) ──
+        # 1) نفس جسم الدالة بالزبط (body_hash من الخطوة 1) واسم جديد = إعادة تسمية أكيدة.
+        # 2) إذا الجسم مش معروف، أو الاسمين متشابهين: بصمة التوقيع (FingerprintBuilder).
+        #    دالتين بنفس الشكل بس جسم مختلف واسم مختلف كلياً = حذف + إضافة، مش إعادة تسمية.
+        # إعادة التسمية بتكسر يلي عم يستدعوا الاسم القديم، فبتنحسب RENAMED / حرج (متل تصنيف NPM).
         real_deletions = set(deleted)
         real_additions = set(added)
 
-        for old_name in list(deleted):
-            old_fp = FingerprintBuilder.build(methods_a[old_name].model_dump())
+        for old_name in sorted(deleted):
+            ma = methods_a[old_name]
+            old_fp = FingerprintBuilder.build(ma.model_dump())
 
             best_match = None
             best_sim   = 0.0
 
-            for new_name in list(real_additions):
-                new_fp  = FingerprintBuilder.build(methods_b[new_name].model_dump())
-                # مطابقة تامة للبصمة → rename مؤكد
-                if old_fp == new_fp:
-                    best_match = new_name
-                    best_sim   = 1.0
+            for new_name in sorted(real_additions):
+                mb = methods_b[new_name]
+                if ma.body_hash and ma.body_hash == mb.body_hash:
+                    best_match, best_sim = new_name, 1.0
                     break
-                # مطابقة جزئية (> 0.8) → rename محتمل
-                sim = FingerprintBuilder.similarity(old_fp, new_fp)
+                bodies_known = bool(ma.body_hash and mb.body_hash)
+                if bodies_known and SequenceMatcher(None, old_name.lower(), new_name.lower()).ratio() < 0.5:
+                    continue
+                new_fp = FingerprintBuilder.build(mb.model_dump())
+                sim = 0.9 if old_fp == new_fp else FingerprintBuilder.similarity(old_fp, new_fp)
                 if sim > best_sim and sim >= 0.8:
                     best_sim   = sim
                     best_match = new_name
 
             if best_match:
                 conflicts.append(ConflictItem(
-                    type=ChangeType.REFACTORING,
-                    severity=SeverityLevel.LOW,
+                    type=ChangeType.RENAMED,
+                    severity=SeverityLevel.HIGH,
+                    risk_level=RiskLevel.CRITICAL,
                     category="method_renamed",
                     class_name=class_a.name,
                     member=old_name,
                     description=f"تمت إعادة تسمية '{old_name}' إلى '{best_match}'",
                     old_value=old_name,
                     new_value=best_match,
-                    impact="Refactoring - يجب تحديث الاستدعاءات",
-                    suggestion=f"استخدم Find & Replace لتحديث '{old_name}' → '{best_match}'",
+                    impact="Breaking change - الاستدعاءات بالاسم القديم ستفشل",
+                    suggestion=f"حدّث الاستدعاءات '{old_name}' → '{best_match}'، أو خلّي الاسم القديم كـ alias",
                     auto_fix_available=True,
                     ai_confidence=round(best_sim, 2)
                 ))
@@ -255,28 +232,39 @@ class StructuralDiff:
                 ai_confidence=1.0
             ))
 
-        # ── دوال معدّلة (تغيّرت الـ signature) ───────────────────────
-        for name in common:
+        # ── دوال معدّلة (الخطوة 7: SignatureComparer معامل معامل) ──
+        risk_severity = {RiskLevel.CRITICAL: SeverityLevel.CRITICAL, RiskLevel.WARNING: SeverityLevel.MEDIUM,
+                         RiskLevel.INFORMATIONAL: SeverityLevel.LOW}
+        for name in sorted(common):
             ma = methods_a[name]
             mb = methods_b[name]
-            if ma.signature == mb.signature:
-                continue
+            result = SignatureComparer.compare(ma, mb)
 
-            is_breaking = StructuralDiff._is_breaking_signature_change(ma, mb)
-            severity    = SeverityLevel.CRITICAL if is_breaking else SeverityLevel.MEDIUM
+            if not result.known:
+                # تحليل قديم بدون معاملات → الطريقة القديمة (نص التوقيع + البصمة)
+                if ma.signature == mb.signature:
+                    continue
+                is_breaking = StructuralDiff._is_breaking_signature_change(ma, mb)
+                risk = RiskLevel.CRITICAL if is_breaking else RiskLevel.WARNING
+                details = "signature text changed"
+            elif not result.changes:
+                continue            # نص التوقيع ممكن يتغيّر (مسافات / ترتيب modifiers) بدون أي تغيير فعلي
+            else:
+                is_breaking, risk, details = result.is_breaking, result.risk, result.describe()
 
             conflicts.append(ConflictItem(
                 type=ChangeType.BREAKING_CHANGE if is_breaking else ChangeType.REFACTORING,
-                severity=severity,
+                severity=risk_severity[risk],
+                risk_level=risk,
                 category="method_signature_changed",
                 class_name=class_a.name,
                 member=name,
-                description=f"تغيّرت signature الدالة '{name}' في '{class_a.name}'",
+                description=f"تغيّرت signature الدالة '{name}' في '{class_a.name}': {details}",
                 old_value=ma.signature,
                 new_value=mb.signature,
-                impact="Breaking change - الاستدعاءات ستفشل" if is_breaking else "تغيير داخلي",
-                suggestion="حدّث جميع الاستدعاءات أو أنشئ wrapper للتوافق",
-                auto_fix_available=True,
+                impact="Breaking change - الاستدعاءات ستفشل" if is_breaking else "تغيير متوافق مع الاستدعاءات الحالية",
+                suggestion="حدّث جميع الاستدعاءات أو أنشئ wrapper للتوافق" if is_breaking else None,
+                auto_fix_available=is_breaking,
                 ai_confidence=0.95
             ))
 

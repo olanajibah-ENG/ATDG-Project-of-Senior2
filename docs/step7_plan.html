@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خطة الخطوة 7</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1f2328; --muted:#57606a; --card:#f6f8fa; --accent:#1f5fa8; --ok:#1a7f37; --okbg:#e9f6ef;
+          --bad:#b3261e; --badbg:#fdecea; --warn:#8a5a00; --warnbg:#fff6e0; --border:#d0d7de; --code:#f4f6f8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+          --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; } }
+  :root[data-theme="dark"] { --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; }
+  body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",Tahoma,Arial,sans-serif; line-height:1.85; margin:0; padding:24px 16px; }
+  main { max-width:880px; margin:auto; }
+  h1 { font-size:1.5rem; margin-bottom:4px; } h2 { font-size:1.2rem; color:var(--accent); margin-top:2em; border-bottom:2px solid var(--accent); padding-bottom:4px; }
+  h3 { font-size:1.05rem; margin:1.2em 0 .3em; }
+  .sub { color:var(--muted); }
+  .wrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 14px; font-size:.95rem; }
+  th, td { border:1px solid var(--border); padding:7px 9px; text-align:right; vertical-align:top; }
+  th { background:var(--card); }
+  code, .ltr { font-family:Consolas,monospace; direction:ltr; unicode-bidi:isolate; background:var(--code); padding:0 4px; border-radius:3px; font-size:.9em; }
+  pre { direction:ltr; text-align:left; background:var(--code); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-family:Consolas,monospace; font-size:.85rem; white-space:pre-wrap; }
+  .box { border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:12px 0; }
+  .ok { background:var(--okbg); } .bad { background:var(--badbg); } .warn { background:var(--warnbg); } .info { background:var(--card); }
+  .b-ok { color:var(--ok); font-weight:700; } .b-bad { color:var(--bad); font-weight:700; } .b-warn { color:var(--warn); font-weight:700; }
+</style>
+</head>
+<body>
+<main>
+<h1>الخطوة 7: مقارنة توقيعات أذكى</h1>
+<p class="sub">بـ Code vs Code، وما بتحتاج ذكاء اصطناعي، فمنقيسها على كل بيانات NPM ببلاش. وآخر الصفحة في خطة "داتا أكبر" يلي طلبها الدكتور.</p>
+
+<h2>1. المشكلة بالأرقام</h2>
+<p>بقياس NPM (1636 تعديل)، النظام الحالي طلّع إنذارات كاذبة على 55 تعديل سليم. ولما فتحنا أسبابها:</p>
+<div class="wrap"><table>
+  <tr><th>سبب التنبيه على التعديلات السليمة</th><th>عدد التنبيهات</th></tr>
+  <tr><td><b>"تغيّر التوقيع" واعتبره كسر</b></td><td><b>143</b></td></tr>
+  <tr><td>"انحذفت دالة"</td><td>65</td></tr>
+  <tr><td>"انحذف كلاس"</td><td>47</td></tr>
+  <tr><td><b>"إعادة تسمية" من كاشف إعادة التسمية</b></td><td><b>20</b></td></tr>
+  <tr><td>"انحذف حقل" و غيرها</td><td>26</td></tr>
+</table></div>
+<p>الخطوة 7 بتعالج أكبر سبب (التوقيع)، وسبب إعادة التسمية. الحذف إله الخطوة 10 (الدوال الخاصة متل <code>_helper</code> ما بتكسر حدا).</p>
+
+<h2>2. ليش النظام هلق بيغلط</h2>
+<p>هلق، القرار "بيكسر أو لا" بيعتمد على <b>بصمة</b> مبنية من نص التوقيع: عدد المعاملات، وأنواعهم، ونوع الإرجاع. <b>إذا البصمة تغيّرت بأي شكل، بيعتبره كسر.</b></p>
+<pre>// قبل
+function fetch(url)
+// بعد
+function fetch(url, options = {})</pre>
+<p>عدد المعاملات تغيّر من 1 لـ 2، فالبصمة تغيّرت، فالنظام بيقول <span class="b-bad">كسر</span>. بس فعلياً كل يلي كانوا يستدعوا <code>fetch(url)</code> لسا شغّالين، لأنه المعامل الجديد إله قيمة افتراضية. يعني <span class="b-ok">ما بيكسر</span>.</p>
+
+<h3>ومشكلتين بكاشف إعادة التسمية (لقيناهم بالخطوة 2)</h3>
+<ol>
+  <li><b>تكرار:</b> في مكانين بالكود بيكشفوا إعادة التسمية، وكل واحد بيطلّع تنبيه لنفس الشي.</li>
+  <li><b>إعادة تسمية وهمية:</b> الكاشف التاني بيقارن البصمات بكل الملف. فأي دالتين إلهن نفس الشكل (مثلاً بدون معاملات) واسمهن مختلف بيعتبرهن "إعادة تسمية"، <b>حتى لو التنتين لسا موجودين</b>. وهاد سبب الـ 20 تنبيه.</li>
+</ol>
+
+<h2>3. الحل: مقارِن توقيعات جديد</h2>
+<p>بدل نص التوقيع، منقارن <b>المعاملات نفسها</b> يلي صرنا نقراها بالخطوة 1 (الاسم، والنوع، والقيمة الافتراضية، والنوع: عادي أو <code>...rest</code>). والقواعد مبنية على طريقة AexPy، ومعدّلة لـ JavaScript/TypeScript:</p>
+<div class="wrap"><table>
+  <tr><th>التغيير</th><th>مثال</th><th>القرار</th></tr>
+  <tr><td>إضافة معامل اختياري أو إله قيمة افتراضية بالآخر</td><td><code>f(a)</code> لـ <code>f(a, b = 1)</code> أو <code>f(a, b?)</code></td><td class="b-ok">ما بيكسر</td></tr>
+  <tr><td>إضافة <code>...rest</code></td><td><code>f(a)</code> لـ <code>f(a, ...more)</code></td><td class="b-ok">ما بيكسر</td></tr>
+  <tr><td>معامل صار اختياري</td><td><code>f(a, b)</code> لـ <code>f(a, b = 0)</code></td><td class="b-ok">ما بيكسر</td></tr>
+  <tr><td>تغيير اسم معامل (JS / TS / Java / C#)</td><td><code>f(name)</code> لـ <code>f(label)</code></td><td class="b-ok">ما بيكسر</td></tr>
+  <tr><td>تغيير اسم معامل (Python)</td><td>ممكن حدا عم يستدعيه بالاسم <code>f(name=...)</code></td><td class="b-warn">تحذير</td></tr>
+  <tr><td>تغيير نوع الإرجاع</td><td><code>: string</code> لـ <code>: number</code></td><td class="b-warn">تحذير</td></tr>
+  <tr><td>إضافة معامل إجباري</td><td><code>f(a)</code> لـ <code>f(a, b)</code></td><td class="b-bad">بيكسر</td></tr>
+  <tr><td>حذف معامل</td><td><code>f(a, b)</code> لـ <code>f(a)</code></td><td class="b-bad">بيكسر</td></tr>
+  <tr><td>معامل كان اختياري وصار إجباري</td><td><code>f(a = 1)</code> لـ <code>f(a)</code></td><td class="b-bad">بيكسر</td></tr>
+  <tr><td>تغيير ترتيب المعاملات</td><td><code>f(a, b)</code> لـ <code>f(b, a)</code></td><td class="b-bad">بيكسر</td></tr>
+  <tr><td>تغيير نوع معامل (إذا الأنواع مكتوبة)</td><td><code>(id: number)</code> لـ <code>(id: string)</code></td><td class="b-bad">بيكسر</td></tr>
+  <tr><td>صارت <code>async</code> أو بطّلت</td><td>بترجّع Promise بدل قيمة (21 حالة بـ NPM من هالنوع)</td><td class="b-bad">بيكسر</td></tr>
+  <tr><td>صارت خاصة (public لـ private)</td><td></td><td class="b-bad">بيكسر</td></tr>
+</table></div>
+<p>كل تغيير بيطلع مع <b>سببه</b> بالوصف (مثلاً "انضاف معامل إجباري <code>b</code>")، و<b>مستوى خطر</b> من الحقل يلي ضفناه بالخطوة 2: حرج / تحذير / معلومة. وبس "حرج" بينحسب كسر.</p>
+
+<h3>تصليح كاشف إعادة التسمية</h3>
+<ul>
+  <li>منخلّي <b>مكان واحد بس</b> بيكشف إعادة التسمية، وجوا نفس الكلاس.</li>
+  <li>إعادة التسمية بتنحسب بس بين <b>دالة انحذفت</b> و<b>دالة انضافت</b>، مش بين دوال لسا موجودة.</li>
+  <li>منستعمل <b>بصمة جسم الدالة</b> يلي ضفناها بالخطوة 1: إذا الجسم نفسه بالزبط والاسم تغيّر، هي إعادة تسمية أكيدة.</li>
+</ul>
+
+<h3>شغلة لازم نكمّلها</h3>
+<p>قراءة معاملات TypeScript لسا ما بتسجّل إذا المعامل اختياري (<code>b?</code>) أو إله قيمة افتراضية (<code>b: number = 1</code>). منكمّلها بهالخطوة، لأنه القواعد فوق بتعتمد عليها.</p>
+
+<h2>4. الملفات</h2>
+<div class="wrap"><table>
+  <tr><th>الملف</th><th>شو بيتغيّر</th></tr>
+  <tr><td><code>signature_comparer.py</code> (جديد)</td><td>المقارِن والقواعد</td></tr>
+  <tr><td><code>structural_diff.py</code></td><td>"تغيّر التوقيع" بيستعمل المقارِن الجديد، وكشف إعادة التسمية بمكان واحد</td></tr>
+  <tr><td><code>tree_sitter_processor.py</code></td><td>قراءة <code>b?</code> والقيم الافتراضية بـ TypeScript</td></tr>
+  <tr><td><code>tests/test_signature_comparer.py</code> (جديد)</td><td>اختبار لكل قاعدة بالجدول، بـ JS و TS و Python و Java، وتقرير md</td></tr>
+</table></div>
+<p class="sub">نص التوقيع القديم (<code>signature</code>) بيضل متل ما هو، لأنه الواجهة بتستعمله. والنسخة القديمة المجمّدة ما بتنلمس.</p>
+
+<h2>5. كيف منقيسها</h2>
+<ul>
+  <li>منعيد قياس <b>كل NPM</b> (تطوير واختبار) بدون ذكاء اصطناعي، ببلاش، ومنقارن مع أرقام الأساس.</li>
+  <li><b>المتوقّع:</b> الـ Specificity (السكوت عن السليم) يطلع فوق 0.82، والـ Recall يضل قريب من 0.35.</li>
+  <li>منشوف كمان الكشف حسب النوع: "تغيير التوقيع" (130 تعديل) و"async/sync" (21 تعديل) لازم يتحسّنوا.</li>
+  <li>بحلّل الحالات يلي تغيّر قرارها بقسم التطوير بس، متل ما متفقين.</li>
+</ul>
+
+<h2>6. "داتا أكبر" يلي طلبها الدكتور</h2>
+<div class="box info">
+<p><b>Code vs Code:</b> قياسنا <b>أصلاً على كل بيانات NPM</b> (1636 تعديل). وبعد الخطوة 7 منعيده كله، ببلاش، فهاد بيعطي نتائج جديدة على الداتا الكاملة مباشرة.</p>
+<p><b>Code vs Doc:</b> هون المشكلة، لأنه كل حالة بتاخد طلب ذكاء اصطناعي، والحد 50 باليوم:</p>
+<div class="wrap"><table>
+  <tr><th>الخيار</th><th>الحجم</th><th>الطلبات</th><th>الوقت بالحد المجاني</th></tr>
+  <tr><td>قسم الاختبار بس</td><td>46 زوج (92 حالة)</td><td>حوالي 92</td><td>يومين</td></tr>
+  <tr><td><b>كل CASCADE المتوازنة</b></td><td><b>71 زوج (142 حالة)، متل الورقة بالزبط</b></td><td><b>حوالي 145</b></td><td><b>3 أيام</b></td></tr>
+  <tr><td>CASCADE الواقعية</td><td>710 حالة</td><td>حوالي 710</td><td>حوالي 15 يوم</td></tr>
+</table></div>
+<p><b>اقتراحي:</b> كل CASCADE المتوازنة (71 زوج). بتعطي أرقام <b>مقارنة مباشرة مع الورقة</b> لأنها نفس الحجم، ومنعملها بالموديل الجديد <code>cohere/north-mini-code:free</code> (لأنه موديلنا القديم متوقف)، فبتصير هي الأساس الجديد. 3 أيام، يوم بيوم، ومنشتغل على الخطوة 7 بنفس الوقت.</p>
+<p class="sub">للعلم بس: لو اشتريتوا رصيد 10$ بيصير الحد 1000 طلب باليوم، فبتخلص كل CASCADE حتى الواقعية بيوم واحد. قلتولي قبل إنكم ما بدكم، فالخطة فوق على المجاني.</p>
+</div>
+
+<h2>7. شو بدي منك</h2>
+<ol>
+  <li>موافقة على الخطوة 7 متل ما هي فوق؟</li>
+  <li>موافقة على قياس كل CASCADE المتوازنة بالموديل الجديد على 3 أيام؟</li>
+</ol>
+</main>
+</body>
+</html>

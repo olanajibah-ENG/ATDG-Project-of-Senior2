@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>شو عملنا بالخطوة 7</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1f2328; --muted:#57606a; --card:#f6f8fa; --accent:#1f5fa8; --ok:#1a7f37; --okbg:#e9f6ef;
+          --bad:#b3261e; --badbg:#fdecea; --warn:#8a5a00; --warnbg:#fff6e0; --border:#d0d7de; --code:#f4f6f8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+          --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; } }
+  :root[data-theme="dark"] { --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; }
+  body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",Tahoma,Arial,sans-serif; line-height:1.9; margin:0; padding:24px 16px; }
+  main { max-width:880px; margin:auto; }
+  h1 { font-size:1.5rem; margin-bottom:4px; } h2 { font-size:1.2rem; color:var(--accent); margin-top:2.2em; border-bottom:2px solid var(--accent); padding-bottom:4px; }
+  h3 { font-size:1.05rem; margin:1.4em 0 .3em; }
+  .sub { color:var(--muted); }
+  .wrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 14px; font-size:.95rem; }
+  th, td { border:1px solid var(--border); padding:7px 9px; text-align:right; vertical-align:top; }
+  th { background:var(--card); }
+  code { font-family:Consolas,monospace; direction:ltr; unicode-bidi:isolate; background:var(--code); padding:0 4px; border-radius:3px; font-size:.9em; }
+  pre { direction:ltr; text-align:left; background:var(--code); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-family:Consolas,monospace; font-size:.85rem; white-space:pre-wrap; margin:6px 0; }
+  .box { border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:12px 0; }
+  .ok { background:var(--okbg); } .bad { background:var(--badbg); } .warn { background:var(--warnbg); } .info { background:var(--card); }
+  .b-ok { color:var(--ok); font-weight:700; } .b-bad { color:var(--bad); font-weight:700; } .b-warn { color:var(--warn); font-weight:700; }
+  .pair { display:flex; gap:10px; flex-wrap:wrap; } .pair > div { flex:1 1 300px; }
+</style>
+</head>
+<body>
+<main>
+<h1>شو عملنا بالخطوة 7، بالتفصيل</h1>
+<p class="sub">ملف ملف: شو كان، شو تغيّر، وليش. وبالأول مشكلة الموديل الجديد يلي صارت اليوم.</p>
+
+<h2>0. أول شي: مشكلة الموديل الجديد وكيف انحلّت</h2>
+<p>بلّشنا قياس CASCADE بالموديل الاحتياطي <code>cohere/north-mini-code:free</code>، لأنه موديلنا القديم متوقف. أول عينة رجعت <b>جواب فاضي</b> 3 مرات ورا بعض، فوقّفت القياس فوراً لحتى ما يروح حد اليوم على الفاضي.</p>
+<h3>شو كان السبب</h3>
+<p>هالموديل من نوع "بيفكّر قبل ما يجاوب" (reasoning model). التفكير بيصرف من <b>نفس الحد</b> يلي منعطيه للجواب، وكنا معطيينه 4000 token. جرّبت طلب حقيقي من CASCADE:</p>
+<div class="wrap"><table>
+  <tr><th>التجربة</th><th>شو صار</th></tr>
+  <tr><td>حد 4000 (يلي كان)</td><td>صرف 3983 token تفكير، ووقف قبل ما يكتب حرف من الجواب</td></tr>
+  <tr><td>حد 4000 مع "فكّر أقل"</td><td>نفس الشي، 4134 token تفكير</td></tr>
+  <tr><td>موديل تاني: Gemma 4 31B</td><td>مرفوض من المزوّد، لأنه عليه ضغط من كل المستخدمين المجانيين</td></tr>
+  <tr><td><b>حد 16000</b></td><td><b>جاوب صح</b>، بعد 14,438 token تفكير، وأخد حوالي 50 ثانية</td></tr>
+</table></div>
+<h3>الحل</h3>
+<p>بأداة القياس (<code>llm_recorder.py</code>) ضفت جدول صغير بيحدد الحد لكل موديل: <code>cohere</code> بياخد 16000، وأي موديل تاني بيضل على 4000. يعني ما تغيّر شي على القياسات القديمة.</p>
+<div class="box warn"><b>الثمن:</b> راحوا حوالي 8 طلبات من حد اليوم على التجارب، فقياس CASCADE الكامل (حوالي 145 طلب) صار بياخد <b>4 أيام</b> بدل 3. وكل طلب بياخد حوالي دقيقة، فقياس اليوم بياخد حوالي ساعة.</div>
+<div class="box info"><b>ملاحظة للتطبيق نفسه (مش للقياس):</b> ملف <code>llm_client.py</code> تبع رفيقتك لسا بيبعت حد 4000. فإذا التطبيق استعمل <code>cohere</code>، رح يرجع جواب فاضي، وبينتقل تلقائياً للموديل يلي بعده. ما بيكسر شي، بس منيح تعرف هالشي.</div>
+
+<h2>1. المقارِن الجديد: <code>signature_comparer.py</code> (ملف جديد)</h2>
+<h3>شو كان قبل</h3>
+<p>القرار "بيكسر أو لا" كان بيعتمد على <b>بصمة من نص التوقيع</b>: عدد المعاملات، وأنواعهم، ونوع الإرجاع. أي فرق بالبصمة يعني كسر. فإضافة معامل اختياري كانت تنحسب كسر لأنه العدد تغيّر.</p>
+<h3>شو صار هلق</h3>
+<p>ملف جديد بيقارن <b>المعاملات نفسها</b>، وحدة وحدة، باستعمال المعلومات يلي صرنا نقراها بالخطوة 1: الاسم، والنوع، والقيمة الافتراضية، ونوع المعامل (عادي، أو <code>...rest</code>، أو بالاسم بس بـ Python).</p>
+<p>كل فرق بيطلع كـ "تغيير" إله 3 أشياء: <b>نوعه</b> (مثلاً <code>parameter_added_required</code>)، و<b>وصف</b> مقروء (مثلاً "required parameter 'b' added")، و<b>مستوى خطر</b>:</p>
+<div class="wrap"><table>
+  <tr><th>المستوى</th><th>المعنى</th><th>بينحسب كسر؟</th></tr>
+  <tr><td class="b-bad">حرج (CRITICAL)</td><td>الاستدعاءات الموجودة رح تفشل</td><td>أي</td></tr>
+  <tr><td class="b-warn">تحذير (WARNING)</td><td>ممكن يكسر حسب طريقة الاستدعاء</td><td>لا</td></tr>
+  <tr><td class="b-ok">معلومة (INFORMATIONAL)</td><td>ما بيكسر</td><td>لا</td></tr>
+</table></div>
+<p>والقرار النهائي للدالة = <b>أسوأ تغيير فيها</b>. يعني إذا في تغيير "معلومة" وتغيير "حرج"، الدالة بتنحسب حرجة.</p>
+
+<h3>الفحوصات بالترتيب</h3>
+<ol>
+  <li><b>الظهور:</b> إذا الدالة صارت أقل ظهوراً (من public لـ private) فهي حرجة، لأنه يلي برّا ما عاد يقدر يوصلها. وإذا العكس، فهي معلومة.</li>
+  <li><b>async:</b> إذا صارت <code>async</code> أو بطّلت، فهي حرجة، لأنها صارت ترجّع Promise بدل القيمة، أو العكس. (بـ NPM في 21 تعديل من هالنوع.) والـ constructor مستثنى.</li>
+  <li><b>المعاملات العادية (بالترتيب):</b>
+    <ul>
+      <li>أول شي منشوف: نفس الأسماء بس بترتيب تاني؟ هيك بيكون <b>تغيير ترتيب</b>، وهو حرج.</li>
+      <li>وإلا منمشي موقع موقع ومنقارن المعامل الأول بالأول، والتاني بالتاني، إلخ:
+        <ul>
+          <li>معامل جديد: إذا إله قيمة افتراضية أو اختياري، فهو معلومة. وإذا إجباري، فهو حرج.</li>
+          <li>معامل انشال: حرج. إلا إذا صار في <code>...rest</code> بالنسخة الجديدة، لأنه هيك الاستدعاء القديم بيضل شغّال.</li>
+          <li>اسم تغيّر: معلومة بـ JavaScript و TypeScript و Java. وتحذير بـ Python، لأنه ممكن حدا يستدعي بالاسم <code>f(name=...)</code>.</li>
+          <li>النوع تغيّر، والنوعين مكتوبين: حرج.</li>
+          <li>كان اختياري وصار إجباري: حرج. والعكس: معلومة.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><b>معاملات Python يلي بالاسم بس</b> (keyword-only): هدول بينطابقوا <b>بالاسم</b> مش بالموقع.</li>
+  <li><b><code>*args</code> و <code>**kwargs</code></b>: إذا انشالوا فهي حرجة، وإذا انضافوا فهي معلومة.</li>
+  <li><b>نوع الإرجاع:</b> إذا تغيّر فهو تحذير بس. وما منقارنه إذا واحد منهم غير معروف (متل <code>Any</code> المستنتج بـ Python)، لحتى ما نطلّع تنبيهات وهمية.</li>
+</ol>
+<p><b>إذا التحليل قديم</b> ومحفوظ قبل الخطوة 1، يعني ما فيه معلومات معاملات، المقارِن بيقول "ما بعرف"، والنظام بيرجع للطريقة القديمة. يعني التحليلات المحفوظة بـ Mongo ما بتنكسر.</p>
+
+<h2>2. ربطه بالنظام: <code>structural_diff.py</code></h2>
+<h3>أ. "تغيّر التوقيع"</h3>
+<div class="pair">
+<div class="box bad"><b>قبل</b><br>إذا نص التوقيع نفسه، بيتخطّى الدالة. وإذا مختلف، بيقارن البصمة: أي فرق يعني كسر.</div>
+<div class="box ok"><b>هلق</b><br>بيشغّل المقارِن الجديد على كل دالة موجودة بالنسختين، <b>حتى لو نص التوقيع نفسه</b>. وبيكتب بالوصف شو تغيّر بالزبط.</div>
+</div>
+<p>ليش "حتى لو النص نفسه"؟ لأنه نص التوقيع ما بيحمل القيم الافتراضية:</p>
+<pre>// قبل                              // بعد
+export function f(a, b = 1) {...}   export function f(a, b) {...}
+// نص التوقيع بالنسختين: "f(a, b)"  ← النظام القديم ما كان يشوف ولا فرق
+// هلق: "parameter 'b' became required" ← حرج</pre>
+<p>وكمان صار كل تنبيه إله <b>مستوى خطر</b> (بحقل <code>risk_level</code> يلي ضفناه بالخطوة 2)، والـ severity القديمة (يلي الواجهة بتلوّن فيها) صارت تنحسب منه: حرج يعني critical، وتحذير يعني medium، ومعلومة يعني low.</p>
+
+<h3>ب. كشف إعادة التسمية</h3>
+<p><b>كان في مكانين</b> بيكشفوا إعادة التسمية:</p>
+<ol>
+  <li><b>جوا كل كلاس</b> (<code>_compare_methods</code>): بيقارن الدوال يلي انحذفت مع يلي انضافت. هاد منطقي.</li>
+  <li><b>مرور عام</b> (<code>RenameDetector</code>) على <b>كل الدوال بالملف</b>: بيبني بصمة لكل دالة، وإذا دالتين إلهن نفس البصمة واسمهن مختلف، بيقول "إعادة تسمية".</li>
+</ol>
+<p>المرور العام كان عامل مشكلتين:</p>
+<ul>
+  <li><b>تكرار:</b> إعادة التسمية الحقيقية بتنكشف مرتين، مرة من كل مكان.</li>
+  <li><b>إعادة تسمية وهمية:</b> <code>start()</code> و <code>stop()</code> إلهن نفس البصمة (بدون معاملات). فالنظام كان يقول "start صارت stop"، مع إنه التنتين لسا موجودين! هاد كان سبب 20 تنبيه كاذب بـ NPM.</li>
+</ul>
+<p><b>شو عملت:</b></p>
+<ul>
+  <li><b>شلت المرور العام</b>، وخلّيت الكشف جوا الكلاس بس. ملف <code>rename_detector.py</code> بيضل موجود بس ما حدا بيستعمله.</li>
+  <li><b>حسّنت الكشف جوا الكلاس:</b>
+    <ol>
+      <li>إذا <b>جسم الدالة نفسه بالزبط</b> (بصمة الجسم <code>body_hash</code> من الخطوة 1) والاسم تغيّر، فهي إعادة تسمية أكيدة (ثقة 1.0).</li>
+      <li>وإلا منرجع لبصمة التوقيع. بس إذا الجسمين معروفين ومختلفين <b>والاسمين مش متشابهين أبداً</b> (نسبة تشابه أقل من 50%)، منعتبرها حذف دالة وإضافة دالة تانية، مش إعادة تسمية.</li>
+    </ol>
+  </li>
+  <li><b>إعادة التسمية صارت تنحسب كسر</b> (RENAMED / حرج). قبل كانت "refactoring" منخفضة. السبب: أي حدا عم يستدعي الاسم القديم رح يفشل، وورقة NPM نفسها بتصنّف إعادة التسمية من التغييرات يلي بتكسر.</li>
+</ul>
+
+<h2>3. قراءة معاملات TypeScript: <code>tree_sitter_processor.py</code></h2>
+<p>المقارِن الجديد بيعتمد على المعاملات، فلازم تنقرى صح. وفحصت كيف كانت تنقرى بـ TypeScript، ولقيت إنها ناقصة كتير:</p>
+<pre>f(a: number, b: string = "x", c?: boolean, ...rest: any[])
+g({k, v}: Opts)</pre>
+<div class="wrap"><table>
+  <tr><th>المعامل</th><th>قبل</th><th>هلق</th></tr>
+  <tr><td><code>a: number</code></td><td>الاسم بس، والنوع ضايع</td><td>الاسم والنوع <code>number</code></td></tr>
+  <tr><td><code>b: string = "x"</code></td><td>الاسم بس</td><td>الاسم والنوع والقيمة الافتراضية <code>"x"</code></td></tr>
+  <tr><td><code>c?: boolean</code></td><td>الاسم بس، وما في شي بيقول إنه اختياري</td><td>اختياري (قيمته الافتراضية <code>undefined</code>، وهيك بيصير فعلياً بـ JavaScript)</td></tr>
+  <tr><td><code>...rest: any[]</code></td><td><b>ضايع كلياً</b></td><td>معامل من نوع <code>...rest</code></td></tr>
+  <tr><td><code>{k, v}: Opts</code></td><td><b>ضايع كلياً</b> (الدالة كانت تبيّن بدون معاملات)</td><td>معامل اسمه <code>{k, v}</code></td></tr>
+</table></div>
+<p>ضفت دالة <code>_ts_parameters</code> بتقرا هالأشكال من شجرة الكود مباشرة. وبتشتغل بس إذا الكود TypeScript، وإلا اللغات التانية (C# و Go...) بتضل على الطريقة القديمة متل ما هي.</p>
+<p>وبـ JavaScript العادية صلّحت كمان شغلتين: الـ destructuring (<code>({a, b}) =&gt;</code>)، والـ arrow function بمعامل واحد بدون أقواس (<code>x =&gt; x</code>)، لأنه كان معاملها يضيع.</p>
+<div class="box info"><b>شو ما تغيّر:</b> نص التوقيع القديم (<code>signature</code>) بيضل حرف بحرف متل ما هو، لأنه الواجهة بتعرضه، والاختبارات بتتأكد من هالشي.</div>
+
+<h2>4. الاختبارات: <code>tests/test_signature_comparer.py</code> (جديد، 27 اختبار)</h2>
+<div class="wrap"><table>
+  <tr><th>المجموعة</th><th>شو بتفحص</th></tr>
+  <tr><td>القواعد (16 اختبار)</td><td>كل سطر من جدول القواعد: اختياري انضاف، إجباري انضاف، انشال، صار إجباري، الترتيب، النوع، إعادة تسمية المعامل (JS مقابل Python)، async، الظهور، نوع الإرجاع، <code>...rest</code>، keyword-only بـ Python، أسوأ تغيير، والتحليل القديم بدون معاملات</td></tr>
+  <tr><td>من كود حقيقي (4)</td><td>كود TypeScript و JavaScript حقيقي بيمرق بكل النظام: إضافة <code>options = {}</code> ما بتطلّع كسر. إضافة معامل إجباري بتطلّع كسر مع السبب. القيمة الافتراضية يلي انشالت بتنكشف حتى لو نص التوقيع نفسه. وصارت async بتنكشف.</td></tr>
+  <tr><td>إعادة التسمية (3)</td><td>إعادة تسمية حقيقية بتطلع <b>مرة وحدة</b> وكسر. <code>start</code> و <code>stop</code> ما بيطلعوا إعادة تسمية وهمية. ودالتين بنفس الشكل وجسم واسم مختلفين بيطلعوا حذف وإضافة.</td></tr>
+  <tr><td>قراءة المعاملات (2)</td><td>كل أشكال معاملات TypeScript و JavaScript فوق، ونص التوقيع القديم ما تغيّر</td></tr>
+</table></div>
+<p><b>النتيجة:</b> 124 من 124 نجحوا (97 قديم و 27 جديد)، والنسخة القديمة المجمّدة ما انلمست.</p>
+<p class="sub">فشل اختبار واحد أول مرة، والغلط كان بالاختبار نفسه مش بالكود: افترضت إنه نص التوقيع القديم فيه الأنواع، وطلع <code>f(a, b, c)</code>، نفس يلي كان قبل التعديل. فصلّحت الاختبار.</p>
+
+<h2>5. شو عم يشتغل هلق</h2>
+<ol>
+  <li><b>قياس الخطوة 7 على كل NPM</b>، بدون ذكاء اصطناعي، فببلاش. منقارن مع الأساس: الكشف كان 0.35، والسكوت عن السليم 0.82.</li>
+  <li><b>اليوم 1 من 4 لقياس CASCADE الكامل</b> بالموديل الجديد.</li>
+</ol>
+<p>بس يخلص القياس الأول، بكتب تقرير الاختبارات md متل كل خطوة، وبحلّل الحالات يلي تغيّر قرارها بقسم التطوير.</p>
+</main>
+</body>
+</html>

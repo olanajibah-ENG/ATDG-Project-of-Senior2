@@ -513,12 +513,14 @@ class TreeSitterProcessor(ILanguageProcessorStrategy):
         حقول إضافية عامة لكل اللغات (best-effort):
         parameters / return_type / docstring / is_async / body / body_hash
         """
-        params = []
-        for p in self._extract_parameters(method_node):
-            name, _, ptype = p.partition(": ")
-            params.append({"name": name, "type": ptype or None, "default": None, "kind": "positional"})
-        if not params:
-            params = self._js_style_parameters(method_node)
+        params = self._ts_parameters(method_node)
+        if params is None:
+            params = []
+            for p in self._extract_parameters(method_node):
+                name, _, ptype = p.partition(": ")
+                params.append({"name": name, "type": ptype or None, "default": None, "kind": "positional"})
+            if not params:
+                params = self._js_style_parameters(method_node)
 
         return {
             "parameters": params,
@@ -532,12 +534,39 @@ class TreeSitterProcessor(ILanguageProcessorStrategy):
             **ts_body_fields(method_node.child_by_field_name("body")),
         }
 
-    def _js_style_parameters(self, method_node) -> List[Dict[str, Any]]:
-        """معاملات JavaScript (identifier / x = 1 / ...rest) يلي _extract_parameters ما بيفهمها."""
+    def _ts_parameters(self, method_node) -> Optional[List[Dict[str, Any]]]:
+        """
+        معاملات TypeScript (required_parameter / optional_parameter) مع النوع والقيمة الافتراضية
+        و ...rest والـ destructuring. None = مش TypeScript (منرجع للطريقة القديمة).
+        المعامل الاختياري "b?" بدون قيمة → default = "undefined" (هيك بيصير بـ JavaScript فعلياً).
+        """
         param_list = method_node.child_by_field_name("parameters")
+        nodes = [p for p in (param_list.named_children if param_list is not None else [])
+                 if p.type in ("required_parameter", "optional_parameter")]
+        if not nodes:
+            return None
         params = []
-        for p in (param_list.named_children if param_list is not None else []):
-            if p.type == "identifier":
+        for p in nodes:
+            pattern, ptype, value = (p.child_by_field_name(f) for f in ("pattern", "type", "value"))
+            kind, name = "positional", self._node_text(pattern) if pattern is not None else None
+            if pattern is not None and pattern.type == "rest_pattern":
+                kind = "var_positional"
+                name = next((self._node_text(c) for c in pattern.named_children), name)
+            default = self._node_text(value) if value is not None else None
+            if default is None and p.type == "optional_parameter":
+                default = "undefined"
+            params.append({"name": name, "type": self._node_text(ptype).lstrip(":").strip() if ptype is not None else None,
+                           "default": default, "kind": kind})
+        return params
+
+    def _js_style_parameters(self, method_node) -> List[Dict[str, Any]]:
+        """معاملات JavaScript (identifier / x = 1 / ...rest / {a, b}) يلي _extract_parameters ما بيفهمها."""
+        param_list = method_node.child_by_field_name("parameters")
+        single = method_node.child_by_field_name("parameter")          # x => x
+        children = param_list.named_children if param_list is not None else ([single] if single is not None else [])
+        params = []
+        for p in children:
+            if p.type in ("identifier", "object_pattern", "array_pattern"):
                 params.append({"name": self._node_text(p), "type": None, "default": None, "kind": "positional"})
             elif p.type == "assignment_pattern":
                 params.append({"name": self._node_text(p.child_by_field_name("left")), "type": None,

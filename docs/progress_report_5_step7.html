@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>تقرير التقدّم 5</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  :root {
+    --ink: #1c2430; --muted: #5a6573; --line: #d9dee5; --accent: #1f5fa8;
+    --accent-bg: #eef4fb; --ok: #1e7d4f; --ok-bg: #e9f6ef; --bad: #b3261e; --bad-bg: #fdecea;
+    --warn: #8a5a00; --warn-bg: #fff6e0; --code-bg: #f4f6f8;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: var(--ink); background: #fff;
+         font-size: 10.5pt; line-height: 1.75; margin: 0; }
+  h1 { font-size: 21pt; color: var(--accent); margin: 0 0 4px; line-height: 1.4; }
+  h2 { font-size: 15pt; color: var(--accent); border-bottom: 2px solid var(--accent);
+       padding-bottom: 4px; margin: 26px 0 10px; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 18px 0 6px; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0; padding-right: 22px; padding-left: 0; }
+  li { margin: 2px 0; }
+  code, .ltr { font-family: Consolas, "Courier New", monospace; font-size: 9pt; direction: ltr;
+               unicode-bidi: isolate; }
+  code { background: var(--code-bg); padding: 0 4px; border-radius: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.4pt; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 5px 7px; vertical-align: top; text-align: right; }
+  th { background: var(--accent-bg); font-weight: 600; }
+  .cover { border-bottom: 3px solid var(--accent); padding-bottom: 12px; margin-bottom: 14px; }
+  .subtitle { color: var(--muted); font-size: 11pt; }
+  .meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 9.5pt; margin-top: 8px; }
+  .box { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 10px 0;
+         page-break-inside: avoid; }
+  .box.ok { background: var(--ok-bg); border-color: #b7dfc8; }
+  .box.warn { background: var(--warn-bg); border-color: #f0d9a0; }
+  .box.info { background: var(--accent-bg); border-color: #c8dbf0; }
+  .box b.t { display: block; margin-bottom: 2px; }
+  .kpis { display: flex; gap: 10px; margin: 10px 0; }
+  .kpi { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px; text-align: center; }
+  .kpi .v { font-size: 17pt; font-weight: 700; color: var(--accent); line-height: 1.2; }
+  .kpi .l { font-size: 8.8pt; color: var(--muted); }
+  .best { font-weight: 700; color: var(--ok); }
+  .pb { page-break-before: always; }
+  .small { font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <h1>تقرير التقدّم 5: الخطوة 7، وشغل ما بعد المناقشة</h1>
+  <div class="subtitle">كل الجديد بعد التقرير 4: الرفع على GitHub، وتغيير موديل القياس، والخطوة 7 ونتائجها على كل بيانات NPM، وكم خطوة ضل</div>
+  <div class="meta"><span>التاريخ: 2026-11-05</span><span>البرانش: <span class="ltr">feature/evaluation-v1</span></span><span>الاختبارات: 125 من 125</span></div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">0.39</div><div class="l">كشف التعديلات يلي بتكسر (اختبار NPM)<br>كان 0.35، والقديم 0.22</div></div>
+  <div class="kpi"><div class="v">40</div><div class="l">إنذارات كاذبة (اختبار NPM)<br>كانت 41</div></div>
+  <div class="kpi"><div class="v">+40</div><div class="l">تعديل بيكسر انكشف زيادة<br>بقسم الاختبار</div></div>
+  <div class="kpi"><div class="v">125</div><div class="l">اختبار ناجح<br>(28 منهم جداد)</div></div>
+</div>
+
+<h2>1. شو صار من التقرير 4 لهلق</h2>
+<table>
+  <tr><th style="width:26%">الشغلة</th><th>شو عملنا</th></tr>
+  <tr><td>قياس صغير مع الذكاء الاصطناعي لـ Code vs Code</td><td>22 تعديل من NPM: الحالي كشف 5 من 17، والقديم 3 من 17، وما في ولا إنذار كاذب. بس الذكاء الاصطناعي لحاله ما كشف ولا تغيير سلوكي، لأنه بيشوف أسماء الدوال بس</td></tr>
+  <tr><td>مراجعة البرزنتيشن</td><td>شرائح جديدة: طريقة الشغل، والمقاييس، ومثال حقيقي من <span class="ltr">gson</span>، وحدود النتائج</td></tr>
+  <tr><td>عميل الذكاء الاصطناعي الجديد</td><td>حطينا <code>llm_client.py</code> تبع رفيقتنا. بيوقّف بس الموديل يلي رفض وبينتقل للي بعده، بدل ما يوقّف كل الموديلات ساعة. وضفنا عليه تعديلين: الخطأ 400 ما عاد يوقّف الموديل (لأنه سببه غالباً الطلب نفسه)، وموديل القياس صار أول واحد بالقائمة</td></tr>
+  <tr><td>بيانات الشرح المنطقي</td><td>الـ 120 حالة تبع ETF / CodeSumEval صاروا بـ <code>evaluation/explanations/ETF_cases</code>، بدون سكربت الحساب لحتى يتأكد منه الفريق</td></tr>
+  <tr><td>الرفع على GitHub</td><td>برانش جديد <span class="ltr">feature/evaluation-v1</span> فيه كل الخطوات، commit ورا commit. ما لمسنا <span class="ltr">main</span> ولا <span class="ltr">development</span></td></tr>
+  <tr><td>الخطوة 7</td><td>مقارنة التوقيعات معامل معامل، وتصليح كشف إعادة التسمية، وقراءة معاملات TypeScript كاملة (القسم 3)</td></tr>
+  <tr><td>قياس CASCADE الكامل</td><td>بلّش بموديل جديد، وبياخد 4 أيام (القسم 4)</td></tr>
+</table>
+
+<h2>2. الرفع على GitHub والأمان</h2>
+<ul>
+  <li><b>الريبو عام (public).</b> كان في مفتاح OpenRouter قديم مكتوب بـ <code>settings.py</code>، وهو موجود أصلاً على GitHub ببرانشات <span class="ltr">development</span> و <span class="ltr">Backend-version2</span> و <span class="ltr">edit_backend-version2</span>. غالباً ما عاد شغّال، بس الأحسن يلي عمله يلغيه من حسابه.</li>
+  <li><b>شلنا المفتاح من الكود</b>، وصار ينقرا من <code>.env</code> بس، وهاد الملف ما بينرفع. وشلناه كمان من تاريخ البرانش الجديد كله.</li>
+  <li><b>الرفع فشل مرتين</b> بسبب انتهاء الوقت (خطأ 408). السبب إنه مجلد <code>RefactoringMiner</code>، وهو أداة خارجية، كان حجمه 178MB من أصل 190MB، وولا ملف بالمشروع بيستعمله. فشلناه من الرفع وخلّيناه على الجهاز، وضفناه لـ <code>.gitignore</code> مع رابط تنزيله. بعدها انرفع البرانش من أول محاولة.</li>
+  <li><b>تاريخ البرانش مش موصول بتاريخ الفريق على GitHub</b>، لأنه النسخة المحلية بلّشت من commit الأساس تبعنا. فالدمج مع <span class="ltr">development</span> بيصير بعدين، مع الفريق وبشكل مقصود.</li>
+</ul>
+
+<h2 class="pb">3. الخطوة 7: مقارنة توقيعات أذكى</h2>
+<h3>المشكلة</h3>
+<p>القرار "هالتغيير بيكسر أو لا" كان بيعتمد على بصمة من نص التوقيع، وأي فرق بالبصمة يعني كسر. فإضافة معامل اختياري، متل <code>fetch(url)</code> لـ <code>fetch(url, options = {})</code>، كانت تنحسب كسر، وهاد كان أكبر سبب للإنذارات الكاذبة بـ NPM (143 تنبيه على تعديلات سليمة). وكاشف إعادة التسمية كان يكرر التنبيه، ويعتبر دالتين لسا موجودين "إعادة تسمية" إذا إلهن نفس الشكل (20 تنبيه).</p>
+
+<h3>شو عملنا</h3>
+<table>
+  <tr><th style="width:30%">الملف</th><th>التغيير</th></tr>
+  <tr><td><code>signature_comparer.py</code> (جديد)</td><td>بيقارن المعاملات وحدة وحدة، بقواعد متل AexPy. كل تغيير إله سبب ومستوى خطر: حرج، أو تحذير، أو معلومة. والقرار النهائي هو أسوأ تغيير</td></tr>
+  <tr><td><code>structural_diff.py</code></td><td>بيستعمل المقارِن الجديد على كل دالة موجودة بالنسختين، حتى لو نص التوقيع نفسه، لأنه النص ما فيه القيم الافتراضية. وإعادة التسمية صارت تنكشف جوا الكلاس بس، بالاعتماد على بصمة الجسم، وصارت تنحسب كسر</td></tr>
+  <tr><td><code>tree_sitter_processor.py</code></td><td>معاملات TypeScript صارت تنقرا بالنوع، والقيمة الافتراضية، و <code>b?</code>، و <code>...rest</code>، و <code>{a, b}</code>. قبل كانت الأنواع والقيم تضيع، و <code>...rest</code> و <code>{a, b}</code> يختفوا كلياً</td></tr>
+</table>
+
+<h3>القواعد</h3>
+<table>
+  <tr><th>ما بيكسر (معلومة)</th><th>بيكسر (حرج)</th></tr>
+  <tr><td>
+    <ul>
+      <li>انضاف معامل اختياري، أو إله قيمة افتراضية، أو <code>...rest</code></li>
+      <li>معامل صار اختياري</li>
+      <li>اسم معامل تغيّر (JS / TS / Java). وبـ Python تحذير، لأنه ممكن ينستدعى بالاسم</li>
+      <li>نوع معامل صار أوسع (<code>A</code> لـ <code>A | B</code>)</li>
+      <li>الإرجاع صار أضيق (<code>A | null</code> لـ <code>A</code>)</li>
+    </ul></td>
+    <td>
+    <ul>
+      <li>انضاف معامل إجباري</li>
+      <li>معامل انشال، أو صار إجباري، أو الترتيب تغيّر</li>
+      <li>نوع معامل تغيّر أو صار أضيق</li>
+      <li>الإرجاع تغيّر أو صار أوسع (<code>A</code> لـ <code>A | null</code>)</li>
+      <li>صارت <code>async</code> أو بطّلت</li>
+      <li>صارت خاصة (public لـ private)</li>
+      <li>الدالة نفسها تغيّر اسمها</li>
+    </ul></td></tr>
+</table>
+
+<h3>الاختبارات</h3>
+<p>28 اختبار جديد: كل قاعدة لحالها، وكود TypeScript و JavaScript حقيقي بيمرق بكل النظام، وإعادة التسمية (مرة وحدة وبدون وهمية)، وقراءة المعاملات. <b>125 من 125 نجحوا</b>. والنسخة المجمّدة ما انلمست، ونص التوقيع القديم يلي بتعرضه الواجهة ما تغيّر.</p>
+
+<h3>النتائج على كل بيانات NPM (بدون ذكاء اصطناعي)</h3>
+<table>
+  <tr><th>المجموعة</th><th>النظام</th><th>Precision</th><th>Recall</th><th>Specificity</th><th>كشف البنيوي</th><th>كشف السلوكي</th><th>TP</th><th>FP</th><th>FN</th><th>TN</th></tr>
+  <tr><td>اختبار</td><td>القديم</td><td>0.91</td><td>0.22</td><td>0.89</td><td>142 من 366</td><td>104 من 731</td><td>246</td><td>24</td><td>851</td><td>200</td></tr>
+  <tr><td>اختبار</td><td>بعد 6</td><td>0.90</td><td>0.35</td><td>0.82</td><td>202 من 366</td><td>183 من 731</td><td>385</td><td>41</td><td>712</td><td>183</td></tr>
+  <tr><td>اختبار</td><td><b>بعد 7</b></td><td>0.91</td><td class="best">0.39</td><td>0.82</td><td class="best">219 من 366</td><td>206 من 731</td><td>425</td><td>40</td><td>672</td><td>184</td></tr>
+  <tr><td>تطوير</td><td>بعد 6</td><td>0.85</td><td>0.30</td><td>0.71</td><td>42 من 80</td><td>37 من 186</td><td>79</td><td>14</td><td>187</td><td>35</td></tr>
+  <tr><td>تطوير</td><td><b>بعد 7</b></td><td>0.86</td><td class="best">0.35</td><td>0.69</td><td>46 من 80</td><td>47 من 186</td><td>93</td><td>15</td><td>173</td><td>34</td></tr>
+</table>
+<table>
+  <tr><th>نوع التغيير بالورقة (كل البيانات)</th><th>العدد</th><th>بعد 6</th><th>بعد 7</th></tr>
+  <tr><td>تغيير سلوكي</td><td>922</td><td>223</td><td>258</td></tr>
+  <tr><td>تغيير التوقيع</td><td>130</td><td>78</td><td>87</td></tr>
+  <tr><td>حذف دالة</td><td>117</td><td>69</td><td>70</td></tr>
+  <tr><td>إعادة تسمية دالة</td><td>47</td><td>26</td><td>32</td></tr>
+  <tr><td>إعادة تسمية حقل</td><td>27</td><td>11</td><td>14</td></tr>
+</table>
+
+<div class="box ok"><b class="t">شو بيعني هاد</b>
+<ul>
+  <li><b>ربحنا كشف بدون ثمن:</b> انكشف 40 تعديل بيكسر زيادة بقسم الاختبار، والإنذارات الكاذبة نقصت واحد.</li>
+  <li><b>انكشفت تغييرات ما كانت تبيّن أبداً بنص التوقيع:</b> قيمة افتراضية انشالت، أو الدالة صارت <code>async</code>، أو الإرجاع صار يقبل <code>null</code>.</li>
+</ul></div>
+<div class="box warn"><b class="t">يلي لسا ناقص، بصراحة</b>
+<ul>
+  <li><b>الـ Specificity ما تحسّنت</b> (لسا 0.82). أغلب الإنذارات الكاذبة الباقية جاية من حذف معاملات أو تغيير أنواع <b>بدوال داخلية</b> (اسمها بيبلّش بـ <code>_</code>)، أو من حذف دوال وكلاسات كاملة. وهاد شغل الخطوة 10.</li>
+  <li><b>بالتطوير خسرنا 4 تعديلات كانت منكشفة.</b> 2 منهم كانوا منكشفين بالصدفة، بإعادة تسمية وهمية. و2 كانوا تغيير اسم معامل بس، وهاد ما بيكسر أي استدعاء بـ TypeScript، حتى لو المؤلفين وسموه كسر.</li>
+  <li><b>تعلّمنا من أخطاء التطوير:</b> أول نسخة كانت تعتبر تغيير الإرجاع "تحذير" بس. لقينا حالة حقيقية، <code>Array&lt;Parameter&gt;</code> صارت <code>Array&lt;Parameter&gt; | null</code>، وهي فعلاً بتكسر. فعدّلنا القاعدة، وطلع الكشف بقسم الاختبار من 0.378 لـ 0.387.</li>
+</ul></div>
+
+<h2 class="pb">4. تغيير موديل القياس، وقياس CASCADE الكامل</h2>
+<ul>
+  <li><b>موديلنا <span class="ltr">poolside/laguna-s-2.1:free</span> متوقف:</b> صفحته لسا موجودة، بس ما في ولا مزوّد عم يشغّله. فانتقلنا للموديل الاحتياطي <span class="ltr">cohere/north-mini-code:free</span>.</li>
+  <li><b>أول مشكلة:</b> الموديل الجديد "بيفكّر" قبل ما يجاوب، والتفكير بيصرف من نفس الحد. بحد 4000 token صرفهم كلهم تفكير، ورجّع جواب فاضي. جربنا حد 16000، فجاوب صح بعد حوالي 14 ألف token تفكير و 50 ثانية. فصار حد هالموديل 16000 بأداة القياس بس، والموديلات التانية بتضل على 4000.</li>
+  <li><b>جربنا كمان <span class="ltr">Gemma 4 31B</span></b>، بس المزوّد رفض الطلب بسبب الضغط على الموديلات المجانية.</li>
+  <li><b>القياس:</b> كل CASCADE المتوازنة (71 زوج، يعني 142 حالة، متل الورقة بالزبط)، وبتكون هي الأساس الجديد بالموديل الجديد. اليوم الأول خلّص 36 حالة قبل ما يخلص الحد اليومي، وكل يوم منكمّل من وين وقفنا. <b>المتوقّع يخلص بـ 4 أيام</b> بدل 3، لأنه راحوا حوالي 8 طلبات على تجارب الموديل.</li>
+</ul>
+<div class="box info"><b class="t">ليش منعيد القياس من الأول؟</b>
+الأرقام القديمة (Precision 0.58 و Recall 0.44) طلعت بموديل تاني. لو قارنّا الخطوات الجاية، يلي رح تنقاس بالموديل الجديد، مع أرقام الموديل القديم، ما منعرف إذا الفرق جاي من التحسين أو من الموديل. فمنعمل أساس جديد بالموديل الجديد، ومنحتفظ بالأرقام القديمة كسجل.</div>
+
+<h2>5. كم خطوة ضل؟</h2>
+<table>
+  <tr><th>الخطوة</th><th>القسم</th><th>الحالة</th></tr>
+  <tr><td>0 لـ 2</td><td>الأساس، ومعلومات الدوال، وبنية البيانات</td><td class="best">خلصت</td></tr>
+  <tr><td>3، 3ب، 4، 5، 6</td><td>Code vs Doc</td><td class="best">خلصت</td></tr>
+  <tr><td>7</td><td>Code vs Code: مقارنة التوقيعات</td><td class="best">خلصت</td></tr>
+  <tr><td><b>8</b></td><td>Code vs Code: مقارنة أجسام الدوال (شو تغيّر جوا الدالة)</td><td>الجاية</td></tr>
+  <tr><td><b>9</b></td><td>Code vs Code: تصنيف التغيير (بنيوي بس، أو بنيوي وسلوكي، أو سلوكي محتمل، أو ما في تغيير)</td><td>باقية</td></tr>
+  <tr><td><b>10</b></td><td>Code vs Code: مستوى الخطر (الأعضاء الخاصين معلومة بس، متل AexPy)</td><td>باقية، وهي يلي بتعالج أغلب الإنذارات الكاذبة الباقية</td></tr>
+  <tr><td><b>11</b></td><td>Code vs Code: ما منبعت للذكاء الاصطناعي غير الدوال يلي جسمها تغيّر، مع الجسم قبل وبعد</td><td>باقية، وهي يلي لازم ترفع كشف التغييرات السلوكية</td></tr>
+  <tr><td>12 لـ 14</td><td>التقييم النهائي: محوّلات البيانات، والوسوم، والقديم مقابل الجديد</td><td>أغلبها انعمل خلال الشغل، لأنه أدوات القياس والبيانات جاهزة. بيضل القياس النهائي على أقسام الاختبار مع الذكاء الاصطناعي، والتقرير النهائي</td></tr>
+</table>
+<p><b>يعني ضل 4 خطوات تطوير (8 لـ 11)، كلها بـ Code vs Code، وبعدها القياس النهائي.</b></p>
+</body>
+</html>

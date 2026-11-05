@@ -37,6 +37,9 @@ class LLMClient:
     model: Optional[str] = None
     seed: int = 42
     max_tokens: int = 4000
+    # موديلات "بتفكّر" قبل ما تجاوب: التفكير بيصرف من نفس الحد، وبـ 4000 بيخلص قبل الجواب
+    # (cohere: حوالي 14 ألف token تفكير على طلب CASCADE واحد → جواب فاضي، finish = length)
+    MAX_TOKENS_BY_MODEL: Dict[str, int] = {"cohere/north-mini-code:free": 16000}
     transport_retries: int = 3          # أخطاء شبكة / 429 / 5xx فقط — نفس الموديل
     offline: bool = False               # True → أي استدعاء بيفشل (لتشغيل الأجزاء الحتمية بس)
 
@@ -50,6 +53,7 @@ class LLMClient:
     def configure(cls, model: Optional[str], seed: int = 42, offline: bool = False,
                   allow_free: bool = False) -> None:
         cls.model, cls.seed, cls.offline, cls.model_info = model, seed, offline, None
+        cls.max_tokens = cls.MAX_TOKENS_BY_MODEL.get(model or "", 4000)
         if offline:
             return
         if not model:
