@@ -80,7 +80,8 @@ class ASTUnifier:
             classes=classes,
             relationships=result.get("class_diagram_data", {}).get("relationships", []),
             language=result.get("extracted_features", {}).get("language", ""),
-            project_id=result.get("project_id")
+            project_id=result.get("project_id"),
+            exported_names=result.get("class_diagram_data", {}).get("exported_names"),
         )
 
     @staticmethod

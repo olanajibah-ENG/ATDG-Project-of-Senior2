@@ -188,6 +188,8 @@ class UnifiedClassDiagram(BaseModel):
     classes:       List[ClassDetail]    = Field(default_factory=list)
     relationships: List[Dict[str, Any]] = Field(default_factory=list)
     language:      str = ""
+    # JS / TS: الأسماء يلي عليها export بهالملف (الخطوة 10). None = ما منعرف (لغة تانية / تحليل قديم)
+    exported_names: Optional[List[str]] = None
     project_id:    Optional[str] = None
 
 

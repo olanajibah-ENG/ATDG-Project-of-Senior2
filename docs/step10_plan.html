@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خطة الخطوة 10</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1f2328; --muted:#57606a; --card:#f6f8fa; --accent:#1f5fa8; --ok:#1a7f37; --okbg:#e9f6ef;
+          --bad:#b3261e; --badbg:#fdecea; --warn:#8a5a00; --warnbg:#fff6e0; --border:#d0d7de; --code:#f4f6f8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+          --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; } }
+  :root[data-theme="dark"] { --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --badbg:#2d1214; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; }
+  body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",Tahoma,Arial,sans-serif; line-height:1.9; margin:0; padding:24px 16px; }
+  main { max-width:880px; margin:auto; }
+  h1 { font-size:1.5rem; margin-bottom:4px; } h2 { font-size:1.2rem; color:var(--accent); margin-top:2.2em; border-bottom:2px solid var(--accent); padding-bottom:4px; }
+  h3 { font-size:1.05rem; margin:1.4em 0 .3em; }
+  .sub { color:var(--muted); }
+  .wrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 14px; font-size:.95rem; }
+  th, td { border:1px solid var(--border); padding:7px 9px; text-align:right; vertical-align:top; }
+  th { background:var(--card); }
+  code { font-family:Consolas,monospace; direction:ltr; unicode-bidi:isolate; background:var(--code); padding:0 4px; border-radius:3px; font-size:.9em; }
+  .box { border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:12px 0; }
+  .ok { background:var(--okbg); } .bad { background:var(--badbg); } .warn { background:var(--warnbg); } .info { background:var(--card); }
+  .b-ok { color:var(--ok); font-weight:700; } .b-bad { color:var(--bad); font-weight:700; }
+</style>
+</head>
+<body>
+<main>
+<h1>الخطوة 10: مستوى الخطر</h1>
+<p class="sub">بـ Code vs Code. قبل الشرح: قست شي على البيانات، وطلع بيغيّر يلي قلتلك ياه قبل عن هالخطوة.</p>
+
+<h2>1. تصحيح لشي قلته قبل</h2>
+<div class="box bad">
+<p>بعد الخطوة 7 قلتلك إنه <b>أغلب الإنذارات الكاذبة الباقية جاية من دوال داخلية</b> (اسمها بيبلّش بـ <code>_</code>)، وإنه الخطوة 10 بتعالجهن. <b>هاد كان غلط.</b> وقتها شفت أمثلة متل <code>_preparePaymentData</code>، وعمّمت من غير ما أعدّ.</p>
+<p>هلق عدّيت على قسم الاختبار: من 40 تعديل سليم عليه إنذار كاذب، <b>بس واحد</b> كل تنبيهاته على أسماء بتبلّش بـ <code>_</code> أو <code>#</code>. يعني القاعدة يلي كانت بالخطة (متل AexPy) بتصلّح إنذار كاذب واحد بس.</p>
+</div>
+
+<h2>2. شو جرّبت (كلو قياس، ما غيّرت ولا سطر بالنظام)</h2>
+<div class="wrap"><table>
+  <tr><th>الفكرة</th><th>الإنذارات الكاذبة يلي بتروح (اختبار، من 40)</th><th>التعديلات يلي بتكسر يلي بنخسرها (اختبار، من 425 منكشفة)</th><th>الحكم</th></tr>
+  <tr><td><b>أ.</b> الأسماء يلي بتبلّش بـ <code>_</code> أو <code>#</code>، أو المكتوب عليها <code>private</code> = معلومة بس (متل AexPy)</td><td>1</td><td>4</td><td>آمنة، بس تأثيرها صغير كتير</td></tr>
+  <tr><td><b>ب.</b> الدالة أو الكلاس مش عليه <code>export</code> بنفس الملف = داخلي = معلومة بس</td><td class="b-ok">16</td><td class="b-bad">107</td><td>الـ Specificity بتطلع من 0.82 لحوالي 0.89، بس الـ Recall بينزل من 0.39 لحوالي 0.29. <b>خسارة كبيرة</b></td></tr>
+  <tr><td><b>ج.</b> دالة انحذفت من ملف وانضافت بملف تاني بنفس التعديل = انتقلت، مش انحذفت</td><td>0</td><td>—</td><td>ما بتأثر</td></tr>
+</table></div>
+<h3>ليش الفكرة (ب) بتخسّر كتير؟</h3>
+<p>بـ JavaScript و TypeScript، الملف يلي فيه الدالة غالباً <b>ما بيعمل export</b> إلها مباشرة. في ملف تاني (متل <code>index.ts</code>) بيجمّع وبيعمل export لكل شي: <code>export * from './x'</code>. ونحنا منحلّل بس الملفات يلي تغيّرت بالتعديل، فما منشوف هالملف. يعني منفكّر الدالة داخلية، وهي فعلاً جزء من الـ API العام، فمنسكت عن كسر حقيقي.</p>
+<p>الحل الصح إنه نقرا <b>كل ملفات المشروع</b> لنعرف شو فعلاً بيوصل للمستخدم، وهاد بيحتاج ننزّل نسخة كاملة من كل مشروع لكل تعديل. هاد شغل كبير (آلاف الطلبات من GitHub)، وما بيلحق قبل القياس النهائي.</p>
+
+<h2>3. شي تاني لقيته: جزء من "الإنذارات الكاذبة" ممكن يكون مش كاذب</h2>
+<p>فتحت الـ 15 تعديل سليم يلي عليهن إنذار كاذب بقسم التطوير. بكتير منهن في <b>تغيير حقيقي بالـ API</b>، بس المؤلفين ما كتبوا إنه بيكسر. أمثلة:</p>
+<ul>
+  <li><code>angular</code>: انحذفت الدالة <code>UrlResolver.resolve</code>، ورسالة التعديل <code>feat(compiler): ...</code>.</li>
+  <li><code>angular</code>: انحذفت كلاسات من <code>core_private.ts</code> و <code>private_export.ts</code> (هدول exports داخلية بين حزم angular).</li>
+  <li><code>pnpm</code>: انحذفت <code>copyShrinkwrap</code>، ورسالة التعديل "better naming".</li>
+</ul>
+<p>تذكّري إنه هالأمثلة السليمة <b>نحنا جبناها</b> (تعديلات ما فيها كلمة "breaking")، ومش موسومة من مؤلفين الورقة. فبعض هالتنبيهات ممكن تكون <b>صح</b>: يا إما تغيير بيكسر بس ما انكتب، يا إما تغيير بحزمة داخلية بمشروع فيه كذا حزمة. يعني الـ Specificity الحقيقية ممكن تكون أحسن من 0.82، بس ما فينا نثبت هالشي بدون وسم يدوي.</p>
+
+<h2>4. اقتراحي للخطوة 10</h2>
+<div class="box ok">
+<ol>
+  <li><b>الفكرة (أ)، متل AexPy:</b> الأعضاء الخاصين (<code>_x</code>، <code>#x</code>، <code>private</code>، <code>protected</code>) بياخدوا مستوى "معلومة". تأثيرها صغير، بس صحيحة.</li>
+  <li><b>مستوى خطر واضح لكل تنبيه</b> (حرج / تحذير / معلومة) بنفس الحقل <code>risk_level</code>. هلق بس تنبيهات التوقيع إلها مستوى خطر، فمنكمّل للباقي: حذف كلاس أو دالة عامة حرج، وحذف حقل تحذير، وإضافة دالة لـ interface حرج، وهيك. وهاد بيبيّن بالواجهة بالألوان، وبيرتّب التقرير.</li>
+  <li><b>الفكرة (ب) بتصير "تحذير" مش "حرج"</b>، بس <b>ما منطبّقها على القياس</b>. بالتقرير منكتب "هالدالة ما عليها export بهالملف، ممكن تكون داخلية". هيك المستخدم بيعرف، وما منخسر الـ Recall.</li>
+  <li><b>منوثّق</b> مشكلة الـ exports وملاحظة الوسم بالتقرير النهائي، كحدود للنتائج.</li>
+</ol>
+</div>
+<div class="box warn"><b>صراحة:</b> بهالاقتراح، الخطوة 10 <b>تقريباً ما رح تغيّر</b> أرقام NPM: إنذار كاذب واحد أقل، و4 تعديلات بيكسروا أقل بقسم الاختبار. فايدتها الحقيقية بالتطبيق نفسه: كل تنبيه بيصير إله مستوى خطر واضح وسبب.</div>
+
+<h2>5. بدي منك</h2>
+<ol>
+  <li>موافقة على الاقتراح بالقسم 4؟</li>
+  <li>أو بدك الفكرة (ب) تنحسب بالقياس (Specificity أعلى، بس Recall أقل بكتير)؟ ما بنصح فيها.</li>
+</ol>
+</main>
+</body>
+</html>

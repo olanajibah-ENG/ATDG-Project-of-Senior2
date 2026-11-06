@@ -121,7 +121,7 @@ def file_pairs(commit: Dict[str, Any]) -> List[Dict[str, Any]]:
 # ─────────────────────────────────────────────────────────────────────
 
 def _brief(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return [{k: i.get(k) for k in ("type", "category", "severity", "class_name", "member")} for i in items]
+    return [{k: i.get(k) for k in ("type", "category", "severity", "class_name", "member", "risk_level")} for i in items]
 
 
 def run_commit(system: str, commit: Dict[str, Any]) -> Dict[str, Any]:

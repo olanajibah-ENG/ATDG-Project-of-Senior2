@@ -3,6 +3,7 @@ TreeSitterProcessor - Final Fixed Version
 """
 
 import logging
+import re
 from typing import Dict, Any, List, Optional
 
 from .base_processor import ILanguageProcessorStrategy
@@ -316,7 +317,58 @@ class TreeSitterProcessor(ILanguageProcessorStrategy):
         module_functions = self._extract_module_functions(tree.root_node)
         if module_functions:
             result["module_functions"] = module_functions
+        # JS / TS: شو عليه export بهالملف (الخطوة 10). غير هيك None، يعني ما منعرف
+        if self.file_type in ("javascript", "typescript"):
+            result["exported_names"] = sorted(self._exported_names(tree.root_node))
         return result
+
+    _CJS_EXPORT = re.compile(r'(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*='
+                             r'|module\.exports\s*=\s*([A-Za-z_$][\w$]*)\s*;?\s*$', re.M)
+    _CJS_OBJECT = re.compile(r'module\.exports\s*=\s*\{([^}]*)\}', re.S)
+
+    def _exported_names(self, root) -> set:
+        """
+        الأسماء يلي عليها export بهالملف: export function/class/const، و export { a, b as c }،
+        و export default X، و CommonJS (module.exports / exports.x). "*" = export * from (كل شي من ملف تاني).
+        بس هالملف: إذا ملف تاني (متل index.ts) بيعمل export للاسم، ما منشوفه.
+        """
+        names = set()
+        for node in root.named_children:
+            if node.type != "export_statement":
+                continue
+            decl = node.child_by_field_name("declaration")
+            if decl is not None:
+                if decl.type in ("lexical_declaration", "variable_declaration"):
+                    for d in decl.named_children:
+                        n = d.child_by_field_name("name")
+                        if n is not None:
+                            names.add(self._node_text(n))
+                else:
+                    n = decl.child_by_field_name("name")
+                    if n is not None:
+                        names.add(self._node_text(n).split("<", 1)[0])
+            for c in node.named_children:
+                if c.type == "export_clause":
+                    for spec in c.named_children:
+                        n = spec.child_by_field_name("name")
+                        if n is not None:
+                            names.add(self._node_text(n))
+                elif c.type == "identifier":                       # export default X
+                    names.add(self._node_text(c))
+            if "*" in self._node_text(node).split("from", 1)[0]:
+                names.add("*")
+        text = self._node_text(root)
+        for m in self._CJS_EXPORT.finditer(text):
+            names.add(m.group(1) or m.group(2))
+        for m in self._CJS_OBJECT.finditer(text):
+            for part in m.group(1).split(","):
+                key = part.split(":", 1)[-1].strip().split("(", 1)[0].strip()
+                if re.fullmatch(r'[A-Za-z_$][\w$]*', key or ""):
+                    names.add(key)
+                k0 = part.split(":", 1)[0].strip()
+                if re.fullmatch(r'[A-Za-z_$][\w$]*', k0 or ""):
+                    names.add(k0)
+        return names
 
     def _extract_module_functions(self, root) -> List[Dict]:
         """
