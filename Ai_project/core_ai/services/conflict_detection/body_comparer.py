@@ -38,6 +38,22 @@ _NOT_CALLS = {"if", "for", "while", "switch", "catch", "function", "return", "ty
               "super", "new", "await", "yield", "print", "assert", "lambda", "not", "and", "or", "in", "def"}
 
 
+_DECL = re.compile(r'\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)'          # JS / TS
+                   r'|\bcatch\s*\(\s*([A-Za-z_$][\w$]*)'
+                   r'|^([A-Za-z_]\w*)\s*(?::[^=]+)?=(?!=)'                # Python: x = ...
+                   r'|^for\s+([A-Za-z_]\w*)\s+in\b'
+                   r'|\bas\s+([A-Za-z_]\w*)\s*:?\s*$')
+
+
+def _locals(lines: List[str], m: MethodDetail) -> List[str]:
+    """معاملات الدالة + الأسماء يلي انعرّفت جوا الجسم. أي اسم تاني (دالة أو ثابت من برّا) مش محلي."""
+    names = {p.name for p in (m.parameters or []) if p.name and p.name.isidentifier()}
+    for l in lines:
+        for match in _DECL.finditer(l):
+            names.update(g for g in match.groups() if g)
+    return sorted(names)
+
+
 def _normalize_lines(body: Optional[str]) -> List[str]:
     """أسطر بدون تعليقات ومسافات زيادة، وبدون أسطر فاضية."""
     out = []
@@ -131,7 +147,8 @@ class BodyComparer:
         return BodyChange(status="changed", lines_added=len(added), lines_removed=len(removed),
                           diff=diff[:MAX_DIFF_CHARS], truncated=a.body_truncated or b.body_truncated
                           or len(diff) > MAX_DIFF_CHARS,
-                          signals=_signals(old, new, removed, added), **base)
+                          signals=_signals(old, new, removed, added),
+                          old_locals=_locals(old, a), new_locals=_locals(new, b), **base)
 
     @staticmethod
     def compare_diagrams(a: UnifiedClassDiagram, b: UnifiedClassDiagram,

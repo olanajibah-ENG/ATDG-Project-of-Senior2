@@ -42,6 +42,7 @@ class LLMClient:
     MAX_TOKENS_BY_MODEL: Dict[str, int] = {"cohere/north-mini-code:free": 16000}
     transport_retries: int = 3          # أخطاء شبكة / 429 / 5xx فقط — نفس الموديل
     offline: bool = False               # True → أي استدعاء بيفشل (لتشغيل الأجزاء الحتمية بس)
+    daily_limit_hit: bool = False       # True بعد أول رفض "free-models-per-day" → الباقي بيفشل فوراً
 
     _current_sample: Optional[str] = None
     _calls: List[Dict[str, Any]] = []
@@ -118,6 +119,10 @@ class LLMClient:
         if cls.offline:
             record.update(ok=False, error="offline mode")
             raise LLMCallError("offline mode")
+        if cls.daily_limit_hit:
+            # خلص الحد اليومي: ما في داعي ننطر ونعيد — كل طلب رح ينرفض لبكرا
+            record.update(ok=False, error="daily free limit reached (skipped)")
+            raise LLMCallError("daily free limit reached")
 
         api_key = os.environ.get("OPENROUTER_API_KEY")
         if not api_key:
@@ -147,6 +152,10 @@ class LLMClient:
         for attempt in range(1, cls.transport_retries + 1):
             try:
                 resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=180)
+                if resp.status_code == 429 and "free-models-per-day" in resp.text:
+                    cls.daily_limit_hit = True
+                    record.update(ok=False, error=f"HTTP 429 daily limit: {resp.text[:200]}")
+                    raise LLMCallError("daily free limit reached")
                 if resp.status_code == 429 or resp.status_code >= 500:
                     last_error = f"HTTP {resp.status_code}: {resp.text[:300]}"
                     time.sleep(10 * attempt)

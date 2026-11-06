@@ -131,7 +131,8 @@ def run_commit(system: str, commit: Dict[str, Any]) -> Dict[str, Any]:
         r = runner("code_vs_code", p)
         items = (r.get("structural_conflicts") or []) + (r.get("semantic_conflicts") or [])
         llm_calls += r.get("llm_call_count", 0)
-        bodies = [{k: b.get(k) for k in ("class_name", "member", "status", "lines_added", "lines_removed", "signals")}
+        bodies = [{k: b.get(k) for k in ("class_name", "member", "status", "lines_added", "lines_removed", "signals",
+                                    "decision", "trivial_reason", "priority")}
                   for b in (r.get("body_changes") or [])]
         files.append({"file": p["id"].split(":", 1)[1], "status": r["status"], "error": r.get("error"),
                       "conflicts": _brief(items), "bodies": bodies,
@@ -166,6 +167,7 @@ def score(results: List[Dict[str, Any]]) -> Dict[str, Any]:
             "recall_by_category": {c: {"found": a, "total": b, "recall": div(a, b)}
                                    for c, (a, b) in sorted(by_cat.items(), key=lambda x: -x[1][1])},
             "body_analysis": body_analysis(checked),
+            "classification": classification_analysis(checked),
             "file_errors": sum(r["files_error"] for r in results),
             "llm_calls": sum(r["llm_calls"] for r in results)}
 
@@ -199,6 +201,47 @@ def body_analysis(checked: List[Dict[str, Any]]) -> Dict[str, Any]:
                                                 "max": counts[-1]},
                   "signals": {s: round(sum(any(s in b["signals"] for b in c) for c in rows) / n, 3)
                               for s in SIGNALS}}
+    return out
+
+
+SEND = {"behavioral_candidate", "structural_and_behavioral"}
+
+
+def classification_analysis(checked: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    الخطوة 9 (ما بتطلّع تنبيهات): شو بتعمل للخطوة 11.
+    - with_candidate: نسبة التعديلات يلي ضل فيها دالة وحدة على الأقل لازم تنبعت (behavioral_candidate /
+      structural_and_behavioral). بالسليم: كل ما قلّت أحسن (توفير). بالبيكسر السلوكي: السقف الجديد.
+    - trivial: كم دالة انفلترت كتغيير تافه، وليش.
+    - auc_max_priority: هل أعلى درجة أهمية بالتعديل بتفرّق بيكسر عن سليم (0.5 = عشوائي).
+    """
+    if not checked or "bodies" not in (checked[0]["files"] or [{}])[0]:
+        return {}
+    group = lambda r: ("clean" if r["label"] == "clean" else
+                       "behavioral" if set(r["categories"]) <= {"change_behavior"} else "structural")
+    out, maxp = {}, defaultdict(list)
+    trivial = Counter()
+    for g in ("behavioral", "structural", "clean"):
+        rows = [r for r in checked if group(r) == g]
+        if not rows:
+            continue
+        cands, decisions = [], Counter()
+        for r in rows:
+            bodies = [b for f in r["files"] for b in f.get("bodies", [])]
+            send = [b for b in bodies if b.get("decision") in SEND]
+            cands.append(len(send))
+            maxp[g].append(max((b.get("priority") or 0 for b in send), default=0.0))
+            decisions.update(b.get("decision") for b in bodies)
+            trivial.update(b["trivial_reason"] for b in bodies if b.get("trivial_reason"))
+        n = len(rows)
+        out[g] = {"commits": n, "with_candidate": round(sum(c > 0 for c in cands) / n, 3),
+                  "candidates_per_commit_mean": round(sum(cands) / n, 2), "decisions": dict(decisions)}
+    out["trivial_filtered"] = dict(trivial)
+    pos = maxp["behavioral"] + maxp["structural"]
+    neg = maxp["clean"]
+    if pos and neg:
+        wins = sum((p > q) + 0.5 * (p == q) for p in pos for q in neg)
+        out["auc_max_priority"] = round(wins / (len(pos) * len(neg)), 3)
     return out
 
 

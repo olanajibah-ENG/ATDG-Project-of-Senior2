@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خطة الخطوة 9</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1f2328; --muted:#57606a; --card:#f6f8fa; --accent:#1f5fa8; --ok:#1a7f37; --okbg:#e9f6ef;
+          --bad:#b3261e; --warn:#8a5a00; --warnbg:#fff6e0; --border:#d0d7de; --code:#f4f6f8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+          --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; } }
+  :root[data-theme="dark"] { --bg:#0d1117; --fg:#e6edf3; --muted:#8d96a0; --card:#161b22; --accent:#4493f8; --ok:#3fb950; --okbg:#12261b;
+          --bad:#f85149; --warn:#d29922; --warnbg:#2b2111; --border:#30363d; --code:#1b222c; }
+  body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",Tahoma,Arial,sans-serif; line-height:1.9; margin:0; padding:24px 16px; }
+  main { max-width:880px; margin:auto; }
+  h1 { font-size:1.5rem; margin-bottom:4px; } h2 { font-size:1.2rem; color:var(--accent); margin-top:2.2em; border-bottom:2px solid var(--accent); padding-bottom:4px; }
+  h3 { font-size:1.05rem; margin:1.4em 0 .3em; }
+  .sub { color:var(--muted); }
+  .wrap { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 14px; font-size:.95rem; }
+  th, td { border:1px solid var(--border); padding:7px 9px; text-align:right; vertical-align:top; }
+  th { background:var(--card); }
+  code { font-family:Consolas,monospace; direction:ltr; unicode-bidi:isolate; background:var(--code); padding:0 4px; border-radius:3px; font-size:.9em; }
+  pre { direction:ltr; text-align:left; background:var(--code); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-family:Consolas,monospace; font-size:.85rem; white-space:pre-wrap; margin:6px 0; }
+  .box { border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:12px 0; }
+  .ok { background:var(--okbg); } .warn { background:var(--warnbg); } .info { background:var(--card); }
+  .flow { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; margin:10px 0; }
+  .step { flex:1 1 140px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:8px; font-size:.9rem; }
+  .step b { display:block; color:var(--accent); }
+  .now { border:2px solid var(--accent); }
+  .arrow { align-self:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>الخطوة 9: تصنيف التغيير لكل دالة</h1>
+<p class="sub">بـ Code vs Code. منجمع نتيجة الخطوة 7 (التوقيع) والخطوة 8 (الجسم) بقرار واحد لكل دالة: شو نوع التغيير، وهل بيستاهل نبعته للذكاء الاصطناعي.</p>
+
+<div class="flow">
+  <div class="step"><b>7 (خلصت)</b>التوقيع: شو تغيّر برّا الدالة</div><div class="arrow">←</div>
+  <div class="step"><b>8 (خلصت)</b>الجسم: الفرق والإشارات</div><div class="arrow">←</div>
+  <div class="step now"><b>9 (هلق)</b>قرار واحد لكل دالة، وفلترة التغييرات التافهة، وترتيب حسب الأهمية</div><div class="arrow">←</div>
+  <div class="step"><b>10</b>قديش خطير</div><div class="arrow">←</div>
+  <div class="step"><b>11</b>الذكاء الاصطناعي بس على يلي بيستاهل</div>
+</div>
+
+<h2>1. ليش منحتاجها</h2>
+<p>من الخطوة 8 عرفنا 3 أشياء:</p>
+<ul>
+  <li><b>تغيّر الجسم لحاله ما بيفرّق:</b> 58% من التعديلات السليمة كمان فيها جسم تغيّر.</li>
+  <li><b>كل تعديل فيه دالة لـ 6 دوال جسمها تغيّر</b>، والحد المجاني 50 طلب باليوم.</li>
+  <li><b>الإشارات بتساعد بس مش قوية لحالها.</b></li>
+</ul>
+<p>فقبل ما نبعت شي للذكاء الاصطناعي بالخطوة 11، لازم نعرف <b>لكل دالة</b>: شو نوع التغيير؟ هل هو تافه وما بيستاهل؟ وإذا بيستاهل، قديش مهم بالنسبة لغيره؟ هاد شغل الخطوة 9.</p>
+
+<h2>2. القرار لكل دالة (4 أنواع)</h2>
+<p>الأنواع موجودة أصلاً من الخطوة 2 (<code>ChangeDecision</code>)، ومبنية على فكرة الخطة: الشي يلي بنعرف نقرّره بدون ذكاء اصطناعي، ما منبعته.</p>
+<div class="wrap"><table>
+  <tr><th>التوقيع تغيّر؟ (الخطوة 7)</th><th>الجسم تغيّر؟ (الخطوة 8)</th><th>القرار</th><th>شو منعمل بالخطوة 11</th></tr>
+  <tr><td>لا</td><td>لا</td><td><code>no_change</code></td><td>ولا شي</td></tr>
+  <tr><td>أي</td><td>لا</td><td><code>structural_only</code></td><td>ولا شي: الخطوة 7 قرّرت لحالها</td></tr>
+  <tr><td>أي</td><td>أي</td><td><code>structural_and_behavioral</code></td><td>منبعته، لأنه في كمان تغيير بالشغل</td></tr>
+  <tr><td>لا</td><td>أي</td><td><code>behavioral_candidate</code></td><td>منبعته، وهون المحل الوحيد يلي ممكن نكشف فيه التغيير السلوكي</td></tr>
+</table></div>
+<p>الدوال يلي انحذفت أو انضافت أو تغيّر اسمها بتاخد <code>structural_only</code>، لأنه الخطوة 7 بتحكم عليهن.</p>
+
+<h2>3. فلترة التغييرات التافهة</h2>
+<p>في تغييرات بتغيّر الجسم بس ما بتغيّر شو الدالة بتعمل لمين عم يستعملها. هدول بيصيروا <code>no_change</code> (مع سبب)، وما منبعتهن:</p>
+<div class="wrap"><table>
+  <tr><th>النوع</th><th>مثال</th></tr>
+  <tr><td>تسجيل وطباعة بس (logging)</td><td><code>console.log(...)</code>، <code>logger.debug(...)</code>، <code>print(...)</code></td></tr>
+  <tr><td>نص رسالة الخطأ بس</td><td><code>throw new Error("bad id")</code> صارت <code>throw new Error("invalid id")</code></td></tr>
+  <tr><td>تغيير اسم متغيّر محلي بس</td><td><code>const r = f(x); return r</code> صارت <code>const res = f(x); return res</code></td></tr>
+</table></div>
+<p class="sub">بتطلع من شكل الأسطر يلي تغيّرت: إذا <b>كل</b> سطر تغيّر هو من هالأنواع، فالتغيير تافه. وإذا في ولو سطر واحد تاني، بيضل التغيير.</p>
+
+<h2>4. ترتيب حسب الأهمية</h2>
+<p>لكل دالة بتنبعت، منحسب <b>درجة أهمية</b> من الإشارات تبع الخطوة 8. الوزن لكل إشارة هو <b>قديش بتظهر أكتر بالتعديلات يلي بتكسر من السليمة</b>، محسوب على قسم التطوير بس:</p>
+<div class="wrap"><table>
+  <tr><th>الإشارة</th><th>بيكسر</th><th>سليم</th><th>تقريباً الوزن</th></tr>
+  <tr><td>قراءة الخيارات تغيّرت</td><td>0.26</td><td>0.16</td><td>1.6</td></tr>
+  <tr><td>استدعاء انشال</td><td>0.36</td><td>0.20</td><td>1.8</td></tr>
+  <tr><td><code>throw</code> انشال</td><td>0.07</td><td>0.00</td><td>عالي (بس قليل)</td></tr>
+  <tr><td>شرط تغيّر</td><td>0.51</td><td>0.45</td><td>1.1</td></tr>
+  <tr><td>...</td><td colspan="3">الباقي بنفس الطريقة</td></tr>
+</table></div>
+<p>وبيزيد الوزن كمان كل ما كبر التغيير (عدد الأسطر). الترتيب بيفيد بالخطوة 11: إذا التعديل فيه 10 دوال، منبعت الأهم أول ضمن حجم الطلب.</p>
+<div class="box warn"><b>ملاحظة على الأوزان:</b> محسوبة على قسم التطوير، وبتنكتب ثابتة بالكود مع مصدرها. ما منحسبها على قسم الاختبار أبداً، لحتى ما نغش بالقياس.</div>
+
+<h2>5. وين بتنحفظ النتيجة</h2>
+<ul>
+  <li>كل نتيجة جسم من الخطوة 8 (<code>BodyChange</code>) بتاخد 3 حقول جداد: <code>decision</code> (القرار)، و <code>trivial_reason</code> (إذا تافه، ليش)، و <code>priority</code> (درجة الأهمية).</li>
+  <li>تنبيهات التوقيع من الخطوة 7 بتاخد كمان <code>decision</code>: <code>structural_only</code> أو <code>structural_and_behavioral</code>. الحقل موجود أصلاً بـ <code>ConflictItem</code> من الخطوة 2.</li>
+  <li>ولسا <b>ما في تنبيهات جديدة</b>، والواجهة ما بتتغيّر.</li>
+</ul>
+
+<h2>6. الملفات</h2>
+<div class="wrap"><table>
+  <tr><th>الملف</th><th>شو بيتغيّر</th></tr>
+  <tr><td><code>change_classifier.py</code> (جديد)</td><td>القرار، وفلترة التافه، والدرجة</td></tr>
+  <tr><td><code>schemas.py</code></td><td>الحقول الجديدة بـ <code>BodyChange</code></td></tr>
+  <tr><td><code>orchestrator.py</code></td><td>بيشغّل التصنيف بعد الخطوتين 7 و 8</td></tr>
+  <tr><td><code>tests/test_change_classifier.py</code> (جديد)</td><td>الأنواع الأربعة، وكل نوع تغيير تافه، وإنه سطر واحد مهم بيمنع اعتباره تافه، والترتيب. وتقرير md</td></tr>
+  <tr><td><code>evaluate_npm.py</code></td><td>تحليل التصنيف (القسم 7)</td></tr>
+</table></div>
+
+<h2>7. كيف منقيسها</h2>
+<p>متل الخطوة 8، هي ما بتطلّع تنبيهات، فمنقيس على كل NPM (ببلاش) شو بتعمل للخطوة 11:</p>
+<ol>
+  <li><b>قديش منوفّر:</b> كم تعديل سليم ما بيضل فيه ولا دالة لازم تنبعت، بعد فلترة التافه؟ كل واحد منهم يعني طلب أقل، وفرصة أقل لإنذار كاذب.</li>
+  <li><b>قديش منخسر:</b> من التعديلات السلوكية يلي بتكسر، كم واحد ضل فيه ولا دالة بعد الفلترة؟ هاد السقف الجديد، وكان 0.70. لازم ما ينزل كتير.</li>
+  <li><b>هل الترتيب بيفيد:</b> إذا بعتنا أعلى دالة وحدة بس من كل تعديل، كم تعديل بيكسر بنكون بعتنا الدالة الصح فيه؟ (مقارنة مع ترتيب عشوائي.)</li>
+</ol>
+<div class="box info"><b>صراحة:</b> متل الخطوة 8، الخطوة 9 لحالها <b>ما رح تغيّر</b> أرقام الكشف ولا الإنذارات الكاذبة. فايدتها بتبيّن بالخطوة 11: طلبات أقل، وتركيز على الدوال يلي بتستاهل.</div>
+
+<div class="box ok"><b>بدي منك:</b> موافقة على الخطوة 9 متل ما هي، أو إذا في نوع تغيير تافه تاني بدك نضيفه للفلترة.</div>
+</main>
+</body>
+</html>

@@ -4,6 +4,7 @@ from .schemas import ConflictAnalysisResult
 from .ast_unifier import ASTUnifier
 from .structural_diff import StructuralDiff
 from .body_comparer import BodyComparer
+from .change_classifier import ChangeClassifier
 from .semantic_analyzer import SemanticAnalyzer
 from .code_doc_consistency import CodeDocConsistencyChecker
 from .report_generator import ReportGenerator
@@ -27,6 +28,8 @@ class ConflictOrchestrator:
         renames = {(c.class_name, c.old_value): c.new_value
                    for c in structural if c.category == "method_renamed" and c.old_value and c.new_value}
         body_changes = BodyComparer.compare_diagrams(diagram_a, diagram_b, renames)
+        # الخطوة 9: قرار لكل دالة (توقيع × جسم)، وفلترة التافه، ودرجة أهمية للخطوة 11
+        ChangeClassifier.classify_all(structural, body_changes)
         semantic   = SemanticAnalyzer().analyze(
             diagram_a.model_dump(), diagram_b.model_dump()
         )

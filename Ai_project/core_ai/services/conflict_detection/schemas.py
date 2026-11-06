@@ -247,6 +247,13 @@ class BodyChange(BaseModel):
     diff:           str = ""                     # الفرق بعد شيل التعليقات والمسافات
     truncated:      bool = False                 # جسم أطول من الحد → الفرق ناقص (البصمة كاملة)
     signals:        List[str] = Field(default_factory=list)
+    # الخطوة 9 (change_classifier): القرار لهالدالة، وإذا التغيير تافه ليش، ودرجة الأهمية للخطوة 11
+    decision:       Optional[str] = None         # ChangeDecision
+    trivial_reason: Optional[str] = None         # logging_only | message_only | local_rename_only
+    priority:       float = 0.0
+    # الأسماء المحلية (معاملات الدالة + يلي انعرّف جوا الجسم) بكل نسخة، لفلترة "اسم متغيّر محلي بس"
+    old_locals:     List[str] = Field(default_factory=list)
+    new_locals:     List[str] = Field(default_factory=list)
 
 
 class ConflictAnalysisResult(BaseModel):
