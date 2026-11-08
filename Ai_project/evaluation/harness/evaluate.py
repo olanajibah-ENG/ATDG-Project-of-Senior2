@@ -120,6 +120,7 @@ def run_current_sample(mode: str, s: Dict[str, Any]) -> Dict[str, Any]:
             out["structural_conflicts"] = dump(res.structural_conflicts)
             out["semantic_conflicts"] = dump(res.semantic_conflicts)
             out["body_changes"] = dump(getattr(res, "body_changes", []))      # الخطوة 8
+            out["behavior_analysis"] = getattr(res, "behavior_analysis", None)  # الخطوة 11
         out["status"] = "ok"
     except Exception as exc:
         out["status"] = "error"

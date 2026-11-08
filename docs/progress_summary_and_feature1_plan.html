@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>ملخص التقدّم وخطة الميزة 1</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm 15mm 14mm; }
+  :root {
+    --ink: #1c2430; --muted: #5a6573; --line: #d9dee5; --navy: #16233f; --accent: #1f5fa8; --violet: #5b3fa0;
+    --accent-bg: #eef4fb; --ok: #1e7d4f; --ok-bg: #e9f6ef; --warn-bg: #fff6e0; --code-bg: #f4f6f8;
+    --unit: #1565c0; --edge: #ef6c00; --integ: #2e7d32; --fail-bg: #fde8ea; --pass-bg: #edf6ea;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: var(--ink); background: #fff; font-size: 9.8pt; line-height: 1.6; margin: 0; }
+  h1 { font-size: 19pt; color: var(--navy); margin: 0; line-height: 1.35; }
+  .sub { color: var(--muted); font-size: 9.5pt; }
+  .cover { border-bottom: 3px solid var(--navy); padding-bottom: 8px; margin-bottom: 12px; }
+  .band { color: #fff; font-weight: 700; font-size: 13pt; padding: 6px 12px; border-radius: 6px; margin: 16px 0 8px; page-break-after: avoid; }
+  .band.navy { background: var(--navy); } .band.violet { background: var(--violet); } .band.green { background: #1e6b45; }
+  h3 { font-size: 11pt; color: var(--accent); margin: 12px 0 5px; page-break-after: avoid; }
+  p { margin: 4px 0; }
+  ul { margin: 4px 0; padding-right: 20px; padding-left: 0; }
+  li { margin: 1px 0; }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  code { font-family: Consolas, monospace; font-size: 8.6pt; background: var(--code-bg); padding: 0 3px; border-radius: 3px; direction: ltr; unicode-bidi: isolate; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; font-size: 8.8pt; }
+  tr { page-break-inside: avoid; }
+  th, td { border-bottom: 1px solid var(--line); padding: 4px 6px; vertical-align: top; text-align: right; }
+  th { background: var(--accent-bg); font-weight: 600; border-bottom: 1px solid #c8d4e3; }
+  td.n { text-align: center; font-variant-numeric: tabular-nums; }
+  tr.hl td { background: #f3f8f4; }
+  tr.ref td { color: var(--muted); }
+  .badge { display: inline-block; background: #2e8b57; color: #fff; font-size: 7.5pt; border-radius: 8px; padding: 0 6px; }
+  .note { border-right: 3px solid var(--accent); background: #f7f9fc; padding: 6px 10px; margin: 6px 0; font-size: 9pt; page-break-inside: avoid; }
+  .note p { margin: 3px 0; }
+  .small { font-size: 8.5pt; color: var(--muted); }
+  .pb { page-break-before: always; }
+
+  /* ── Feature 1 (English, LTR) ── */
+  .f1 { direction: ltr; text-align: left; font-size: 9.2pt; }
+  .f1 h2 { font-size: 15pt; color: var(--accent); text-align: center; margin: 0; }
+  .f1 .tag { text-align: center; color: var(--muted); font-size: 9pt; margin-bottom: 8px; }
+  .flow { display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
+  .box { border: 1px solid #394556; border-radius: 3px; padding: 5px 10px; text-align: center; font-weight: 700; color: #1b2a5c; background: #e3f0fb; font-size: 9pt; }
+  .box small { display: block; font-weight: 400; color: #455066; font-size: 8pt; }
+  .box.grey { background: #eceff1; } .box.purple { background: #f1e6f5; } .box.cyan { background: #e2f4f6; } .box.sand { background: #fff1de; }
+  .box.final { background: #2e7d32; color: #fff; } .box.final small { color: #e6f3e7; }
+  .box.new { border: 2px dashed var(--accent); }
+  .arrow { text-align: center; color: #5b6676; font-size: 8pt; line-height: 1; }
+  .split { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid #394556; }
+  .split > div { text-align: center; font-size: 8pt; }
+  .split .h { color: #fff; font-weight: 700; padding: 4px; font-size: 9pt; }
+  .split .b { padding: 4px; }
+  .u .h { background: var(--unit); } .u .b { background: #e3f0fb; }
+  .e .h { background: var(--edge); } .e .b { background: #fff1de; }
+  .i .h { background: var(--integ); } .i .b { background: #e8f3e7; }
+  .fp { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #394556; font-size: 8.5pt; }
+  .fp > div { padding: 5px 8px; }
+  .fp .fail { background: var(--fail-bg); } .fp .pass { background: var(--pass-bg); }
+  .f1 table th, .f1 table td { text-align: left; }
+  .added { border: 1px solid #b9cde6; background: #f4f8fd; border-radius: 6px; padding: 6px 10px; margin-top: 8px; page-break-inside: avoid; }
+  .added h4 { margin: 0 0 3px; font-size: 10pt; color: var(--accent); }
+  .added ul { padding-left: 18px; padding-right: 0; }
+  .legend { font-size: 8pt; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>ملخص التقدّم: دقة الشرح المنطقي، وكشف التناقضات، وخطة الميزة 1</h1>
+  <div class="sub">2026-11-08 · AutoTest &amp; DocGen Manager</div>
+</div>
+
+<div class="band navy">أولاً: دقة الشرح المنطقي</div>
+<h3>الأوراق المعتمدة</h3>
+<table>
+  <tr><th style="width:17%">الورقة</th><th style="width:26%">الطريقة</th><th style="width:27%">البيانات</th><th>الاستخدام في المشروع</th></tr>
+  <tr><td>ClassEval<br><span class="small">ICSE 2024</span></td><td>معيار مبني يدويًا لتوليد الكلاسات</td><td>100 كلاس، 412 method</td><td>مرجع للتقييم على مستوى الكلاس</td></tr>
+  <tr class="hl"><td><b>ETF</b> <span class="badge">البيانات المستخدمة</span><br><span class="small">ACL 2025</span></td><td>التحليل الساكن يستخرج الكيانات، والـ LLM يتحقق من كل كيان في الشرح</td><td><b>CodeSumEval:</b> 411 شرحًا من 7 نماذج، مقسّمة إلى 9,933 عينة على مستوى الكيان (Java)</td><td>اعتمدنا البروتوكول والبيانات، وقسنا على <b>120 حالة</b> منها</td></tr>
+  <tr><td>CodeExp<br><span class="small">EMNLP 2022</span></td><td>دراسة بشرية لمعايير جودة الشرح</td><td>13K زوج موسوم يدويًا</td><td>تعريف معايير جودة الشرح</td></tr>
+  <tr><td>Beyond Function Level<br><span class="small">LLM4Code @ ICSE 2025</span></td><td>شرح على مستوى الكلاس والمستودع</td><td>ClassEval 400، و CodeSearchNet 806</td><td>توسيع التقييم لمستوى الملف والمشروع</td></tr>
+</table>
+<h3>النتائج الحالية</h3>
+<table>
+  <tr><th>الوكيل</th><th class="n">عدد الحالات</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">F1</th><th class="n">نسبة الهلوسة</th><th class="n">F1 ≥ 0.70</th></tr>
+  <tr><td><b>LowLevel</b></td><td class="n">120</td><td class="n">0.901</td><td class="n">0.922</td><td class="n"><b>0.904</b></td><td class="n">0.100</td><td class="n">117 / 120</td></tr>
+  <tr><td><b>HighLevel</b></td><td class="n">120</td><td class="n">0.889</td><td class="n">0.721</td><td class="n"><b>0.768</b></td><td class="n">0.111</td><td class="n">88 / 120</td></tr>
+</table>
+<div class="note"><p>LowLevel يتفوق أساسًا في الـ Recall (يذكر معظم الكيانات الصحيحة)، و HighLevel يحافظ على الـ Precision لكنه يُغفل بعض الكيانات. نسبة الهلوسة قرابة 10% في الحالتين. للمرجعية: ورقة ETF تذكر F1 ≈ 0.73 لأداتها في <b>كشف الهلوسة</b>، وهو مقياس لمهمة مختلفة عن جودة الشرح، لذا لا يُقارن به مباشرة.</p>
+<p><b>الخطوة التالية:</b> إدخال ملخص Graph مستخرج من التحليل الساكن في prompt الشرح لتقليل العلاقات المخترعة، مع إعادة القياس على نفس الـ 120 حالة قبل وبعد، وبنفس الموديل.</p></div>
+
+<div class="band violet">ثانيًا: كشف التناقضات</div>
+<h3>الأوراق المعتمدة</h3>
+<table>
+  <tr><th style="width:17%">الورقة</th><th style="width:12%">القسم</th><th style="width:33%">الطريقة</th><th>الاستخدام في المشروع</th></tr>
+  <tr><td>DocPrism<br><span class="small">ISSTA 2026</span></td><td>Code vs Doc</td><td>تصنيف محلي لأنواع التناقض وفلترة خارجية (LCEF)</td><td>المنهجية التي بُني عليها الكاشف</td></tr>
+  <tr class="hl"><td><b>CASCADE</b> <span class="badge">بيانات القياس</span><br><span class="small">FSE 2026</span></td><td>Code vs Doc</td><td>tests من التوثيق تُشغَّل على الكود الأصلي وعلى كود مولَّد</td><td>بيانات القياس (71 متناقض + 71 مصحّح) ومقياس PFP</td></tr>
+  <tr><td>METAMON<br><span class="small">LLM4Code 2025</span></td><td>Code vs Doc</td><td>أسئلة معكوسة للـ LLM للتحقق من ثبات الحكم</td><td>فكرة درجة الثقة</td></tr>
+  <tr><td>C4RLLaMA</td><td>Code vs Doc</td><td>نموذج مدرَّب يكشف ويصحّح</td><td>تبرير القياس على بيانات حقيقية فقط</td></tr>
+  <tr><td>AexPy<br><span class="small">ISSRE 2022</span></td><td>Code vs Code</td><td>نموذج API وقواعد تصنيف خطورة التغيير</td><td>قواعد مقارنة التوقيعات والأعضاء الخاصة</td></tr>
+  <tr><td>Safer Builders<br><span class="small">MSR 2026</span></td><td>Code vs Code</td><td>كشف التغييرات من الـ diff بأنماط AexPy</td><td>فكرة التحليل على مستوى الـ diff</td></tr>
+  <tr class="hl"><td><b>NPM Breaking Changes</b> <span class="badge">بيانات القياس</span><br><span class="small">TOSEM 2025</span></td><td>Code vs Code</td><td>دراسة وتصنيف للتغييرات التي تكسر الكود في JS/TS</td><td>بيانات القياس (1,519 commit موسومة يدويًا) والتصنيف</td></tr>
+</table>
+
+<h3>كيف طبّقنا ورقة NPM</h3>
+<table>
+  <tr><th style="width:42%">ما تقوله الورقة</th><th>ما طبّقناه</th></tr>
+  <tr><td>1,519 commit موسومة يدويًا كتغييرات تكسر الكود</td><td>اعتمادها كمرجع صحيح: تنزيل الكود قبل وبعد لـ 1,460 commit، وتقسيمها 20% تطوير و 80% اختبار</td></tr>
+  <tr><td>الوسم على مستوى الـ commit</td><td>القياس على مستوى الـ commit كاملًا</td></tr>
+  <tr><td>البيانات تحتوي تغييرات تكسر الكود فقط</td><td>إضافة 338 commit سليمًا من نفس المشاريع لقياس الإنذارات الكاذبة (ليست موسومة من مؤلفي الورقة)</td></tr>
+  <tr><td>أنواع بنيوية خاصة بـ JS/TS (حذف export، تغيير المعاملات)</td><td>قراءة معاملات TypeScript كاملة، وقراءة الـ export في كل ملف، وقواعد مقارنة التوقيعات</td></tr>
+  <tr><td>ثلثا التغييرات سلوكية (تغيير الإرجاع، معالجة الأخطاء، القيم الافتراضية، الخيارات)</td><td>مقارنة أجسام الدوال، و 8 إشارات سلوكية مرتبطة بأنواع الورقة، وتصنيف كل دالة، وتحليل بالذكاء الاصطناعي للدوال المرشّحة فقط</td></tr>
+  <tr><td>الدوال خارج الكلاسات منتشرة في JavaScript</td><td>دعم الدوال المستقلة في التحليل</td></tr>
+</table>
+
+<h3>النتائج الحالية</h3>
+<table>
+  <tr><th style="width:12%">القسم</th><th style="width:22%">البيانات وعددها</th><th style="width:13%">المرحلة</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">Specificity</th><th class="n">F1</th><th class="n">PFP</th></tr>
+  <tr><td rowspan="3">Code vs Doc</td><td rowspan="2">CASCADE تطوير<br>25 زوجًا = 50 حالة</td><td>النظام الأصلي</td><td class="n">0.50</td><td class="n">0.68</td><td class="n">0.32</td><td class="n">0.58</td><td class="n">0.00</td></tr>
+  <tr class="hl"><td><b>بعد التحسينات</b></td><td class="n"><b>0.58</b></td><td class="n"><b>0.44</b></td><td class="n"><b>0.68</b></td><td class="n"><b>0.50</b></td><td class="n"><b>0.55</b></td></tr>
+  <tr class="ref"><td>أداة CASCADE (الورقة)، 71 زوجًا</td><td>مرجع</td><td class="n">0.88</td><td class="n">0.21</td><td class="n">0.97</td><td class="n">—</td><td class="n">—</td></tr>
+  <tr><td rowspan="4">Code vs Code</td><td rowspan="2">NPM اختبار<br>1,321 commit<br>(1,097 تكسر + 224 سليم)</td><td>النظام الأصلي</td><td class="n">0.91</td><td class="n">0.22</td><td class="n">0.89</td><td class="n">0.36</td><td class="n">—</td></tr>
+  <tr class="hl"><td><b>بعد التحسينات</b></td><td class="n"><b>0.92</b></td><td class="n"><b>0.38</b></td><td class="n"><b>0.83</b></td><td class="n"><b>0.54</b></td><td class="n">—</td></tr>
+  <tr><td rowspan="2">NPM تطوير<br>315 commit<br>(266 تكسر + 49 سليم)</td><td>النظام الأصلي</td><td class="n">0.85</td><td class="n">0.19</td><td class="n">0.82</td><td class="n">0.31</td><td class="n">—</td></tr>
+  <tr class="hl"><td><b>بعد التحسينات</b></td><td class="n"><b>0.86</b></td><td class="n"><b>0.35</b></td><td class="n"><b>0.69</b></td><td class="n"><b>0.50</b></td><td class="n">—</td></tr>
+</table>
+<div class="note">
+  <p><b>المصطلحات:</b> «النظام الأصلي» هو كود المشروع كما كان قبل التحسينات (نسخة مجمّدة لا تُعدَّل)، و«بعد التحسينات» هو نفس المشروع بعد خطواتنا، وكلاهما مقيس على نفس البيانات.</p>
+  <p><b>Code vs Doc:</b> الكاشف بعد التحسينات يلتقط ضعف ما تلتقطه أداة CASCADE تقريبًا (0.44 مقابل 0.21)، وفي 55% من الحالات المكتشفة يختفي التنبيه بعد أن صحّح المطوّرون التوثيق (PFP)، أي أن التنبيهات فعلًا عن التناقض. أما النظام الأصلي فكان PFP = 0.00، أي أن «كشفه» كان بالصدفة.</p>
+  <p><b>ملاحظة على الموديل:</b> أرقام Code vs Doc بعد التحسينات قيست بموديل <span class="ltr">poolside/laguna-s-2.1</span>، وهذا الموديل لم يعد متاحًا. القياس الكامل على الـ 142 حالة جارٍ الآن بموديل جديد (<span class="ltr">cohere/north-mini-code</span>)، وسيصبح هو الأساس الجديد، لذا قد تتغير هذه الأرقام.</p>
+  <p><b>Code vs Code:</b> ارتفع الكشف في بيانات الاختبار من 0.22 إلى 0.38 (173 تغييرًا إضافيًا). الـ Precision مرتفعة لأن 83% من العينات تكسر الكود، فالمؤشر الأدق للإنذارات الكاذبة هو الـ Specificity.</p>
+  <p><b>الخطوة التالية (11):</b> تحليل بالذكاء الاصطناعي لأجسام الدوال المرشّحة فقط، لكشف التغييرات السلوكية. الكود والاختبارات جاهزة (201 اختبار ناجح)، والقياس على عينة من بيانات التطوير بعد انتهاء قياس CASCADE.</p>
+  <p class="small">للمرجعية فقط، ليس للمقارنة: ورقة NPM دراسة تجريبية وليست أداة كشف. رقمها الأقرب هو نسبة ما كشفه تشغيل tests المطوّرين أنفسهم (regression testing): من 2,724 commit مرشّح، كُشف 2,206 (81%)، أي أن 19% لم تكشفها الـ tests. هذه طريقة ديناميكية تحتاج تشغيل المشروع، وعلى عينة أوسع من الـ 1,519، ولا تذكر الورقة Precision أو Specificity. وتشير الورقة إلى أن التغييرات السلوكية تمثّل 68.1% من الحالات (1,034 من 1,519)، وأن الأدوات الحالية لا تكشف منها إلا ما يرتبط بالأنواع.</p>
+</div>
+
+<!-- ───────────────────────── Feature 1 ───────────────────────── -->
+<div class="pb"></div>
+<div class="band green">ثالثًا: الميزة 1 — توليد tests موثوقة (خطة التنفيذ)</div>
+<div class="f1">
+  <h2>Feature 1 — Final Testing Pipeline</h2>
+  <div class="tag">Generate Trusted Tests · Unit · Edge · Integration · Python + pytest (MVP)</div>
+  <div class="flow">
+    <div class="box">1 · Source code (Python)</div><div class="arrow">▼</div>
+    <div class="box">2 · Static analysis (Python ast)</div><div class="arrow">▼</div>
+    <div class="box new">3 · Dependency graph (unit-level edges + file imports)<small>one shared graph format for the whole project — the same graph the logical-explanation module uses</small></div><div class="arrow">▼</div>
+    <div class="box grey">4 · Unit inventory + skip list (reason · continue batch)</div><div class="arrow">▼</div>
+    <div class="box purple">5 · Context builder → focal DTO (never full repo)</div>
+    <div class="arrow">▼ split by prompt level</div>
+    <div class="split">
+      <div class="u"><div class="h">UNIT</div><div class="b">One function / method<br>signature · body · neighbors</div></div>
+      <div class="e"><div class="h">EDGE</div><div class="b">Unit + branch hints<br>boundaries · exceptions</div></div>
+      <div class="i"><div class="h">INTEGRATION</div><div class="b">Group depth ≤ 2 · ≤ 4 units<br>in-process · externals mocked/skipped</div></div>
+    </div>
+    <div class="arrow">▼ merge · shared path</div>
+    <div class="box cyan">6 · Static validation (syntax · imports · safety lint)</div><div class="arrow">▼</div>
+    <div class="box cyan">7 · Assemble test files</div><div class="arrow">▼</div>
+    <div class="box sand new">8 · Sandbox: install pinned dependencies (allowlist, network, no secrets) → pytest (no network + limits)</div><div class="arrow">▼</div>
+    <div class="box grey">9 · Classify per test</div><div class="arrow">▼</div>
+    <div class="fp">
+      <div class="fail"><b>FAIL</b><br>Repair ≤ 3 (test + error message)<br>→ back to validation → assemble → sandbox</div>
+      <div class="pass"><b>PASS</b><br>Keep as candidate for acceptance</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="box new" style="background:#e8f3e7">10 · Accept: re-run kept tests 3× in a fresh sandbox · ready only if all 3 pass (otherwise flaky) · coverage on final all-pass run</div><div class="arrow">▼</div>
+    <div class="box final">11 · Output: ready files (download) + coverage · bound to code version</div>
+  </div>
+  <div class="legend">Dashed boxes: refinements added to the earlier version of this plan.</div>
+
+  <table>
+    <tr><th style="width:20%">Status</th><th>Meaning</th></tr>
+    <tr><td><b>ready</b></td><td>Clean isolated pass on this version, stable over 3 re-runs → downloadable</td></tr>
+    <tr><td>skipped</td><td>Not analyzable + reason; batch continues</td></tr>
+    <tr><td>generation_failed</td><td>Invalid after repair budget, or collection/import/name/fixture errors</td></tr>
+    <tr><td>environment_error</td><td>Install / timeout / resources — not a logic result</td></tr>
+    <tr><td>flaky</td><td>Passed, then failed on a re-run — not delivered</td></tr>
+    <tr><td>test_failed</td><td>Assertions failed after repairs — possible bug or wrong expectation</td></tr>
+  </table>
+
+  <div class="added">
+    <h4>Evaluation plan (on published benchmark data, like the other two modules)</h4>
+    <ul>
+      <li><b>Data:</b> the CoverUp paper's replication package (FSE 2025, Apache-2.0): <code>github.com/plasma-umass/coverup-eval</code>, with the CM and PY suites (from CodaMosa) and the MT suite (from MuTAP), plus the published results and comparison scripts. Running the CM / PY suites needs Linux with Docker.</li>
+      <li><b>Metrics:</b> share of generated tests that reach <code>ready</code>; line + branch coverage of the ready tests; share of <code>flaky</code> and <code>test_failed</code>; mutation score on a sample (MuTAP).</li>
+      <li><b>Comparison:</b> CoverUp reports a per-module median line + branch coverage of 80% vs CodaMosa 47%, and 89% vs MuTAP 77%. Their main results used GPT-4o; we use a free model, so the comparison is against the published numbers with that difference stated. Temperature 0 and recorded calls, as in our other measurements.</li>
+    </ul>
+  </div>
+  <div class="added">
+    <h4>Request budget (free tier: 50 LLM requests per day)</h4>
+    <ul>
+      <li>Each unit costs 1 generation request + up to 3 repair requests, so at worst 4 requests per unit (about 12 units per day).</li>
+      <li>To fit the budget: generate the unit, edge and integration tests of one unit in a single request where possible, cache identical requests, and measure on a fixed sample first.</li>
+    </ul>
+  </div>
+  <p class="small" style="margin-top:6px">Trusted = executable, isolated, deterministic on the analyzed version — not a semantic correctness proof. Integration is in-process and bounded; not whole-system E2E. MVP language: Python + pytest.</p>
+</div>
+</body>
+</html>

@@ -1,4 +1,5 @@
 # core_ai/services/conflict_detection/orchestrator.py
+import os
 from typing import Dict, Any, Optional
 from .schemas import ConflictAnalysisResult
 from .ast_unifier import ASTUnifier
@@ -6,7 +7,7 @@ from .structural_diff import StructuralDiff
 from .body_comparer import BodyComparer
 from .change_classifier import ChangeClassifier
 from .risk_classifier import RiskClassifier
-from .semantic_analyzer import SemanticAnalyzer
+from .behavior_analyzer import DEFAULT_THRESHOLD as BEHAVIOR_THRESHOLD, BehaviorAnalyzer
 from .code_doc_consistency import CodeDocConsistencyChecker
 from .report_generator import ReportGenerator
 
@@ -33,9 +34,15 @@ class ConflictOrchestrator:
         ChangeClassifier.classify_all(structural, body_changes)
         # الخطوة 10: مستوى خطر لكل تنبيه (الأعضاء الخاصين = معلومة، متل AexPy)
         RiskClassifier.classify(structural, diagram_a)
-        semantic   = SemanticAnalyzer().analyze(
-            diagram_a.model_dump(), diagram_b.model_dump()
-        )
+        # الخطوة 11: الذكاء الاصطناعي بس على الدوال المرشّحة (بدل SemanticAnalyzer القديم يلي كان
+        # يبعت أسماء الدوال بس، بطلب بكل مقارنة). ما في مرشّحين → ولا طلب.
+        # BEHAVIOR_LLM_ENABLED=0 بيوقّفه، و BEHAVIOR_CONFIDENCE_THRESHOLD للعتبة.
+        semantic, behavior_stats = [], None
+        if os.environ.get("BEHAVIOR_LLM_ENABLED", "1").strip().lower() not in ("0", "false", "no", "off"):
+            analyzer = BehaviorAnalyzer(threshold=float(os.environ.get("BEHAVIOR_CONFIDENCE_THRESHOLD",
+                                                                       BEHAVIOR_THRESHOLD)))
+            semantic = analyzer.analyze(diagram_a, diagram_b, body_changes, structural)
+            behavior_stats = analyzer.stats.model_dump()
 
         version_a = str(analysis_a.get("_id", "version_a"))
         version_b = str(analysis_b.get("_id", "version_b"))
@@ -51,6 +58,7 @@ class ConflictOrchestrator:
             metadata=metadata
         )
         result.body_changes = body_changes
+        result.behavior_analysis = behavior_stats
         return result
 
     @staticmethod

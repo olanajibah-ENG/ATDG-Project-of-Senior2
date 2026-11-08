@@ -280,6 +280,7 @@ class ConflictAnalysisResult(BaseModel):
     semantic_conflicts:   List[ConflictItem] = Field(default_factory=list)
     doc_conflicts:        List[ConflictItem] = Field(default_factory=list)
     body_changes:         List[BodyChange]   = Field(default_factory=list)   # Code vs Code (الخطوة 8)
+    behavior_analysis:    Optional[Dict[str, Any]] = None                    # إحصائيات الخطوة 11
 
     conflicts: Optional[Dict[str, List[ConflictItem]]] = None
 

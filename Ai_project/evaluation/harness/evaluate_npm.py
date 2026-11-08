@@ -136,6 +136,7 @@ def run_commit(system: str, commit: Dict[str, Any]) -> Dict[str, Any]:
                   for b in (r.get("body_changes") or [])]
         files.append({"file": p["id"].split(":", 1)[1], "status": r["status"], "error": r.get("error"),
                       "conflicts": _brief(items), "bodies": bodies,
+                      "behavior": {k: v for k, v in (r.get("behavior_analysis") or {}).items() if k != "hidden"} or None,
                       "flagged": any(i.get("type") in FLAG_TYPES for i in items)})
     ok = [f for f in files if f["status"] == "ok"]
     return {"id": commit["id"], "label": commit["label"], "categories": commit["categories"],
@@ -245,6 +246,27 @@ def classification_analysis(checked: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
+def step11_sample(commits: List[Dict[str, Any]], n_breaking: int) -> List[Dict[str, Any]]:
+    """
+    الذكاء الاصطناعي بس بيزيد تنبيهات: التعديل يلي انكشف بالخطوات 7-10 بيضل منكشف. فمنقيس على يلي
+    **ما انكشفوا** بآخر قياس offline على كل NPM، وفيهم دالة مرشّحة وحدة على الأقل (الخطوة 9).
+    كل السليمة منهم (لحتى نقيس الإنذارات الكاذبة صح) + n_breaking عشوائي من يلي بتكسر.
+    """
+    last = sorted(RESULTS.glob("npm_all__current__*.json"))[-1]
+    prev = {r["id"]: r for r in json.loads(last.read_text(encoding="utf-8"))["results"]}
+    def eligible(c):
+        r = prev.get(c["id"])
+        return (r is not None and r["checked"] and not r["flagged"]
+                and any(b.get("decision") in SEND for f in r["files"] for b in f.get("bodies", [])))
+    pool = [c for c in commits if eligible(c)]
+    clean = [c for c in pool if c["label"] == "clean"]
+    breaking = sorted((c for c in pool if c["label"] == "breaking"), key=lambda c: c["id"])
+    random.Random(SEED).shuffle(breaking)
+    print(f"step11 sample from {last.name}: {len(clean)} clean + {min(n_breaking, len(breaking))} "
+          f"of {len(breaking)} breaking", flush=True)
+    return sorted(clean + breaking[:n_breaking], key=lambda c: c["id"])
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", choices=["dev", "test", "all"], default="dev")
@@ -252,6 +274,9 @@ def main() -> None:
     ap.add_argument("--model", help="بدونه: offline (الفحص البنيوي بس)")
     ap.add_argument("--limit", type=int, help="أول N تعديل بس (بعد ترتيب ثابت) — لقياس الـ LLM بحد الطلبات")
     ap.add_argument("--max-files", type=int, default=0, help="مع --limit: تعديلات فيها هالعدد ملفات أو أقل")
+    ap.add_argument("--step11-sample", type=int, default=0,
+                    help="عينة الخطوة 11: من التعديلات يلي ما انكشفت بآخر قياس offline وفيها دوال مرشّحة، "
+                         "كل السليمة + هالعدد من يلي بتكسر (seed 42)")
     ap.add_argument("--stage", default="")
     ap.add_argument("--no-replay", action="store_true")
     args = ap.parse_args()
@@ -261,6 +286,8 @@ def main() -> None:
     commits = [c for c in commits if args.split == "all" or split.get(c["id"]) == args.split]
     if args.max_files:
         commits = [c for c in commits if 0 < len(file_pairs(c)) <= args.max_files]
+    if args.step11_sample:
+        commits = step11_sample(commits, args.step11_sample)
     if args.limit:
         rng = random.Random(SEED)
         pos = [c for c in commits if c["label"] == "breaking"]; neg = [c for c in commits if c["label"] == "clean"]
@@ -280,7 +307,8 @@ def main() -> None:
 
     RESULTS.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    set_name = f"npm_{args.split}" + (f"_limit{args.limit}" if args.limit else "")
+    set_name = (f"npm_{args.split}" + (f"_limit{args.limit}" if args.limit else "")
+                + (f"_step11sample{args.step11_sample}" if args.step11_sample else ""))
     rows = []
     for system in args.systems.split(","):
         results = []

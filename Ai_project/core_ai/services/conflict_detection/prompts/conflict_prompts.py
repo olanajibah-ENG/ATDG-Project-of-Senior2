@@ -192,3 +192,63 @@ CODE_DOC_CLASS_ITEM = """ITEM id={item_id}  (the class itself)
 [DOCUMENTATION]
 {doc}
 [/DOCUMENTATION]"""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Code vs Code — الخطوة 11: هل تغيير الجسم بيكسر يلي عم يستدعي الدالة؟
+# بينبعت بس للدوال المرشّحة من الخطوة 9، مع الكود قبل وبعد والفرق. SEMANTIC_PROMPT القديم ما انلمس.
+# ─────────────────────────────────────────────────────────────────────────────
+BEHAVIOR_SYSTEM = """You are a senior software engineer reviewing changes to a library's code for backward compatibility.
+You only report what you can verify from the given code. Respond with valid JSON only, no markdown."""
+
+BEHAVIOR_PROMPT = """The following {language} functions changed between two versions of a library.
+Each ITEM shows one function BEFORE and AFTER the change, the line-level DIFF, any change to
+its signature, and automatic HINTS (patterns seen in the changed lines; they may be wrong).
+
+{items}
+
+For EACH item answer independently:
+
+1. before / after: one sentence each on what the function does for its caller.
+2. observable_change: does the change alter anything a CALLER can observe — the returned value or
+   its shape, the exceptions/errors thrown, default values, how options/arguments are handled,
+   side effects the caller relies on, or sync vs async results? Refactoring, renaming local
+   variables, logging, performance and internal restructuring are NOT observable.
+3. change_type: one of "change_return", "change_default", "option_handling", "error_handling",
+   "other" (only if observable_change is true).
+4. breaking: would EXISTING callers that worked before now get a different result, an error, or
+   need to change their code? A new optional feature that does not affect existing calls is not
+   breaking.
+5. evidence: copy "old_snippet" from BEFORE and "new_snippet" from AFTER EXACTLY (verbatim).
+   One of them may be empty if the line was only added or only removed.
+6. confidence: 0.0 to 1.0 that your "breaking" answer is correct.
+
+Return ONLY this JSON:
+{{
+  "results": [
+    {{
+      "id": "<item id>",
+      "before": "...",
+      "after": "...",
+      "observable_change": false,
+      "change_type": "other",
+      "breaking": false,
+      "explanation": "...",
+      "old_snippet": "...",
+      "new_snippet": "...",
+      "confidence": 0.0
+    }}
+  ]
+}}"""
+
+BEHAVIOR_ITEM = """ITEM id={item_id}
+{signature}HINTS: {hints}
+[BEFORE]
+{before}
+[/BEFORE]
+[AFTER]
+{after}
+[/AFTER]
+[DIFF]
+{diff}
+[/DIFF]"""
