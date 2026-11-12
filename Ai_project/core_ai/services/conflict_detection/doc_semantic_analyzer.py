@@ -91,6 +91,29 @@ def code_quote_ok(snippet: Optional[str], lines: Optional[list], item: CodeDocIt
 # قراءة الجواب
 # ─────────────────────────────────────────────────────────────────────
 
+_STRAY_PREFIX = re.compile(r'^(\s*)[A-Za-z_][^"{}\[\]]*?(?=")')
+_LITERAL_LINE = re.compile(r'(true|false|null)\b')
+
+
+def repair_json(text: str) -> str:
+    """
+    إصلاح كلام الموديل يلي بيدخل بنص الـ JSON (موديلات "بتفكّر" متل cohere/north-mini-code):
+      - سطر تفكير كامل برّا الـ JSON  ("probably missing a comma? ...")  → بينشال
+      - كلمة قبل اسم حقل               ('probably: "conflicting": [')    → '"conflicting": ['
+      - فاصلة زيادة قبل ] أو }
+    ما بيخترع ولا قيمة: بيشيل بس نص ما إله مكان بـ JSON.
+    """
+    out = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped and stripped[0].isalpha() and not _LITERAL_LINE.match(stripped):
+            if '"' not in stripped:
+                continue
+            line = _STRAY_PREFIX.sub(r"\1", line)
+        out.append(line)
+    return re.sub(r",\s*([}\]])", r"\1", "\n".join(out))
+
+
 def parse_response(raw: Optional[str]) -> Dict:
     if not raw or not isinstance(raw, str) or not raw.strip():
         raise ValueError("empty response")
@@ -98,7 +121,13 @@ def parse_response(raw: Optional[str]) -> Dict:
     match = re.search(r"\{.*\}", clean, re.DOTALL)
     if not match:
         raise ValueError(f"no JSON object in response: {clean[:120]}")
-    data = json.loads(match.group())
+    try:
+        data = json.loads(match.group())
+    except json.JSONDecodeError as first_error:
+        try:
+            data = json.loads(repair_json(match.group()))
+        except json.JSONDecodeError:
+            raise first_error
     if not isinstance(data.get("results"), list):
         raise ValueError("JSON has no 'results' list")
     return data

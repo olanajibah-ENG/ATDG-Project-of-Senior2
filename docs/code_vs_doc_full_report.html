@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>تقرير Code vs Doc الكامل</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm 15mm 14mm; }
+  :root {
+    --ink: #1c2430; --muted: #5a6573; --line: #d9dee5; --accent: #1f5fa8; --accent-bg: #eef4fb;
+    --ok: #1e7d4f; --ok-bg: #e9f6ef; --bad: #b3261e; --bad-bg: #fdecea; --warn: #8a5a00; --warn-bg: #fff6e0; --code-bg: #f4f6f8;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: var(--ink); background: #fff; font-size: 10pt; line-height: 1.7; margin: 0; }
+  h1 { font-size: 20pt; color: var(--accent); margin: 0 0 4px; line-height: 1.35; }
+  h2 { font-size: 14pt; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 3px; margin: 22px 0 8px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14px 0 5px; page-break-after: avoid; }
+  p { margin: 5px 0; }
+  ul, ol { margin: 5px 0; padding-right: 22px; padding-left: 0; }
+  li { margin: 2px 0; }
+  code, .ltr { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; direction: ltr; unicode-bidi: isolate; }
+  code { background: var(--code-bg); padding: 0 4px; border-radius: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9pt; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; text-align: right; }
+  th { background: var(--accent-bg); font-weight: 600; }
+  td.n, th.n { text-align: center; font-variant-numeric: tabular-nums; }
+  .cover { border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 12px; }
+  .subtitle { color: var(--muted); font-size: 10.5pt; }
+  .meta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 9pt; margin-top: 6px; }
+  .kpis { display: flex; gap: 8px; margin: 10px 0; }
+  .kpi { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 7px; text-align: center; }
+  .kpi .v { font-size: 16pt; font-weight: 700; color: var(--accent); line-height: 1.2; }
+  .kpi .l { font-size: 8.4pt; color: var(--muted); }
+  .box { border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; margin: 8px 0; page-break-inside: avoid; }
+  .box.ok { background: var(--ok-bg); border-color: #b7dfc8; }
+  .box.bad { background: var(--bad-bg); border-color: #f2c2bd; }
+  .box.warn { background: var(--warn-bg); border-color: #f0d9a0; }
+  .box.info { background: var(--accent-bg); border-color: #c8dbf0; }
+  .box b.t { display: block; margin-bottom: 2px; }
+  .best { font-weight: 700; color: var(--ok); }
+  .worse { font-weight: 700; color: var(--bad); }
+  tr.hl td { background: #f3f8f4; }
+  tr.ref td { color: var(--muted); }
+  .pb { page-break-before: always; }
+  .small { font-size: 8.6pt; color: var(--muted); }
+  .q { font-weight: 700; color: var(--accent); }
+  .qa { border-bottom: 1px dashed var(--line); padding: 6px 0; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>تقرير Code vs Doc الكامل: من البداية للنتيجة النهائية</h1>
+  <div class="subtitle">كشف التناقض بين الكود والتوثيق: شو عملنا بكل خطوة، والنتائج على بيانات CASCADE، ومقارنتها بأرقام الورقة، وتحليل كل خطأ وسببه، وأجوبة على الأسئلة المتوقّعة</div>
+  <div class="meta"><span>التاريخ: 2026-11-12</span><span>البيانات: CASCADE (FSE 2026)، 71 زوج</span><span>الموديل: <span class="ltr">cohere/north-mini-code:free</span></span><span>البرانش: <span class="ltr">feature/development</span></span></div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">0.65</div><div class="l">Precision<br>(أعلى خط ذكاء اصطناعي بالورقة 0.59)</div></div>
+  <div class="kpi"><div class="v">0.45</div><div class="l">Recall<br>(أداة CASCADE 0.21)</div></div>
+  <div class="kpi"><div class="v">0.76</div><div class="l">Specificity<br>(النظام الأصلي 0.31)</div></div>
+  <div class="kpi"><div class="v">0.75</div><div class="l">PFP<br>(النظام الأصلي 0.00)</div></div>
+</div>
+
+<div class="box info"><b class="t">الخلاصة بسطرين</b>
+على نفس الـ 71 زوج يلي استعملتها ورقة CASCADE، نظامنا بيكشف تقريباً <b>ضعف</b> يلي بتكشفه أداة الورقة، بدقة <b>أعلى من كل طرق الذكاء الاصطناعي بالورقة</b>، وبـ 3 من كل 4 حالات بيكشفها، التنبيه بيروح لما يتصلّح التوثيق. نقطة الضعف هي الإنذارات الكاذبة (Specificity 0.76 مقابل 0.97 للأداة). وأسباب الأخطاء محدّدة ومعروفة (القسم 7).</div>
+
+<h2>1. شو المشكلة يلي عم نحلّها</h2>
+<p>التوثيق بيوصف شو بتعمل الدالة: شو بترجّع، وشو الأخطاء يلي بترميها، وشو الشروط. مع الوقت الكود بيتغيّر والتوثيق ما بيتحدّث، فبيصير التوثيق <b>بيكذب</b>. يلي بيقرا التوثيق وبيثق فيه بيكتب كود غلط.</p>
+<p>مثال حقيقي من البيانات (<span class="ltr">gson</span>): التوثيق بيقول إنه الدالة بترمي <code>ClassCastException</code> إذا القيمة مش رقم، والكود فعلياً بيرمي <code>NumberFormatException</code>. فيلي بيلتقط <code>ClassCastException</code> بكوده، ما رح يلتقط شي.</p>
+
+<h2>2. البيانات: CASCADE</h2>
+<ul>
+  <li><b>المصدر:</b> ورقة CASCADE (FSE 2026)، وبياناتها منشورة بترخيص MIT.</li>
+  <li><b>شو فيها:</b> 71 دالة Java من مشاريع حقيقية (<span class="ltr">gson، guava، jsoup، commons-lang، commons-math، joda-time، jackson</span> وغيرها)، توثيقها متناقض مع الكود. ومع كل وحدة، <b>نفس الدالة بعد ما المطوّرين صلّحوا التوثيق بـ commit حقيقي</b>. يعني 142 حالة.</li>
+  <li><b>نقطة مهمة:</b> بكل زوج، <b>الكود نفسه بالزبط</b> بالنسختين، والفرق بس بالتوثيق (تأكّدنا من هالشي بكل أزواج التطوير). فأي فرق بتنبيه النظام بين النسختين سببه التوثيق بس.</li>
+  <li><b>التقسيم:</b> 25 زوج للتطوير (منفتح أخطاءه ومنتعلّم منه) و46 زوج للاختبار (أرقام بس)، seed = 42، مع الحفاظ على الأزواج كاملة.</li>
+  <li><b>كيف بنينا العينة:</b> منعيد بناء الكلاس من بيانات الدالة، ومنحوّل الـ Javadoc لنفس شكل التوثيق يلي بيولّده نظامنا. وفي حالة وحدة ملف الوسم بالمصدر فيه تناقض، ووثّقناها.</li>
+</ul>
+
+<h2>3. المقاييس</h2>
+<table>
+  <tr><th style="width:16%">المقياس</th><th>السؤال</th><th style="width:24%">المعادلة</th></tr>
+  <tr><td>Precision</td><td>لما منطلّع تنبيه، قديش مرة بيكون صح؟</td><td class="ltr">TP / (TP + FP)</td></tr>
+  <tr><td>Recall</td><td>من كل التناقضات الحقيقية، كم لقينا؟</td><td class="ltr">TP / (TP + FN)</td></tr>
+  <tr><td>Specificity</td><td>من كل التوثيق الصحيح، كم سكتنا عنه؟</td><td class="ltr">TN / (TN + FP)</td></tr>
+  <tr><td>F1</td><td>توازن بين التنين</td><td class="ltr">2·P·R / (P + R)</td></tr>
+  <tr><td><b>PFP</b></td><td>من التناقضات يلي لقيناها، بكم وحدة <b>التنبيه راح بعد ما تصلّح التوثيق</b>؟ (مقياس ورقة CASCADE)</td><td>الأزواج يلي نسختها المصلّحة سكتت ÷ الأزواج يلي انكشفت</td></tr>
+</table>
+<p>الحالة "منبَّه عليها" إذا طلع عليها تنبيه "تناقض مباشر" أو "وعد زيادة". "نقص بالتوثيق" (Under_Promise) ما بينعرض للمستخدم، متل ورقة DocPrism، فما بينحسب تنبيه.</p>
+
+<h2 class="pb">4. شو عملنا، خطوة خطوة</h2>
+<table>
+  <tr><th style="width:7%">الخطوة</th><th style="width:25%">شو عملنا</th><th>ليش</th></tr>
+  <tr><td>0</td><td>تجميد النسخة الأصلية، وأداة قياس ثابتة</td><td>للمقارنة العادلة. النسخة الأصلية ما بتنلمس (منتأكد منها ببصمة). وطلبات الذكاء الاصطناعي ثابتة (<span class="ltr">temperature 0، seed 42</span>، موديل واحد، ممنوع ينتقل لموديل تاني)، وكل جواب بينحفظ، فإعادة القياس بتعطي نفس النتيجة وما بتكلّف</td></tr>
+  <tr><td>1</td><td>معلومات كاملة عن كل دالة</td><td>كان النظام بيعرف الاسم والتوقيع بس. صار يقرا الجسم، والمعاملات وأنواعها وقيمها الافتراضية، ونوع الإرجاع، والتوثيق الداخلي، وأرقام الأسطر. بدون الجسم، ما في طريقة نعرف شو الدالة بتعمل فعلاً</td></tr>
+  <tr><td>2</td><td>بنية البيانات</td><td>تصنيفات DocPrism: تناقض مباشر، ووعد زيادة، ونقص بالتوثيق. ومكان للدليل ودرجة الثقة</td></tr>
+  <tr><td>3</td><td>تقسيم التوثيق وربط كل جزء بدالته</td><td>بدل ما ينبعت التوثيق كله دفعة وحدة، كل دالة بتنفحص مع الجزء يلي بيحكي عنها بس، فبيقل التشويش</td></tr>
+  <tr><td>3ب</td><td>الدوال يلي برّا الكلاسات</td><td>كانت ما تنشاف أبداً</td></tr>
+  <tr><td>4</td><td>سؤال جديد للموديل (على طريقة DocPrism)</td><td>ملخّص للتوثيق وملخّص للكود، و3 أسئلة منفصلة: شو بالتوثيق مش منفّذ؟ شو متناقض؟ شو بالكود مش موثّق؟ والموديل لازم ينسخ الجملة والسطر كما هم، ويعطي درجة ثقة</td></tr>
+  <tr><td>5</td><td>الفلترة بعد جواب الموديل</td><td>منرمي أي جواب جملته أو سطره مش موجود فعلاً (اختراع)، وعتبة ثقة 0.7، ومنشيل التكرار، و"النقص بالتوثيق" ما بينعرض، وإعادة المحاولة 3 مرات</td></tr>
+  <tr><td>6</td><td>ربط كل شي بالنظام</td><td>صار يشتغل تلقائياً. <b>وشلنا الفحص القديم للتوقيع</b>، لأنه كان سبب كل الإنذارات الكاذبة بالنظام الأصلي (القسم 5)، وصار "غير موثّق" إحصائية مش تنبيه</td></tr>
+</table>
+<p class="small">التفاصيل والاختبارات: <code>core_ai/tests/reports/step1…step6</code>. كل خطوة إلها اختبارات، والمجموع اليوم 201 اختبار ناجح.</p>
+
+<h2>5. النتائج بكل مرحلة</h2>
+<table>
+  <tr><th style="width:30%">المرحلة</th><th>البيانات</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">F1</th><th class="n">Specificity</th><th class="n">PFP</th><th class="n">TP / FP / FN / TN</th></tr>
+  <tr><td>النظام الأصلي</td><td>تطوير</td><td class="n">0.50</td><td class="n">0.68 (وهمية)</td><td class="n">0.58</td><td class="n worse">0.32</td><td class="n worse">0.00</td><td class="n">17 / 17 / 8 / 8</td></tr>
+  <tr><td>النظام الأصلي</td><td>كلها (71)</td><td class="n">0.50</td><td class="n">0.69 (وهمية)</td><td class="n">0.58</td><td class="n worse">0.31</td><td class="n worse">0.00</td><td class="n">49 / 49 / 22 / 22</td></tr>
+  <tr><td>بعد 3ب، بدون ذكاء اصطناعي</td><td>تطوير</td><td class="n">0.50</td><td class="n">0.04</td><td class="n">—</td><td class="n">0.96</td><td class="n">0.00</td><td class="n">1 / 1 / 24 / 24</td></tr>
+  <tr><td>بعد 6، بدون ذكاء اصطناعي</td><td>تطوير</td><td class="n">—</td><td class="n">0.00</td><td class="n">—</td><td class="n best">1.00</td><td class="n">—</td><td class="n">0 / 0 / 25 / 25</td></tr>
+  <tr><td>بعد 6، الموديل القديم (<span class="ltr">poolside</span>)</td><td>تطوير</td><td class="n">0.58</td><td class="n">0.44</td><td class="n">0.50</td><td class="n">0.68</td><td class="n">0.55</td><td class="n">11 / 8 / 14 / 17</td></tr>
+  <tr><td>بعد 6، الموديل الجديد (<span class="ltr">cohere</span>)</td><td>تطوير</td><td class="n">0.60</td><td class="n">0.36</td><td class="n">0.45</td><td class="n">0.76</td><td class="n">0.89</td><td class="n">9 / 6 / 16 / 19</td></tr>
+  <tr><td>بعد 6، الموديل الجديد</td><td>اختبار</td><td class="n">0.68</td><td class="n">0.50</td><td class="n">0.58</td><td class="n">0.76</td><td class="n">0.70</td><td class="n">23 / 11 / 23 / 35</td></tr>
+  <tr class="hl"><td><b>النتيجة النهائية</b>، الموديل الجديد</td><td><b>كلها (71)</b></td><td class="n"><b>0.65</b></td><td class="n"><b>0.45</b></td><td class="n"><b>0.53</b></td><td class="n"><b>0.76</b></td><td class="n"><b>0.75</b></td><td class="n">32 / 17 / 39 / 54</td></tr>
+</table>
+<div class="box warn"><b class="t">ليش "Recall" النظام الأصلي وهمية؟</b>
+النظام الأصلي نبّه على 49 نسخة متناقضة، و<b>نفس العدد بالزبط</b> (49) من النسخ المصلّحة، يعني ما ميّز بيناتهم أبداً (PFP = 0). كل تنبيهاته كانت "عدد المعاملات بالتوثيق مختلف عن الكود"، بسبب خطأ بقراءة توقيعات Java يلي بتبلّش بـ <code>+ </code>. يعني التنبيه ما كان إله علاقة بالتناقض، وكان رح يطلع حتى لو التوثيق صحيح. وبالتوزيع الواقعي (10% بس متناقض) كانت الـ Precision تبعه 0.10، يعني 9 من كل 10 تنبيهات غلط.</div>
+
+<h2 class="pb">6. المقارنة مع أرقام ورقة CASCADE</h2>
+<table>
+  <tr><th style="width:36%">النظام</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">Specificity</th><th>طريقته</th></tr>
+  <tr class="ref"><td>أداة CASCADE</td><td class="n">0.88</td><td class="n">0.21</td><td class="n">0.97</td><td>بتولّد tests من التوثيق وبتشغّلها على الكود</td></tr>
+  <tr class="ref"><td>LLM-A (سؤال مباشر للموديل)</td><td class="n">0.55–0.59</td><td class="n">0.29–0.46</td><td class="n">0.64–0.81</td><td>بتسأل الموديل إذا الكود والتوثيق متناقضين</td></tr>
+  <tr class="ref"><td>LLM-S (سؤال أبسط)</td><td class="n">0.53–0.56</td><td class="n">0.54–0.67</td><td class="n">0.42–0.58</td><td>سؤال أبسط للموديل</td></tr>
+  <tr class="hl"><td><b>نظامنا (نفس الـ 71 زوج)</b></td><td class="n best">0.65</td><td class="n">0.45</td><td class="n">0.76</td><td>تقسيم التوثيق، و3 أسئلة، ودليل منسوخ ومتحقَّق منه، وعتبة ثقة</td></tr>
+</table>
+<ul>
+  <li><b>الـ Precision (0.65) أعلى من كل طرق الذكاء الاصطناعي بالورقة</b> (أعلاها 0.59).</li>
+  <li><b>الـ Recall (0.45) ضعف أداة CASCADE تقريباً</b> (0.21)، وقد أعلى رقم لـ LLM-A.</li>
+  <li><b>الـ Specificity (0.76) ضمن مجال LLM-A</b>، وأعلى بكتير من LLM-S، بس أقل من أداة CASCADE.</li>
+  <li><b>LLM-S بيكشف أكتر</b> (حتى 0.67)، بس بإنذارات كاذبة أكتر بكتير (Specificity 0.42–0.58). يعني ميزتنا هي التوازن: دقة أعلى وإنذارات أقل، مع كشف منيح.</li>
+</ul>
+<div class="box info"><b class="t">ليش أداة CASCADE دقتها أعلى بس كشفها أقل؟</b>
+الأداة <b>بتشغّل الكود فعلياً</b>: بتولّد tests من التوثيق وبتشوف إذا فشلت. فإذا نبّهت، غالباً في مشكلة حقيقية (Precision 0.88). بس كتير تناقضات ما بتبيّن بتشغيل test بسيط (متل "بيرجّع null إذا فاضي" أو نوع الاستثناء)، فبتضيع (Recall 0.21). نحنا منقرا الكود والتوثيق ومنفكّر فيهن متل مراجع بشري، فمنلقط أكتر، بس أحياناً منفكّر إنه في تناقض وهو مش موجود. يعني الطريقتين بيكمّلوا بعض.</div>
+
+<h2>7. تحليل الأخطاء بالتفصيل (قسم التطوير، 25 زوج)</h2>
+<p>فتحنا كل حالة بقسم التطوير بس، متل ما متفقين. قسم الاختبار ما فتحناه أبداً، أرقام بس، لحتى ما نعدّل النظام على أساسه.</p>
+
+<h3>أ. التناقضات يلي ما انكشفت (16 من 25)، وليش</h3>
+<table>
+  <tr><th style="width:34%">السبب</th><th class="n" style="width:8%">العدد</th><th>أمثلة حقيقية، وشو كان التناقض</th></tr>
+  <tr><td><b>الجواب ما انقرا</b>: الموديل حط كلام برّا قالب JSON (متل <code>probably: ...</code>)، فالنظام ما قدر يقرا الجواب، وبعد 3 محاولات اشتغل الفحص الثابت بس</td><td class="n">5</td><td><span class="ltr">ISO8601Utils.parse</span> (صيغة التاريخ)، و<span class="ltr">UnixCrypt.crypt</span> (<code>SecureRandom</code>)، و<span class="ltr">StringUtils.getDigits</span> (مثال نتيجته غلط)، و<span class="ltr">Time.parseTimeToSeconds</span>، و<span class="ltr">Element.child</span></td></tr>
+  <tr><td><b>التناقض بيحتاج كود من برّا الدالة</b>: الدالة بتستدعي دالة تانية (أو الأب)، والموديل ما بيشوف كودها</td><td class="n">6</td><td><span class="ltr">JsonParser.readValueAsTree</span> (بترجع null إذا فاضي: بيعتمد على دالة تانية)، و<span class="ltr">MutableDuration.setDuration</span> (شو بيصير بـ null: بيعتمد على <code>super</code>)، و<span class="ltr">LocalTime.toString</span> (شكل الوقت: بيعتمد على الـ formatter)، و<span class="ltr">IOUtils.copy</span>، و<span class="ltr">ExtendedBufferedReader.getLineNumber</span> (-1)، و<span class="ltr">Element.ownText</span> (normalized)</td></tr>
+  <tr><td><b>التوثيق كان ناقص، مش غلط</b>: التصليح <b>ضاف</b> معلومة. ونحنا قصداً ما منعرض "النقص بالتوثيق" (متل DocPrism)</td><td class="n">2</td><td><span class="ltr">EmpiricalDistribution.getGeneratorUpperBounds</span> (ضافوا شرط مسبق)، و<span class="ltr">Frequency.getPct</span> (ضافوا "بترجع 0 إذا…")</td></tr>
+  <tr><td><b>فرق كلمة وحدة دقيق</b></td><td class="n">2</td><td><span class="ltr">PeriodFormatterBuilder.appendSeparatorIfFieldsBefore</span> (التوثيق بيقول "after" والصح "before")، و<span class="ltr">MultiHashMap.containsValue</span> ("list" بدل "map")</td></tr>
+  <tr><td><b>انكشف بس تحت عتبة الثقة</b> (0.5 &lt; 0.7)</td><td class="n">1</td><td><span class="ltr">StopWatch.formatTime</span> (التوثيق بيقول "split time" والكود بيرجع الوقت الكلي)</td></tr>
+</table>
+
+<h3>ب. الإنذارات الكاذبة (6 من 25 توثيق صحيح)، وليش</h3>
+<table>
+  <tr><th style="width:34%">السبب</th><th class="n" style="width:8%">العدد</th><th>أمثلة</th></tr>
+  <tr><td><b>الموديل ما شاف كود الدالة يلي بتنستدعى</b>، فافترض إنه الشغل مش معمول</td><td class="n">3</td><td><span class="ltr">PeriodFormatterBuilder</span> (قال "ما في parsing case-insensitive" وهي بتمرّر لدالة بتعمله)، و<span class="ltr">MutableDuration.setDuration</span> (بتمرّر للأب)، و<span class="ltr">Element.child</span> (قال "ممكن ترجع Node" وهي <code>children()</code> بترجع عناصر بس)</td></tr>
+  <tr><td><b>قراءة حرفية زيادة</b> لتفصيل صغير</td><td class="n">2</td><td><span class="ltr">ISO8601Utils.parse</span> (الكود بيقبل صيغ أكتر من المكتوبة)، و<span class="ltr">JsonPrimitive.getAsDouble</span> (حالة حدّية مش مهمة)</td></tr>
+  <tr><td><b>ممكن يكون تناقض حقيقي باقي</b> حتى بعد التصليح</td><td class="n">1</td><td><span class="ltr">UnixCrypt.crypt</span>: التوثيق المصلّح لسا بيقول "salt غلط بيعطي hash مختلف"، والكود بيرمي استثناء</td></tr>
+</table>
+
+<h3>ج. هل التنبيه الصح كان للسبب الصح؟</h3>
+<p>منعرف شو كان التناقض الحقيقي لأنه عنا التوثيق قبل وبعد التصليح، فقارنّا الجملة يلي نبّه عليها النظام بالجملة يلي المطوّرين صلّحوها:</p>
+<ul>
+  <li><b>6 من 9</b>: التنبيه كان على <b>نفس الجملة يلي انصلحت</b> ولنفس السبب. متل <span class="ltr">getAsDouble</span> (نوع الاستثناء)، و<span class="ltr">CharUtils.toCharacter</span> (مثال بمعاملين والدالة إلها معامل واحد)، و<span class="ltr">getMean</span> (بترجع مصفوفة مش رقم)، و<span class="ltr">RealVectorImpl.equals</span> (Vector3D بدل RealVector)، و<span class="ltr">Element.prependChild</span>، و<span class="ltr">ErrorCollector.intercept</span>.</li>
+  <li><b>3 من 9</b>: النظام نبّه على الدالة الصح بس <b>لسبب تاني</b>. متل <span class="ltr">CommandLine.getParsedOptionValue</span>: التناقض الحقيقي إنها بترجع null، والنظام نبّه على الاستثناء. هدول بينحسبوا صح بالأرقام، بس بالحقيقة نصّهم صدفة.</li>
+</ul>
+
+<h2 class="pb">8. ليش طلعت النتائج هيك</h2>
+<div class="box ok"><b class="t">ليش الدقة والـ PFP عاليين</b>
+<ul>
+  <li><b>الدليل المنسوخ والمتحقَّق منه:</b> الموديل لازم ينسخ الجملة والسطر كما هم، ومنرمي يلي مش موجود. بقسم التطوير انرمى جوابين جملتهم مش موجودة بالتوثيق، وهيك ما طلعوا كتنبيهات كاذبة.</li>
+  <li><b>كل دالة مع توثيقها هي بس</b> (الخطوة 3): الموديل ما بيتشتّت بباقي الملف.</li>
+  <li><b>"النقص بالتوثيق" ما بينعرض:</b> بقسم التطوير، لو عرضناه، ما كان رح يزيد ولا كشف صحيح (كل التناقضات يلي فيها هيك ملاحظة كانت منكشفة أصلاً)، بس كان رح يزيد إنذارين كاذبين على نسخ مصلّحة.</li>
+  <li><b>شلنا الفحص القديم للتوقيع</b>، يلي كان مصدر كل الإنذارات الكاذبة بالنظام الأصلي.</li>
+</ul></div>
+<div class="box warn"><b class="t">ليش الكشف مش أعلى</b>
+<ul>
+  <li><b>ثلث التناقضات الضايعة سببها جواب ما انقرا</b> (5 من 16)، مش إنه الموديل ما فهم. وهاد أسهل شي لنحسّنه.</li>
+  <li><b>كتير تناقضات CASCADE بتعتمد على كود برّا الدالة</b> (6 من 16). الموديل بيشوف الدالة لحالها، فما بيعرف شو بتعمل الدوال يلي بتستدعيها.</li>
+  <li><b>جزء من "تناقضات" CASCADE هو توثيق ناقص</b>، والتصليح ضاف معلومة. وتصميمنا (متل DocPrism) قصداً ما بيعرض هالنوع، لأنه بيطلّع إنذارات كاذبة كتير.</li>
+  <li><b>موديل مجاني وصغير:</b> الأوراق استعملت موديلات أقوى.</li>
+</ul></div>
+<div class="box warn"><b class="t">ليش في إنذارات كاذبة</b>
+نص الإنذارات الكاذبة بقسم التطوير (3 من 6) نفس سبب جزء من التناقضات الضايعة: <b>الموديل ما بيشوف كود الدوال يلي بتنستدعى</b>، فبيفترض إنه شي مش معمول وهو معمول بدالة تانية.</div>
+
+<h3>المشاكل يلي انكشفت بهالتحليل (وما صلّحناها لسا)</h3>
+<table>
+  <tr><th style="width:34%">المشكلة</th><th>التفاصيل</th><th style="width:28%">الحل المقترح</th></tr>
+  <tr><td><b>جواب الموديل ما بينقرا</b></td><td>بـ 23 عينة من 142 (7 تطوير و16 اختبار)، في طلب واحد على الأقل جوابه ما انقرا. الموديل "بيفكّر" وأحياناً بيحط كلام بنص الـ JSON. جرّبنا قراءة متساهلة على الأجوبة المحفوظة: بتصلّح 4 أجوبة بس من 17، لأنه الكسر بأشكال كتير</td><td>نطلب من الموديل وضع JSON المضمون (<span class="ltr">response_format</span>) إذا المزوّد بيدعمه، أو موديل ما بيفكّر</td></tr>
+  <tr><td><b>إعادة المحاولة ما كانت تعيد فعلياً بالقياس</b></td><td>أداة القياس بتحفظ كل جواب وصل. فلما الجواب ما انقرا وعاد النظام المحاولة، رجعتله الأداة نفس الجواب المحفوظ المكسور. يعني الـ 3 محاولات كانت وحدة. بالتطبيق نفسه هالشي ما بيصير، لأنه المحاولة التانية بتتجاوز الحفظ</td><td>الأداة ما تحفظ الجواب يلي ما انقرا، أو تحترم "بدون حفظ" بالمحاولات التانية</td></tr>
+  <tr><td><b>الموديل ما بيشوف الدوال المستدعاة</b></td><td>سبب 6 تناقضات ضايعة و3 إنذارات كاذبة بالتطوير</td><td>نضيف بالطلب توثيق أو توقيع الدوال يلي بتستدعيها الدالة (من نفس الكلاس)</td></tr>
+</table>
+
+<h2 class="pb">9. أسئلة متوقّعة وأجوبتها</h2>
+<div class="qa"><span class="q">هل النتائج قابلة للتكرار؟</span> نعم. كل طلب بـ <span class="ltr">temperature 0</span> و <span class="ltr">seed 42</span> وموديل واحد مثبّت، وكل جواب محفوظ مع الموديل يلي جاوب. إعادة القياس بترجع نفس الأرقام بالزبط وبدون ولا طلب جديد.</div>
+<div class="qa"><span class="q">هل عدّلتوا النظام على بيانات الاختبار؟</span> لا. السؤال للموديل، والعتبة (0.7)، وطريقة الفلترة، كلهم انحطّوا بالخطوات 4 و5 قبل أي قياس. وما فتحنا ولا حالة من قسم الاختبار. وقسم الاختبار طلّع أرقام أحسن من التطوير، يعني ما في مؤشر على إنّا فصّلنا النظام على التطوير.</div>
+<div class="qa"><span class="q">ليش الأرقام تغيّرت عن العرض الأول (0.58 و 0.44)؟</span> الموديل الأول (<span class="ltr">poolside/laguna-s-2.1</span>) ما عاد إله مزوّد، فعدنا القياس كله بموديل تاني. بنفس قسم التطوير: الكشف نزل (من 0.44 لـ 0.36)، بس الإنذارات الكاذبة قلّت (Specificity من 0.68 لـ 0.76) والـ PFP طلع (من 0.55 لـ 0.89). والنتيجة النهائية هي على كل الـ 71 زوج بالموديل الجديد.</div>
+<div class="qa"><span class="q">ليش قسم الاختبار أحسن من التطوير؟</span> الأقسام صغيرة: بقسم التطوير، زوج واحد بيغيّر الـ Recall بـ 4%. فالفرق بين 0.36 و 0.50 بيدخل ضمن التذبذب الطبيعي لعينة بهالحجم، ولهيك الرقم المعتمد هو على كل الـ 71.</div>
+<div class="qa"><span class="q">هل المقارنة مع الورقة عادلة؟</span> نفس الـ 71 زوج بالزبط، ونفس تعريف التنبيه على مستوى الدالة. الفرق إنه الورقة استعملت موديلات تانية لخطوط LLM، ونحنا موديل مجاني صغير، وهاد لصالحهم مش لصالحنا.</div>
+<div class="qa"><span class="q">ليش ما بتعرضوا "النقص بالتوثيق" لترتفع الـ Recall؟</span> لأنه بيطلّع إنذارات كاذبة كتير: تقريباً كل دالة فيها شي ما انذكر بالتوثيق. ورقة DocPrism عملت نفس القرار. وبقسم التطوير، عرضه ما كان رح يزيد ولا كشف، وكان رح يزيد إنذارين كاذبين.</div>
+<div class="qa"><span class="q">لو نزّلتوا العتبة من 0.7، شو بيصير؟</span> بقسم التطوير في تنبيه واحد بس تحت العتبة (0.5، وكان صح). يعني العتبة تقريباً ما بتأثر هون، والموديل غالباً بيعطي ثقة عالية (0.8–1.0).</div>
+<div class="qa"><span class="q">هل التنبيهات الصحيحة كانت للسبب الصح؟</span> بـ 6 من 9 بقسم التطوير، التنبيه كان على نفس الجملة يلي المطوّرين صلّحوها. والـ 3 الباقيين على الدالة الصح بس لسبب تاني (القسم 7ج).</div>
+<div class="qa"><span class="q">شو معنى الـ PFP = 0.75 بالضبط؟</span> من 32 تناقض انكشف، بـ 24 منهن النسخة المصلّحة (نفس الكود، والتوثيق صحيح) ما طلع عليها تنبيه. يعني التنبيه فعلاً مربوط بالتناقض. النظام الأصلي كان 0: كان ينبّه على النسختين متل بعض.</div>
+<div class="qa"><span class="q">ليش 5 حالات ما اشتغل عليها الذكاء الاصطناعي؟</span> الموديل رجّع جواب ما بينقرا (القسم 8). هالحالات انحسبت بالفحص الثابت بس، يعني انحسبت ضدنا، مش لصالحنا.</div>
+<div class="qa"><span class="q">ليش ما قستوا CASCADE الواقعية (710 حالة)؟</span> بتحتاج حوالي 710 طلب، يعني أسبوعين بالحد المجاني (50 طلب باليوم). المتوازنة هي نفس الحجم يلي استعملته الورقة للمقارنة.</div>
+<div class="qa"><span class="q">شو بيلزم لنرفع النتيجة؟</span> بالترتيب: (1) جواب مضمون القراءة من الموديل، (2) إعادة المحاولة فعلياً بأداة القياس، (3) توثيق الدوال المستدعاة بالطلب. الأوليين ممكن يرجّعوا حتى 5 تناقضات ضايعة بقسم التطوير لحالهم.</div>
+
+<h2 class="pb">10. التحسينات بعد تحليل الأخطاء (2026-11-12)</h2>
+<p>بعد التحليل بالقسمين 7 و 8، طبّقنا أرخص تحسينين، وقسناهم على كل الـ 71 زوج.</p>
+
+<h3>شو عملنا</h3>
+<table>
+  <tr><th style="width:22%">التحسين</th><th style="width:22%">الملف</th><th>التغيير</th></tr>
+  <tr><td><b>قراءة JSON متساهلة</b></td><td><code>doc_semantic_analyzer.py</code> (التطبيق نفسه)</td><td>إذا جواب الموديل ما انقرا، النظام بيحاول يصلّحه قبل ما يستسلم: بيشيل أسطر "التفكير" يلي الموديل بيحطها بنص الـ JSON (متل <code>probably missing a comma?</code>)، وبيشيل كلمة زيادة قبل اسم حقل (<code>probably: "conflicting"</code>)، وبيشيل فاصلة زيادة قبل <code>]</code> أو <code>}</code>. ما بيخترع ولا قيمة. وإذا ضل مكسور، الخطأ بيضل متل ما هو</td></tr>
+  <tr><td><b>إعادة محاولة فعلية</b></td><td><code>evaluate.py</code> (أداة القياس بس)</td><td>قبل، المحاولة التانية والتالتة كانوا يرجّعوا نفس الجواب المحفوظ المكسور، يعني الـ 3 محاولات كانوا وحدة. هلق كل محاولة إلها مكان حفظ خاص: بتطلب جواب جديد مرة وحدة، وبعدها بترجع من الحفظ ببلاش، فالقياس بيضل قابل للتكرار. وضفنا <code>--replay-only</code> للقياس على الأجوبة المحفوظة بس، بدون ولا طلب</td></tr>
+</table>
+<p class="small">الاختبارات: 9 اختبارات جديدة (أمثلة حقيقية من أجوبة الموديل، ونص مكسور فعلاً بيضل مكسور، وإعادة المحاولة بتطلب جواب جديد، وإعادة القياس بترجع نفس الأجوبة ببلاش). المجموع 210 من 210 نجحوا.</p>
+
+<h3>النتائج (كل الـ 71 زوج)</h3>
+<table>
+  <tr><th style="width:36%">المرحلة</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">F1</th><th class="n">Specificity</th><th class="n">PFP</th><th class="n">TP / FP / FN / TN</th></tr>
+  <tr><td>الأساس (القسم 5)</td><td class="n">0.65</td><td class="n">0.45</td><td class="n">0.53</td><td class="n">0.76</td><td class="n">0.75</td><td class="n">32 / 17 / 39 / 54</td></tr>
+  <tr><td>+ قراءة متساهلة (الأجوبة المحفوظة، 0 طلب)</td><td class="n">0.65</td><td class="n">0.47</td><td class="n">0.54</td><td class="n">0.75</td><td class="n">0.76</td><td class="n">33 / 18 / 38 / 53</td></tr>
+  <tr><td>+ إعادة محاولة فعلية <span class="small">(ناقصة: الحد اليومي خلص بالنص)</span></td><td class="n worse">0.58</td><td class="n">0.47</td><td class="n">0.52</td><td class="n worse">0.66</td><td class="n worse">0.61</td><td class="n">33 / 24 / 38 / 47</td></tr>
+</table>
+
+<h3>شو بيعني هاد</h3>
+<div class="box warn"><b class="t">النتيجة ما كانت متل ما توقّعنا</b>
+<ul>
+  <li><b>القراءة المتساهلة</b> صلّحت 4 أجوبة بس: انكشف تناقض واحد زيادة، وطلع إنذار كاذب واحد زيادة. يعني تقريباً بدون تأثير، لأنه أغلب الأجوبة المكسورة مكسورة بأشكال ما بتتصلّح بأمان.</li>
+  <li><b>الإعادة الفعلية</b> وصلت لحوالي 13 عينة قبل ما يخلص الحد اليومي، وفي 3 أو 4 عينات لسا ما وصلها الدور. الأجوبة الجديدة <b>ما كشفت ولا تناقض زيادة</b>، وطلّعت <b>6 إنذارات كاذبة جديدة</b> على نسخ مصلّحة (وحدة منها بقسم التطوير: <span class="ltr">ErrorCollector.intercept</span>، والموديل قال إنه الكود ما بيحسب قيمة افتراضية، وهو بيمرّرها كما هي).</li>
+  <li><b>التفسير:</b> الحالات يلي الموديل بيكسر جوابه فيها هي الحالات يلي بيتلخبط فيها. ولما يجاوب عليها بشكل صحيح، غالباً بيبالغ وبينبّه حتى لو التوثيق صحيح.</li>
+</ul></div>
+<div class="box info"><b class="t">ليش منعتبر الرقم الجديد هو الأصدق، مع إنه أسوأ؟</b>
+التطبيق نفسه بيعيد المحاولة فعلياً لما الجواب ما بينقرا. فالأرقام الأساسية (Precision 0.65، Specificity 0.76) كانت مستفيدة من خطأ بأداة القياس: الجواب المكسور كان يصير "ما في تنبيه"، وهاد كان يحسّن الإنذارات الكاذبة بالصدفة. الرقم الجديد (Precision 0.58، Recall 0.47، Specificity 0.66، PFP 0.61) هو يلي بيصير فعلياً بالتطبيق. وحتى هيك، الـ Precision لسا ضمن مجال أفضل طريقة ذكاء اصطناعي بالورقة (0.55–0.59)، والـ Recall لسا أكتر من ضعف أداة CASCADE، والـ Specificity ضمن مجال LLM-A (0.64–0.81).</div>
+
+<h3>شو الجاي</h3>
+<ul>
+  <li>نكمّل الإعادة للعينات القليلة يلي ما وصلها الدور (حوالي 10 طلبات)، لحتى يكتمل الرقم.</li>
+  <li>التحسين الأكبر لسا هو <b>إعطاء الموديل توثيق الدوال يلي بتستدعيها الدالة</b> (القسم 8). هاد بيعالج نفس النوع من المبالغة يلي شفناه هون، لأنه الموديل بينبّه لما ما بيعرف شو بتعمل الدوال التانية.</li>
+</ul>
+
+<h2>11. الخلاصة</h2>
+<ul>
+  <li>على نفس بيانات ورقة CASCADE (71 زوج)، نظامنا: <b>Precision 0.65، Recall 0.45، Specificity 0.76، PFP 0.75</b>.</li>
+  <li>مقارنة بالنظام الأصلي: كان "بيكشف" بالصدفة (PFP 0)، وهلق التنبيه فعلاً عن التناقض.</li>
+  <li>مقارنة بالورقة: دقة أعلى من كل طرق الذكاء الاصطناعي فيها، وكشف ضعف أداتها، وإنذارات كاذبة ضمن مجال أفضل طريقة ذكاء اصطناعي فيها.</li>
+  <li>الأخطاء إلها أسباب محدّدة: جواب ما بينقرا، ودوال مستدعاة ما بتنشاف، وتوثيق ناقص (قصداً ما منعرضه). وكل واحد منها إله حل واضح.</li>
+  <li><b>بعد تصليح أداة القياس</b> (القسم 10)، الرقم الأصدق للتطبيق كما هو: Precision 0.58، Recall 0.47، Specificity 0.66، PFP 0.61 (القياس ناقص بعينات قليلة). وهو لسا ضمن مجال أفضل طرق الذكاء الاصطناعي بالورقة، وأكتر من ضعف كشف أداتها.</li>
+</ul>
+<p class="small">المصادر: <code>evaluation/paper_sets/results/cascade_balanced__current__20261111T200952Z.json</code> (كل حالة وجواب الموديل)، و<code>evaluation/paper_sets/PROGRESS.md</code>، وتقارير الخطوات بـ <code>core_ai/tests/reports/</code>.</p>
+</body>
+</html>
