@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core_ai',
+    'core_testing',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -118,6 +119,15 @@ AI_TASKS_COLLECTION = 'ai_tasks'
 DOCUMENTATION_FILES_COLLECTION = 'documentation_files'
 GENERATED_FILES_COLLECTION = 'generated_files'
 PROJECT_ANALYSIS_RESULTS_COLLECTION = 'project_analysis_results'
+
+# ── Feature 1: Generate Trusted Tests (core_testing) ─────────────────────────
+TEST_JOBS_COLLECTION = 'test_jobs'
+# Test routes check the user's token with the key UPM signs it with.
+# Empty key → every test route answers 401.
+CORE_TESTING_JWT_SIGNING_KEY = os.environ.get('UPM_JWT_SIGNING_KEY', '')
+# Analysis gate: how often a waiting job checks again, and when it gives up.
+CORE_TESTING_GATE_POLL_SECONDS = 5
+CORE_TESTING_GATE_MAX_WAIT_SECONDS = 600
 
 AUTH_PASSWORD_VALIDATORS = [
     {

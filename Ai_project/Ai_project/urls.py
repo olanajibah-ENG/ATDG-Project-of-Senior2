@@ -29,6 +29,7 @@ def health_check(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),  # استخدام admin العادي
+    path('api/analysis/tests/', include('core_testing.urls')),  # Feature 1: Generate Trusted Tests
     path('api/analysis/', include('core_ai.urls')), # مسارات API لتطبيق core_ai
     path('health/', health_check, name='health_check'),  # Health check لـ Docker
     path('test/', lambda request: HttpResponse("TEST ENDPOINT WORKS!"), name='test'),
