@@ -94,11 +94,97 @@ class GenericProcessor(ILanguageProcessorStrategy):
         }
 
     def generate_dependency_graph_data(self, ast_data: Dict[str, Any], features: Dict[str, Any]) -> Dict[str, Any]:
-        deps  = self.extract_dependencies(ast_data)
-        nodes = [{"id": "main", "label": f"[{self.file_type}] module", "type": "module"}]
-        edges = [{"from": "main", "to": f"dep_{i}", "label": "imports", "arrow": "→"} for i in range(len(deps))]
-        nodes += [{"id": f"dep_{i}", "label": d, "type": "dependency"} for i, d in enumerate(deps)]
-        return {"nodes": nodes, "edges": edges}
+        """
+        🔥 Graphify Unified Schema Implementation for Generic (Regex fallback)
+        توليد بيانات dependency_graph بالشكل الموحد
+        ✅ nodes: module + imports (محدود)
+        ✅ edges: imports فقط (calls محدود جداً)
+        ✅ confidence: INFERRED (regex-based)
+        """
+        deps = self.extract_dependencies(ast_data)
+        code = ast_data.get("code_content", "")
+        funcs = features.get("functions", [])
+        classes = features.get("classes", [])
+        
+        nodes = []
+        edges = []
+        node_ids = set()
+        
+        # إضافة module node
+        node_ids.add("__module__")
+        nodes.append({
+            "id": "__module__",
+            "label": f"[{self.file_type}] Module",
+            "type": "module",
+            "local": True
+        })
+        
+        # إضافة classes
+        for cls in classes:
+            if cls not in node_ids:
+                node_ids.add(cls)
+                nodes.append({
+                    "id": cls,
+                    "label": cls,
+                    "type": "class",
+                    "local": True
+                })
+        
+        # إضافة functions
+        for func in funcs:
+            if func not in node_ids:
+                node_ids.add(func)
+                nodes.append({
+                    "id": func,
+                    "label": f"{func}()",
+                    "type": "function",
+                    "local": True
+                })
+        
+        # إضافة imports
+        for dep in deps:
+            dep_id = f"ext.{dep}"
+            if dep_id not in node_ids:
+                node_ids.add(dep_id)
+                nodes.append({
+                    "id": dep_id,
+                    "label": dep,
+                    "type": "external",
+                    "local": False
+                })
+            
+            # edge للـ import
+            edges.append({
+                "from": "__module__",
+                "to": dep_id,
+                "relation": "imports",
+                "confidence": "INFERRED"  # regex-based, not 100% accurate
+            })
+        
+        # محاولة استخراج calls بسيطة (محدودة جداً)
+        # نبحث عن أسماء الدوال في الكود
+        for func in funcs:
+            # بحث بسيط عن استدعاءات
+            pattern = rf'\b{func}\s*\('
+            if re.search(pattern, code):
+                # محاولة تحديد من أي دالة تم الاستدعاء (صعب مع regex)
+                # نكتفي بـ edge عام من module
+                edges.append({
+                    "from": "__module__",
+                    "to": func,
+                    "relation": "calls",
+                    "confidence": "INFERRED"
+                })
+        
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "meta": {
+                "total_nodes": len(nodes),
+                "total_edges": len(edges),
+                "source": "regex"
+            }
+        }
 
     @staticmethod
     def _find(pattern: str, code: str) -> List[str]:

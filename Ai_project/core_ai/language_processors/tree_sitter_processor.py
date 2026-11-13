@@ -408,14 +408,204 @@ class TreeSitterProcessor(ILanguageProcessorStrategy):
         return out
 
     def generate_dependency_graph_data(self, ast_data: Dict[str, Any], features: Dict[str, Any]) -> Dict[str, Any]:
-        deps = self.extract_dependencies(ast_data)
-        nodes = [{"id": "main", "label": f"[{self.file_type}] module", "type": "module"}]
+        """
+        🔥 Graphify Unified Schema Implementation for Tree-sitter
+        توليد بيانات dependency_graph بالشكل الموحد
+        ✅ nodes: class/function/method/external حسب اللغة
+        ✅ edges: calls قدر الإمكان + imports
+        ✅ confidence: EXTRACTED / INFERRED
+        """
+        tree = ast_data.get("ast_tree")
+        if not tree or not tree.root_node:
+            return {"nodes": [], "edges": [], "meta": {"total_nodes": 0, "total_edges": 0, "source": "tree-sitter"}}
+        
+        nodes = []
         edges = []
-        for i, dep in enumerate(deps):
-            nid = f"dep_{i}"
-            nodes.append({"id": nid, "label": dep, "type": "dependency"})
-            edges.append({"from": "main", "to": nid, "label": "imports", "arrow": "=>"})
-        return {"nodes": nodes, "edges": edges}
+        node_ids = set()
+        
+        # Step 1: جمع الكلاسات والدوال
+        classes_map = {}
+        functions_list = []
+        
+        for node in self._walk(tree):
+            # جمع Classes
+            if node.type in ['class_declaration', 'class_definition']:
+                class_name = self._get_name(node)
+                if class_name and class_name not in node_ids:
+                    node_ids.add(class_name)
+                    nodes.append({
+                        "id": class_name,
+                        "label": class_name,
+                        "type": "class",
+                        "local": True
+                    })
+                    classes_map[class_name] = {"methods": [], "node": node}
+            
+            # جمع Functions/Methods
+            elif node.type in ['function_declaration', 'function_definition', 'method_declaration', 'method_definition']:
+                func_name = self._get_name(node)
+                if func_name:
+                    # تحديد إذا كانت method أو function
+                    parent_class = self._find_parent_class_name_safe(node)
+                    if parent_class and parent_class in classes_map:
+                        method_id = f"{parent_class}.{func_name}"
+                        if method_id not in node_ids:
+                            node_ids.add(method_id)
+                            nodes.append({
+                                "id": method_id,
+                                "label": f"{func_name}()",
+                                "type": "method",
+                                "parent": parent_class,
+                                "local": True
+                            })
+                            classes_map[parent_class]["methods"].append({"id": method_id, "node": node})
+                    else:
+                        # module-level function
+                        if func_name not in node_ids:
+                            node_ids.add(func_name)
+                            nodes.append({
+                                "id": func_name,
+                                "label": f"{func_name}()",
+                                "type": "function",
+                                "local": True
+                            })
+                            functions_list.append({"id": func_name, "node": node})
+        
+        # Step 2: جمع imports
+        dependencies = self.extract_dependencies(ast_data)
+        for dep in dependencies:
+            dep_id = f"ext.{dep}"
+            if dep_id not in node_ids:
+                node_ids.add(dep_id)
+                nodes.append({
+                    "id": dep_id,
+                    "label": dep,
+                    "type": "external",
+                    "local": False
+                })
+            
+            # edge للـ import
+            edges.append({
+                "from": "__module__",
+                "to": dep_id,
+                "relation": "imports",
+                "confidence": "EXTRACTED"
+            })
+        
+        # إضافة module node
+        if dependencies and "__module__" not in node_ids:
+            node_ids.add("__module__")
+            nodes.insert(0, {
+                "id": "__module__",
+                "label": f"[{self.file_type}] Module",
+                "type": "module",
+                "local": True
+            })
+        
+        # Step 3: 🔥 استخراج calls من جسم كل method/function
+        # للميثودات
+        for class_name, class_info in classes_map.items():
+            for method_info in class_info["methods"]:
+                method_id = method_info["id"]
+                method_node = method_info["node"]
+                
+                for node in self._walk(method_node):
+                    if node.type in ['call_expression', 'method_invocation']:
+                        callee = self._extract_call_name(node)
+                        if callee:
+                            target_id, confidence = self._resolve_call_target(callee, class_name, node_ids, classes_map)
+                            if target_id and target_id != method_id:
+                                # إضافة node إذا لم يكن موجود
+                                if target_id not in node_ids:
+                                    node_ids.add(target_id)
+                                    nodes.append({
+                                        "id": target_id,
+                                        "label": callee,
+                                        "type": "external",
+                                        "local": False
+                                    })
+                                
+                                edges.append({
+                                    "from": method_id,
+                                    "to": target_id,
+                                    "relation": "calls",
+                                    "confidence": confidence
+                                })
+        
+        # للدوال
+        for func_info in functions_list:
+            func_id = func_info["id"]
+            func_node = func_info["node"]
+            
+            for node in self._walk(func_node):
+                if node.type in ['call_expression', 'method_invocation']:
+                    callee = self._extract_call_name(node)
+                    if callee:
+                        target_id, confidence = self._resolve_call_target(callee, None, node_ids, classes_map)
+                        if target_id and target_id != func_id:
+                            if target_id not in node_ids:
+                                node_ids.add(target_id)
+                                nodes.append({
+                                    "id": target_id,
+                                    "label": callee,
+                                    "type": "external",
+                                    "local": False
+                                })
+                            
+                            edges.append({
+                                "from": func_id,
+                                "to": target_id,
+                                "relation": "calls",
+                                "confidence": confidence
+                            })
+        
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "meta": {
+                "total_nodes": len(nodes),
+                "total_edges": len(edges),
+                "source": "tree-sitter"
+            }
+        }
+    
+    def _extract_call_name(self, call_node):
+        """استخراج اسم الدالة/الميثود من call node"""
+        for child in call_node.children:
+            if child.type in ['identifier', 'field_expression', 'member_expression']:
+                text = self._node_text(child)
+                if text:
+                    return text
+        return None
+    
+    def _resolve_call_target(self, callee, current_class, node_ids, classes_map):
+        """تحديد target الـ call وتحديد confidence"""
+        # حالة 1: this.method() أو self.method()
+        if callee.startswith('this.') or callee.startswith('self.'):
+            clean_name = callee.split('.', 1)[1]
+            if current_class:
+                return f"{current_class}.{clean_name}", "EXTRACTED"
+        
+        # حالة 2: method() بدون prefix داخل كلاس
+        if current_class and '.' not in callee:
+            potential_target = f"{current_class}.{callee}"
+            if potential_target in node_ids:
+                return potential_target, "EXTRACTED"
+        
+        # حالة 3: ClassName.method()
+        if '.' in callee:
+            parts = callee.split('.')
+            if parts[0] in classes_map:
+                return f"{parts[0]}.{'.'.join(parts[1:])}", "EXTRACTED"
+            else:
+                return f"ext.{callee}", "INFERRED"
+        
+        # حالة 4: function_name()
+        if callee in node_ids:
+            return callee, "EXTRACTED"
+        
+        # حالة 5: external
+        return f"ext.{callee}", "INFERRED"
 
     # ═══════════════════════════════════════════════════════════════
     # HELPERS - الإصلاحات الرئيسية هنا

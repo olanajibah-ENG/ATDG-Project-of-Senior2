@@ -7,7 +7,7 @@ from __future__ import annotations
 from core_ai.services.preprocessing.token_budget import estimate_tokens, get_safe_budget
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from bson import ObjectId
 from django.conf import settings
 from ..mongo_utils import get_mongo_db
@@ -20,7 +20,94 @@ from .agents import (
     ProjectLowLevelAgent,
     VerifierAgent,
 )
+from .llm_client import LLMClient
+
 logger = logging.getLogger(__name__)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 🔥 Graphify: دالة تحويل dependency_graph إلى ملخص نصي للـ prompt
+# ═══════════════════════════════════════════════════════════════════════════
+
+def graph_to_prompt_summary(dependency_graph: Dict[str, Any], focus_ids: List[str] = None, max_edges: int = 50) -> str:
+    """
+    تحويل dependency_graph الموحد إلى ملخص نصي يُحقن في الـ prompt
+    
+    Parameters:
+    - dependency_graph: الـ graph بالشكل الموحد {nodes, edges, meta}
+    - focus_ids: قائمة بـ IDs معينة للتركيز عليها (optional)
+    - max_edges: الحد الأقصى للـ edges المعروضة (default: 50)
+    
+    Returns:
+    - str: ملخص نصي جاهز للحقن في الـ prompt
+    
+    قواعد الصياغة (من ملاحظات الفريق):
+    - عرض فقط العلاقات المتعلقة بالجزء المُشرح أو أول 50 علاقة
+    - البداية بـ EXTRACTED ثم INFERRED
+    - ممنوع استخدام: "ground truth" أو "Do not invent relationships"
+    - التنويه: العلاقات التالية مؤكدة من AST؛ قد توجد علاقات أخرى (خاصة الديناميكية) لم تكتشف
+    """
+    if not dependency_graph or not isinstance(dependency_graph, dict):
+        return ""
+    
+    nodes = dependency_graph.get("nodes", [])
+    edges = dependency_graph.get("edges", [])
+    meta = dependency_graph.get("meta", {})
+    
+    if not nodes and not edges:
+        return ""
+    
+    # فلترة الـ edges حسب focus_ids إذا تم تحديدها
+    filtered_edges = edges
+    if focus_ids:
+        filtered_edges = [
+            e for e in edges 
+            if e.get("from") in focus_ids or e.get("to") in focus_ids
+        ]
+    
+    # تحديد العدد
+    filtered_edges = filtered_edges[:max_edges]
+    
+    # فصل حسب confidence
+    extracted_edges = [e for e in filtered_edges if e.get("confidence") == "EXTRACTED"]
+    inferred_edges = [e for e in filtered_edges if e.get("confidence") == "INFERRED"]
+    
+    # بناء الملخص
+    lines = ["--- CODE STRUCTURE GRAPH (FROM AST) ---"]
+    lines.append(f"Source: {meta.get('source', 'unknown')}")
+    lines.append(f"Total Nodes: {meta.get('total_nodes', len(nodes))}, Total Edges: {meta.get('total_edges', len(edges))}")
+    lines.append("")
+    
+    # Confirmed (EXTRACTED)
+    if extracted_edges:
+        lines.append("Confirmed relationships (EXTRACTED from AST):")
+        for edge in extracted_edges:
+            relation = edge.get("relation", "unknown")
+            from_id = edge.get("from", "?")
+            to_id = edge.get("to", "?")
+            lines.append(f"  {from_id} --{relation}--> {to_id}")
+        lines.append("")
+    
+    # Possible (INFERRED)
+    if inferred_edges:
+        lines.append("Possible relationships (INFERRED from context):")
+        for edge in inferred_edges:
+            relation = edge.get("relation", "unknown")
+            from_id = edge.get("from", "?")
+            to_id = edge.get("to", "?")
+            lines.append(f"  {from_id} --{relation}--> {to_id}")
+        lines.append("")
+    
+    # تنويه نهائي (بدون ground truth أو Do not invent)
+    lines.append("Note: The above relationships are confirmed from static analysis (AST).")
+    lines.append("Additional relationships (especially dynamic calls) may exist but were not detected.")
+    lines.append("Prefer confirmed relationships when analyzing control flow.")
+    lines.append("--- END GRAPH ---")
+    
+    return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # ---------------------------------------------------------------------------
 # Routing helpers
 # ---------------------------------------------------------------------------
@@ -194,6 +281,8 @@ class DocumentationOrchestrator:
         semantic_data      = analysis_data.get("semantic_analysis_data") or {}
         class_diagram_data = analysis_data.get("class_diagram_data") or {}
         extracted_features = analysis_data.get("extracted_features") or {}
+        dependency_graph   = analysis_data.get("dependency_graph") or {}  # 🔥 استخراج الـ graph
+        
         if is_project:
             contexts      = analysis_data.get("contexts") or {}
             ordered_files = analysis_data.get("dependency_order") or []
@@ -235,6 +324,13 @@ class DocumentationOrchestrator:
         # Class name (first class found)
         classes    = class_diagram_data.get("classes") or []
         class_name = classes[0].get("name") if classes else None
+        
+        # 🔥 حقن الـ graph summary في detailed_analysis
+        graph_summary = ""
+        if dependency_graph:
+            graph_summary = graph_to_prompt_summary(dependency_graph, focus_ids=None, max_edges=50)
+            logger.info(f"[Graphify] Generated graph summary: {len(graph_summary)} chars")
+        
         # Build summaries — both are always computed; agents pick what they need
         analysis_summary  = self._prepare_high_level_summary(
             semantic_data, class_diagram_data, extracted_features
@@ -242,6 +338,11 @@ class DocumentationOrchestrator:
         detailed_analysis = self._prepare_low_level_analysis(
             semantic_data, class_diagram_data, extracted_features
         )
+        
+        # إضافة الـ graph summary للـ detailed_analysis
+        if graph_summary:
+            detailed_analysis += f"\n\n{graph_summary}\n"
+        
         return DocumentationState(
             code_content=code_content or "",
             detailed_analysis=detailed_analysis,
