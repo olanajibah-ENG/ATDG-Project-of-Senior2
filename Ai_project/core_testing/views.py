@@ -5,18 +5,20 @@
     GET  /api/analysis/tests/jobs/{job_id}/plan/   units, skipped, work_items_count
 """
 import logging
+from datetime import datetime
 
+from django.conf import settings
 from rest_framework import exceptions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core_testing import errors, serializers
+from core_testing import errors, serializers, staleness
 from core_testing import repo as repo_module
 from core_testing import readers as readers_module
 from core_testing import scope as scope_module
 from core_testing.auth import UpmJWTAuthentication, require_owner
-from core_testing.statuses import FileStatus
+from core_testing.statuses import FileStatus, JobStatus
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +47,17 @@ class JobApiView(APIView):
         return super().handle_exception(exc)
 
     def _owned_job(self, request, job_id):
-        job = repo_module.get_job_repo().get(job_id)
+        repo = repo_module.get_job_repo()
+        job = repo.get(job_id)
         if job is None:
             raise errors.not_found()
         require_owner(job, request.user)
-        return job
+        # A job whose background work never arrived is reported as failed, not left pending forever.
+        return staleness.fail_if_stale(
+            job, repo, datetime.utcnow(),
+            getattr(settings, "CORE_TESTING_QUEUE_TIMEOUT_SECONDS", 120),
+            getattr(settings, "CORE_TESTING_GATE_MAX_WAIT_SECONDS", 600),
+        )
 
 
 class JobListView(JobApiView):
@@ -86,5 +94,7 @@ class JobPlanView(JobApiView):
     def get(self, request, job_id):
         job = self._owned_job(request, job_id)
         if job.get("plan") is None:
+            if job.get("status") == JobStatus.FAILED:
+                raise errors.plan_not_ready("The job failed before a plan was built. Read the job for the error.")
             raise errors.plan_not_ready()
         return Response(serializers.plan_response(job))

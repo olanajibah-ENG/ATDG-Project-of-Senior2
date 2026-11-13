@@ -158,6 +158,12 @@ another user's token.
 - [x] T046 Write the Arabic report `Ai_project/core_testing/tests/reports/s1_job_and_plan.md`: goal of the slice; files added and changed; how the tests were run; one table per test file (what it checks, result); the acceptance run of T045; the existing collections and fields this slice reads; how to call the three routes; the list of items left for S2 onward; any problem found
 - [x] T047 Remove the temporary "Sync Impact Report" comment from `.specify/memory/constitution.md` and commit the slice (Spec Kit files, `core_testing`, the three changed files, the report)
 
+### Follow-up found by the acceptance run
+
+- [x] T048 Add `Ai_project/core_testing/staleness.py`: `stale_error(job, now, queue_timeout_seconds, gate_max_wait_seconds)` and `fail_if_stale(job, repo, now, ...)` — a job `pending`/`queued` for more than 120 s, or `running` with no update for more than the gate's maximum wait + 120 s, is marked `failed` with `error.code` `worker_unavailable`; add `CORE_TESTING_QUEUE_TIMEOUT_SECONDS = 120` to `Ai_project/Ai_project/settings.py`
+- [x] T049 Call `staleness.fail_if_stale` when a job is read in `Ai_project/core_testing/views.py` (status and plan routes), and make the plan route answer 409 with a clear message when the job failed before any plan was built
+- [x] T050 [P] Write `Ai_project/core_testing/tests/test_staleness.py` and extend `Ai_project/core_testing/tests/test_api.py`: queued too long → failed; running with no progress → failed; finished jobs never change; a late pass does not revive a failed job
+
 ---
 
 ## Dependencies & Execution Order
@@ -230,7 +236,7 @@ Task: "Implement Ai_project/core_testing/languages/python_adapter.py"
 
 ## Notes
 
-- 47 tasks: Setup 6, Foundational 7, User Story 1 21, User Story 2 5, User Story 3 3, Polish 5
+- 50 tasks: Setup 6, Foundational 7, User Story 1 21, User Story 2 5, User Story 3 3, Polish 5, follow-up 3
 - Out of scope for every task here: any LLM call, prompt or context building, test file writing,
   sandbox, coverage, download, repair, edge hints, integration groups, cancel, records listing,
   and the graph additions that S1 does not need (builtins, confidence tiers, `io_kind`, cache)

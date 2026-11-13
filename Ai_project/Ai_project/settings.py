@@ -128,6 +128,8 @@ CORE_TESTING_JWT_SIGNING_KEY = os.environ.get('UPM_JWT_SIGNING_KEY', '')
 # Analysis gate: how often a waiting job checks again, and when it gives up.
 CORE_TESTING_GATE_POLL_SECONDS = 5
 CORE_TESTING_GATE_MAX_WAIT_SECONDS = 600
+# A job still "queued" after this long was never picked up by the worker → reported as failed.
+CORE_TESTING_QUEUE_TIMEOUT_SECONDS = 120
 
 AUTH_PASSWORD_VALIDATORS = [
     {

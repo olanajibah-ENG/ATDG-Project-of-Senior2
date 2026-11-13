@@ -242,3 +242,38 @@ def test_routes_are_mounted_under_api_analysis_tests():
     assert resolve("/api/analysis/tests/jobs/").func.view_class is views.JobListView
     assert resolve("/api/analysis/tests/jobs/job_abc/").func.view_class is views.JobDetailView
     assert resolve("/api/analysis/tests/jobs/job_abc/plan/").func.view_class is views.JobPlanView
+
+
+# ── A job the worker never picked up ────────────────────────────────────────
+
+def test_job_never_picked_up_is_reported_as_failed(repo, reader, make_project, enqueued):
+    from datetime import timedelta
+
+    make_project({"game.py": "game.py"})
+    job_id = _post({"project_id": PROJECT_ID}).data["job_id"]
+
+    # right after the start it is simply pending
+    assert _get(views.JobDetailView, job_id).data["status"] == "pending"
+
+    # ... but if nothing has happened long after, the worker never ran it
+    repo._jobs[job_id]["created_at"] = datetime.utcnow() - timedelta(minutes=10)
+    data = _get(views.JobDetailView, job_id).data
+    assert data["status"] == "failed"
+    assert data["error"]["code"] == "worker_unavailable"
+    assert repo.get(job_id)["status"] == "failed"           # saved
+
+    plan = _get(views.JobPlanView, job_id)
+    assert plan.status_code == 409
+    assert "failed" in plan.data["error"]["message"]
+
+
+def test_a_planned_job_is_never_turned_into_a_failure_by_age(repo, reader, make_project, enqueued):
+    from datetime import timedelta
+
+    make_project({"game.py": "game.py"})
+    job_id = _post({"project_id": PROJECT_ID}).data["job_id"]
+    _run(job_id, repo, reader)
+    repo._jobs[job_id]["created_at"] = datetime.utcnow() - timedelta(days=30)
+    repo._jobs[job_id]["updated_at"] = datetime.utcnow() - timedelta(days=30)
+    assert _get(views.JobDetailView, job_id).data["status"] == "completed"
+    assert _get(views.JobPlanView, job_id).status_code == 200

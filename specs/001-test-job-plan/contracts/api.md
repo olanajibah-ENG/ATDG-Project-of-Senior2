@@ -100,6 +100,17 @@ Meant to be polled about every 2 seconds.
 | `files[].reason` | present only when skipped: `unsupported_language`, `analysis_failed`, `no_units` |
 | `error` | `null`, or `{"code": "...", "message": "..."}` when `status` is `failed` |
 
+Error codes of a failed job:
+
+| `error.code` | Meaning |
+|--------------|---------|
+| `analysis_failed` | no selected Python file could be analysed |
+| `worker_unavailable` | the background worker never ran the job, or the job stopped making progress |
+
+A job is never left `pending` forever. If it is still `queued` 120 seconds after it was created, or
+`running` with no change for 720 seconds, the next read of the job reports it as `failed` with
+`worker_unavailable`. Start a new job after the worker is back.
+
 Errors: 401 `unauthorized`, 403 `forbidden`, 404 `not_found`.
 
 ---
@@ -134,4 +145,5 @@ Errors: 401 `unauthorized`, 403 `forbidden`, 404 `not_found`.
 While files are still waiting for analysis the plan is partial: it lists what is planned so far,
 and the job's `stage` is not yet `planned`.
 
-Errors: 401 `unauthorized`, 403 `forbidden`, 404 `not_found`, 409 `plan_not_ready`.
+Errors: 401 `unauthorized`, 403 `forbidden`, 404 `not_found`, 409 `plan_not_ready` (also returned,
+with a message saying so, when the job failed before any plan was built).
