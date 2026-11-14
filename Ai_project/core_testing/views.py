@@ -3,6 +3,8 @@
     POST /api/analysis/tests/jobs/                 start a job            → 202
     GET  /api/analysis/tests/jobs/{job_id}/        status, stage, progress, files
     GET  /api/analysis/tests/jobs/{job_id}/plan/   units, skipped, work_items_count
+    GET  /api/analysis/tests/jobs/{job_id}/records/                list of work items (no code)
+    GET  /api/analysis/tests/jobs/{job_id}/records/{record_id}/    one work item, with its test code
 """
 import logging
 from datetime import datetime
@@ -16,6 +18,7 @@ from rest_framework.views import APIView
 from core_testing import errors, serializers, staleness
 from core_testing import repo as repo_module
 from core_testing import readers as readers_module
+from core_testing import records as records_module
 from core_testing import scope as scope_module
 from core_testing.auth import UpmJWTAuthentication, require_owner
 from core_testing.statuses import FileStatus, JobStatus
@@ -87,7 +90,9 @@ class JobListView(JobApiView):
 
 class JobDetailView(JobApiView):
     def get(self, request, job_id):
-        return Response(serializers.status_response(self._owned_job(request, job_id)))
+        job = self._owned_job(request, job_id)
+        records = records_module.get_record_repo().list(job_id) if job.get("records_created") else []
+        return Response(serializers.status_response(job, records))
 
 
 class JobPlanView(JobApiView):
@@ -98,3 +103,20 @@ class JobPlanView(JobApiView):
                 raise errors.plan_not_ready("The job failed before a plan was built. Read the job for the error.")
             raise errors.plan_not_ready()
         return Response(serializers.plan_response(job))
+
+
+class JobRecordsView(JobApiView):
+    def get(self, request, job_id):
+        self._owned_job(request, job_id)
+        filters = serializers.validate_record_filters(request.query_params)
+        records = records_module.get_record_repo().list(job_id, **filters)
+        return Response(serializers.records_response(records))
+
+
+class JobRecordDetailView(JobApiView):
+    def get(self, request, job_id, record_id):
+        self._owned_job(request, job_id)
+        record = records_module.get_record_repo().get(record_id)
+        if record is None or record["job_id"] != job_id:
+            raise errors.not_found("No record with that id in this job.")
+        return Response(serializers.record_detail_response(record))

@@ -150,7 +150,8 @@ def test_status_shape_right_after_start(repo, reader, make_project, enqueued):
                                   "progress", "files", "error"}
     assert (response.data["status"], response.data["stage"]) == ("pending", "queued")
     assert set(response.data["progress"]["by_status"]) == {
-        "pending", "ready", "skipped", "generation_failed", "test_failed", "environment_error"}
+        "pending", "generated", "ready", "skipped", "generation_failed", "test_failed",
+        "environment_error"}
     assert response.data["files"] == [{"path": "game.py", "status": "pending"}]
     assert response.data["error"] is None
 

@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
+class LLMUnavailable(Exception):
+    """No model could answer: all busy / rate-limited, no API key, or the network is down."""
+
+
 class LLMClient:
     CACHE_TTL = 3600 * 48          # cache identical responses for 48 h
     ROUNDS = 2                     # how many times to sweep over all models
@@ -146,9 +150,54 @@ class LLMClient:
                 logger.info("[LLM Cache] HIT")
                 return cached
 
+        content, _model, _usage = LLMClient._sweep(
+            system_prompt, user_prompt,
+            force_request=force_request, model=model, temperature=temperature, max_tokens=4000,
+        )
+        if use_cache:
+            LLMClient._set_cached(cache_key, content)
+        return content
+
+    @staticmethod
+    def call_model_ex(
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        model: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 4000,
+        force_request: bool = False,
+    ) -> dict:
+        """Like call_model, but also says which model answered and what it cost.
+
+        Returns {"text", "model", "prompt_tokens", "completion_tokens"}. It does not use the
+        48-hour answer cache: callers that need reuse keep their own record of answers.
+        """
+        content, used_model, usage = LLMClient._sweep(
+            system_prompt, user_prompt,
+            force_request=force_request, model=model, temperature=temperature, max_tokens=max_tokens,
+        )
+        return {
+            "text": content,
+            "model": used_model,
+            "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+            "completion_tokens": int(usage.get("completion_tokens") or 0),
+        }
+
+    @staticmethod
+    def _sweep(
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        force_request: bool = False,
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+    ) -> tuple:
+        """One request, swept over the model list. → (text, model, usage dict)."""
         api_key = getattr(settings, "OPENROUTER_API_KEY", None)
         if not api_key:
-            raise Exception("OPENROUTER_API_KEY missing in settings.")
+            raise LLMUnavailable("OPENROUTER_API_KEY missing in settings.")
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -175,7 +224,7 @@ class LLMClient:
                 payload = {
                     "model": current_model,
                     "messages": messages,
-                    "max_tokens": 4000,
+                    "max_tokens": max_tokens,
                     "temperature": temperature,
                 }
                 logger.info(f"[LLM] round={round_no + 1} model={current_model}")
@@ -218,18 +267,17 @@ class LLMClient:
                 try:
                     data = resp.json()
                     content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+                    usage = data.get("usage") or {}
                 except ValueError:
-                    content = None
+                    content, usage = None, {}
 
                 if not content or not content.strip():
                     last_error = f"Empty answer from {current_model}"
                     logger.warning(f"[LLM] {last_error}")
                     continue
 
-                if use_cache:
-                    LLMClient._set_cached(cache_key, content)
                 logger.info(f"[LLM] Success with {current_model}")
-                return content
+                return content, current_model, usage if isinstance(usage, dict) else {}
 
             # finished a sweep over all models
             if round_no < LLMClient.ROUNDS - 1:
@@ -238,7 +286,7 @@ class LLMClient:
                             f"{'' if tried_any else ' (all were resting)'}")
                 time.sleep(pause)
 
-        raise Exception(
+        raise LLMUnavailable(
             f"All free models are busy or rate-limited. Try again in a few minutes. "
             f"Last error: {last_error}"
         )

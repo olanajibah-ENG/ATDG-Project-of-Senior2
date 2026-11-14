@@ -25,6 +25,7 @@ def build_plan(ready_files, skipped_files, levels, project_graph=None):
             unit = dict(unit)
             unit.pop("line", None)
             unit["callees"] = queries.callees(project_graph, unit["id"]) if project_graph else []
+            unit["externals"] = queries.externals(project_graph, unit["id"]) if project_graph else []
             units.append(unit)
         skipped.extend(file_skips)
 

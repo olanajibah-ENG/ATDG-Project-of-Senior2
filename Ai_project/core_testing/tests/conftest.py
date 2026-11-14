@@ -120,3 +120,25 @@ def make_token(user_id=7, token_type="access", key=TEST_KEY, lifetime_seconds=36
 @pytest.fixture
 def token():
     return make_token
+
+
+# ── S2: records, attempts and a scripted model ──────────────────────────────
+
+@pytest.fixture
+def records():
+    from core_testing import records as records_module
+
+    instance = records_module.InMemoryRecordRepo()
+    records_module.set_record_repo(instance)
+    yield instance
+    records_module.set_record_repo(None)
+
+
+@pytest.fixture
+def attempts():
+    from core_testing import records as records_module
+
+    instance = records_module.InMemoryAttemptRepo()
+    records_module.set_attempt_repo(instance)
+    yield instance
+    records_module.set_attempt_repo(None)

@@ -41,10 +41,13 @@ def _imports(path):
     return found
 
 
-def test_core_testing_imports_no_llm_client_and_no_other_feature():
+def test_only_the_facade_imports_the_llm_client_and_no_other_feature_is_imported():
     offenders = []
     for path in _python_files(APP_DIR, skip_dirs=("tests",)):
         for name in _imports(path):
+            is_facade = os.path.basename(path) == "llm_facade.py"
+            if "llm_client" in name and is_facade:
+                continue                      # the facade is the one door to the model
             if "llm_client" in name or name.startswith(FORBIDDEN):
                 offenders.append((os.path.relpath(path, PROJECT_DIR), name))
     assert offenders == []
@@ -59,7 +62,7 @@ def test_core_ai_never_imports_core_testing():
 
 
 def test_only_shared_parts_of_core_ai_are_used():
-    allowed = ("core_ai.mongo_utils", "core_ai.celery_tasks.analyze_task")
+    allowed = ("core_ai.mongo_utils", "core_ai.celery_tasks.analyze_task", "core_ai.ai_engine.llm_client")
     used = set()
     for path in _python_files(APP_DIR, skip_dirs=("tests",)):
         used.update(n for n in _imports(path) if n.startswith("core_ai"))

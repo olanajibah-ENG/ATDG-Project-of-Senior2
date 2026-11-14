@@ -47,7 +47,7 @@ def test_one_pass_plans_an_analysed_project(repo, reader, make_project):
     assert len(job["plan"]["units"]) == 14 and job["plan"]["skipped"] == []
     assert job["plan"]["work_items_count"] == 42
     assert job["progress"] == {"total": 42, "done": 0, "by_status": {
-        "pending": 42, "ready": 0, "skipped": 0,
+        "pending": 42, "generated": 0, "ready": 0, "skipped": 0,
         "generation_failed": 0, "test_failed": 0, "environment_error": 0}}
     assert job["error"] is None
 

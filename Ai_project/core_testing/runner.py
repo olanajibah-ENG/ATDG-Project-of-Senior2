@@ -9,7 +9,7 @@ from datetime import timedelta
 from core_testing import gate, planner
 from core_testing.graphify import loader, merge, resolver
 from core_testing.languages.python_adapter import is_python
-from core_testing.statuses import RECORD_STATUSES, FileStatus, JobStage, JobStatus, SkipReason
+from core_testing.statuses import RECORD_STATUSES, FileStatus, JobStage, JobStatus, Level, SkipReason
 
 
 @dataclass
@@ -24,7 +24,11 @@ def _progress(plan):
     return {"total": plan["work_items_count"], "done": 0, "by_status": by_status}
 
 
-def run_pass(job_id, repo, reader, request_analysis, now, max_wait_seconds=600):
+def run_pass(job_id, repo, reader, request_analysis, now, max_wait_seconds=600,
+             then_generate=False, record_repo=None):
+    """`then_generate=False` is the S1 behaviour: planning ends the job (completed / planned).
+    With `then_generate=True` and the unit level requested, planning instead creates the records
+    and leaves the job running, in stage `generating`, for the generation phase."""
     job = repo.get(job_id)
     if job is None or job["status"] in JobStatus.FINAL:
         return PassResult(done=True)
@@ -88,6 +92,18 @@ def run_pass(job_id, repo, reader, request_analysis, now, max_wait_seconds=600):
             error={"code": "analysis_failed", "message": "No selected Python file could be analysed."},
         )
         done = True
+    elif then_generate and Level.UNIT in job["levels"] and plan["units"]:
+        from core_testing import generation
+
+        job["plan"] = plan
+        if not job.get("records_created"):
+            generation.create_records(job, record_repo)
+        fields.update(
+            status=JobStatus.RUNNING, stage=JobStage.GENERATING, error=None,
+            records_created=True, llm_requests=int(job.get("llm_requests") or 0),
+            progress=generation.progress_from_records(record_repo.counts(job_id), plan),
+        )
+        done = False
     else:
         fields.update(status=JobStatus.COMPLETED, stage=JobStage.PLANNED, error=None)
         done = True

@@ -17,6 +17,8 @@ class JobStage:
     WAITING_ANALYSIS = "waiting_analysis"
     PLANNING = "planning"
     PLANNED = "planned"
+    GENERATING = "generating"
+    GENERATED = "generated"
 
 
 class FileStatus:
@@ -46,5 +48,29 @@ class Level:
     ALL = (UNIT, EDGE, INTEGRATION)
 
 
-# Record statuses shown in progress.by_status (only `pending` and `skipped` are produced in S1).
-RECORD_STATUSES = ("pending", "ready", "skipped", "generation_failed", "test_failed", "environment_error")
+class RecordStatus:
+    PENDING = "pending"
+    GENERATED = "generated"          # written and checked for form; NOT run
+    READY = "ready"                  # only the acceptance gate may set this (sandbox slice)
+    SKIPPED = "skipped"
+    GENERATION_FAILED = "generation_failed"
+    TEST_FAILED = "test_failed"
+    ENVIRONMENT_ERROR = "environment_error"
+
+
+class FailReason:
+    NO_CODE = "no_code"
+    SYNTAX_ERROR = "syntax_error"
+    FORBIDDEN_IMPORT = "forbidden_import"
+    UNSAFE_CODE = "unsafe_code"
+    WEAK_TEST = "weak_test"
+
+
+class StopReason:
+    MODEL_UNAVAILABLE = "model_unavailable"
+    REQUEST_LIMIT_REACHED = "request_limit_reached"
+
+
+# Record statuses shown in progress.by_status.
+RECORD_STATUSES = ("pending", "generated", "ready", "skipped", "generation_failed", "test_failed",
+                   "environment_error")

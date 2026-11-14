@@ -13,3 +13,21 @@ def callees(project_graph, unit_id):
         if target in unit_ids and target != unit_id and target not in out:
             out.append(target)
     return out
+
+
+def externals(project_graph, unit_id):
+    """External names a unit calls (`ext.os.getcwd` → `os.getcwd`), without Python builtins."""
+    import builtins
+
+    out = []
+    for edge in project_graph["edges"]:
+        if edge.get("relation") != "calls" or edge.get("from") != unit_id:
+            continue
+        target = edge.get("to") or ""
+        if not target.startswith("ext."):
+            continue
+        name = target[4:]
+        if name.split(".")[0] in dir(builtins) or name in out:
+            continue
+        out.append(name)
+    return out

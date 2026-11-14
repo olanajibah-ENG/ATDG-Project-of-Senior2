@@ -130,6 +130,15 @@ CORE_TESTING_GATE_POLL_SECONDS = 5
 CORE_TESTING_GATE_MAX_WAIT_SECONDS = 600
 # A job still "queued" after this long was never picked up by the worker → reported as failed.
 CORE_TESTING_QUEUE_TIMEOUT_SECONDS = 120
+# S2 — generation
+TEST_RECORDS_COLLECTION = 'test_records'
+TEST_ATTEMPTS_COLLECTION = 'test_attempts'
+# One job may not spend more model requests than this (reused answers do not count).
+CORE_TESTING_MAX_REQUESTS_PER_JOB = 20
+# Free models spend part of this on their own reasoning; 2000 cut real answers off mid-file.
+CORE_TESTING_LLM_MAX_TOKENS = 4000
+# None = the client's own model order.
+CORE_TESTING_LLM_MODEL = None
 
 AUTH_PASSWORD_VALIDATORS = [
     {

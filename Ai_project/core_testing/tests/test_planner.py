@@ -76,3 +76,26 @@ def test_units_carry_their_callees_when_a_graph_is_given():
     assert by_id["game.py::Student.enroll"]["callees"] == ["game.py::Course.add_student"]
     assert by_id["game.py::Course.add_student"]["callees"] == []
     assert "line" not in by_id["game.py::Student.enroll"]
+
+
+def test_units_carry_their_externals_without_builtins():
+    ready = _ready({"game.py": "game.py"})
+    plan, _ = planner.build_plan(ready, [], ALL, _graph(ready))
+    by_id = {u["id"]: u for u in plan["units"]}
+    # enroll calls len() and print(): builtins are not externals
+    assert by_id["game.py::Student.enroll"]["externals"] == []
+    assert all("print" not in u["externals"] and "len" not in u["externals"] for u in plan["units"])
+
+
+def test_real_externals_are_listed():
+    from core_testing.graphify import queries
+
+    graph = {"nodes": [], "edges": [
+        {"from": "a.py::f", "to": "ext.os.getcwd", "relation": "calls", "confidence": "INFERRED"},
+        {"from": "a.py::f", "to": "ext.print", "relation": "calls", "confidence": "INFERRED"},
+        {"from": "a.py::f", "to": "ext.os.getcwd", "relation": "calls", "confidence": "INFERRED"},
+        {"from": "a.py::f", "to": "ext.typing", "relation": "imports", "confidence": "EXTRACTED"},
+        {"from": "a.py::g", "to": "ext.requests.get", "relation": "calls", "confidence": "INFERRED"},
+    ]}
+    assert queries.externals(graph, "a.py::f") == ["os.getcwd"]
+    assert queries.externals(graph, "a.py::g") == ["requests.get"]

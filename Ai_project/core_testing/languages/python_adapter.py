@@ -107,3 +107,54 @@ def list_units(file_path, analysis):
     for s in skips:
         s.pop("line", None)
     return units, skips
+
+
+# ── S2: what generation needs from a Python file ────────────────────────────
+
+import builtins as _builtins  # noqa: E402
+
+BUILTIN_NAMES = frozenset(dir(_builtins))
+
+
+def split_unit_id(unit_id_value):
+    """`path::Class.method` → (path, class | None, name)."""
+    path, _, local = unit_id_value.partition("::")
+    class_name, _, name = local.rpartition(".")
+    return path, (class_name or None), name
+
+
+def find_entry(analysis, unit_id_value):
+    """→ (class_entry | None, unit_entry | None) from the stored class data."""
+    _, class_name, name = split_unit_id(unit_id_value)
+    data = class_data(analysis)
+    if class_name:
+        for cls in data.get("classes") or []:
+            if cls.get("name") == class_name:
+                for method in cls.get("methods") or []:
+                    if method.get("name") == name:
+                        return cls, method
+                return cls, None
+        return None, None
+    for func in data.get("module_functions") or []:
+        if func.get("name") == name:
+            return None, func
+    return None, None
+
+
+def module_name(path):
+    """`pkg/game.py` → `pkg.game`. A path with no extension is used as it is (`game` → `game`)."""
+    text = str(path).replace("\\", "/")
+    if text.lower().endswith(".py"):
+        text = text[:-3]
+    if text.endswith("/__init__"):
+        text = text[: -len("/__init__")]
+    return ".".join(part for part in text.split("/") if part)
+
+
+def import_statement(path, name):
+    return f"from {module_name(path)} import {name}"
+
+
+def project_import_roots(project_paths):
+    """Top-level names a test may import from the project itself."""
+    return {module_name(p).split(".")[0] for p in project_paths if module_name(p)}
