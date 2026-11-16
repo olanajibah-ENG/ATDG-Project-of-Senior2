@@ -4,6 +4,31 @@
 
 **Input**: Feature specification from `/specs/002-unit-test-generation/spec.md`
 
+## Layout update (2026-11-16)
+
+On the supervisor's advice the owner moved Feature 1 out of its own Django app and into `core_ai`,
+laid out like logical explanation and conflict detection. File paths in this folder were updated
+to the new places. Where the text still says "the `core_testing` app", read it by this table.
+
+| Was | Is now |
+|-----|--------|
+| `Ai_project/core_testing/` (logic) | `Ai_project/core_ai/services/test_generation/` |
+| `core_testing/views.py` | `core_ai/views/testgen_views.py` |
+| `core_testing/serializers.py` | `core_ai/serializers/testgen_serializer.py` |
+| `core_testing/tasks.py` | `core_ai/celery_tasks/testgen_tasks.py` |
+| `core_testing/urls.py` | merged into `core_ai/urls.py` (block "Test Generation") |
+| `core_testing/apps.py`, `INSTALLED_APPS` entry | removed: `core_ai` is the app |
+| document builders in `repo.py` / `records.py` | `core_ai/models/testgen.py` |
+| `core_testing/tests/` | `core_ai/tests/test_generation/` |
+| `core_testing/tests/reports/s*.md` | `core_ai/tests/reports/testgen_s*.md` |
+| settings `CORE_TESTING_*` | `TESTGEN_*` |
+| Celery task `core_testing.advance_job` | `core_ai.testgen.advance_job` |
+
+Routes, request and response shapes, collections and behaviour are unchanged. The boundary that
+the separate app used to give is now checked by `core_ai/tests/test_generation/test_boundaries.py`:
+only Feature 1's own entry files import the package, the package imports no other feature, and
+only `llm_facade.py` imports the model client.
+
 ## Summary
 
 After a job's plan is built, the job goes on by itself: for each planned unit it builds a small
@@ -49,7 +74,7 @@ model request.
 
 | Principle | Status | How this plan complies |
 |-----------|--------|------------------------|
-| I. Feature 1 only, one module | PASS | New code is under `core_testing/`. Existing files changed: `core_ai/ai_engine/llm_client.py` (add `call_model_ex`; `call_model` keeps its behaviour), `settings.py`. Both are in the list the constitution allows. |
+| I. Feature 1 only, one module | PASS | New code is under `core_ai/services/test_generation/`. Existing files changed: `core_ai/ai_engine/llm_client.py` (add `call_model_ex`; `call_model` keeps its behaviour), `settings.py`. Both are in the list the constitution allows. |
 | II. Trusted means proven | PASS | No record can become `ready`: there is no code path that sets it. Checked tests are `generated`, and the route that shows their code says they were not run. |
 | III. Bounded, recorded LLM use | PASS | The model is reached only through `LLMFacade`, which is the only module allowed to import the client (checked by `test_boundaries.py`). Every call writes an attempt. One request per unit, no repair. The context is the only project data in the prompt. Tests use a fake model. |
 | IV. Python + pytest first | PASS | Python-specific checks and rules stay in `languages/python_adapter.py`. The `LanguageAdapter` interface and its registry are added now, as promised in S1. |
@@ -78,7 +103,7 @@ specs/002-unit-test-generation/
 
 ```text
 Ai_project/
-├── core_testing/
+├── core_ai/services/test_generation/
 │   ├── records.py                 # NEW  RecordRepo + AttemptRepo (Mongo + in-memory)
 │   ├── context.py                 # NEW  UnitContext: what the model is allowed to see
 │   ├── llm_facade.py              # NEW  the only door to the model; records every call
@@ -132,7 +157,7 @@ storage and their model, so the whole slice runs in tests with in-memory storage
 | File | Change |
 |------|--------|
 | `core_ai/ai_engine/llm_client.py` | Add `call_model_ex(...)`, which returns the text **and** the model name and token counts, and accepts `max_tokens`. Add `LLMUnavailable(Exception)`, raised where the client today raises a plain `Exception` when every model is busy. `call_model` keeps its signature, its cache and its return value; it is rewritten to call the same inner loop. |
-| `Ai_project/Ai_project/settings.py` | `TEST_RECORDS_COLLECTION`, `TEST_ATTEMPTS_COLLECTION`, `CORE_TESTING_MAX_REQUESTS_PER_JOB = 20`, `CORE_TESTING_LLM_MAX_TOKENS = 4000`, `CORE_TESTING_LLM_MODEL = None` (None = the client's own order). |
+| `Ai_project/Ai_project/settings.py` | `TEST_RECORDS_COLLECTION`, `TEST_ATTEMPTS_COLLECTION`, `TESTGEN_MAX_REQUESTS_PER_JOB = 20`, `TESTGEN_LLM_MAX_TOKENS = 4000`, `TESTGEN_LLM_MODEL = None` (None = the client's own order). |
 
 The change to `llm_client.py` touches code that conflict detection uses. It is guarded by running
 the whole existing suite, and by new tests that pin `call_model`'s behaviour (text returned, cache

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>تقرير العمل — الميزة 1 حتى الشريحة S2</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 10.6pt; line-height: 1.65; color: #1c2430; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 4px; color: #12305a; }
+  .sub { color: #56637a; font-size: 10.5pt; margin-bottom: 14px; }
+  h2 { font-size: 14pt; color: #fff; background: #1f5f4a; padding: 6px 12px; border-radius: 5px; margin: 22px 0 10px; break-after: avoid; }
+  h3 { font-size: 11.8pt; color: #12305a; margin: 16px 0 6px; border-right: 4px solid #2f7de1; padding-right: 8px; break-after: avoid; }
+  p { margin: 5px 0; }
+  ul, ol { margin: 4px 0 8px; padding-right: 20px; }
+  li { margin: 2px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 9.6pt; }
+  tr { break-inside: avoid; }
+  th { background: #e8eef7; color: #12305a; text-align: right; padding: 6px 8px; border: 1px solid #c3cede; }
+  td { padding: 5px 8px; border: 1px solid #d3dbe7; vertical-align: top; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 9.1pt; direction: ltr; unicode-bidi: embed; background: #eef2f7; padding: 0 3px; border-radius: 3px; }
+  pre { direction: ltr; text-align: left; font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; line-height: 1.45; background: #f4f6fa; border: 1px solid #d3dbe7; border-radius: 5px; padding: 9px 11px; margin: 8px 0 12px; white-space: pre-wrap; break-inside: avoid; }
+  .box { border: 1px solid #c3cede; border-radius: 6px; padding: 8px 12px; margin: 8px 0 12px; break-inside: avoid; }
+  .key { background: #eaf6f0; border-color: #8cc5a8; }
+  .note { background: #fff8e6; border-color: #e6c46a; }
+  .warn { background: #fdeeee; border-color: #e0a0a0; }
+  .nums { display: flex; gap: 8px; margin: 8px 0 12px; }
+  .num { flex: 1; border: 1px solid #c3cede; border-radius: 6px; padding: 8px 6px; text-align: center; background: #f7f9fc; break-inside: avoid; }
+  .num b { display: block; font-size: 17pt; color: #12305a; line-height: 1.2; }
+  .num span { font-size: 9.2pt; color: #56637a; }
+  .flow { display: flex; gap: 5px; margin: 8px 0 12px; }
+  .flow div { flex: 1; text-align: center; border: 1px solid #c3cede; background: #f7f9fc; border-radius: 5px; padding: 6px 4px; font-size: 9.5pt; }
+  .flow div b { display: block; color: #12305a; }
+  .flow .done { background: #eaf6f0; border-color: #8cc5a8; }
+  .flow .next { background: #fff8e6; border-color: #e6c46a; }
+  .tag { display: inline-block; font-size: 8.6pt; padding: 0 6px; border-radius: 9px; border: 1px solid; white-space: nowrap; }
+  .t-ok { background: #eaf6f0; border-color: #8cc5a8; color: #1f5f4a; }
+  .t-open { background: #fff8e6; border-color: #e6c46a; color: #7a5a00; }
+  .pb { break-before: page; }
+  .small { font-size: 9.4pt; color: #56637a; }
+</style>
+</head>
+<body>
+
+<h1>تقرير العمل — الميزة 1: توليد اختبارات موثوقة</h1>
+<div class="sub">مشروع AutoTest &amp; DocGen Manager · من دمج Graphify حتى نهاية الشريحة S2 · الفترة 12 إلى 14/11/2026 · الفرع <code>feature/core-testing</code></div>
+
+<div class="box key">
+<b>الخلاصة:</b> دمجنا تعديلات الباك (Graphify)، جهّزنا طريقة العمل بـ Spec Kit، ونفّذنا أول شريحتين من ميزة توليد الاختبارات. النظام الآن يستقبل طلباً على مشروع، يجرد دواله، يفهم من يستدعي من، ويكتب اختبار pytest لكل دالة بعد فحصه شكلياً. جُرّب كل ذلك على النظام الحقيقي بنموذج لغوي حقيقي. الاختبارات المولَّدة <b>لم تُشغَّل بعد</b>: التشغيل والثقة يأتيان في الشريحة S3.
+</div>
+
+<div class="nums">
+  <div class="num"><b>454</b><span>اختباراً آلياً ناجحاً</span></div>
+  <div class="num"><b>2 من 6</b><span>شرائح منجزة</span></div>
+  <div class="num"><b>9 من 9</b><span>وحدات وُلِّد لها اختبار</span></div>
+  <div class="num"><b>5</b><span>مسارات API جديدة</span></div>
+  <div class="num"><b>5</b><span>commits</span></div>
+</div>
+
+<div class="flow">
+  <div class="done"><b>S1 ✓</b>المهمة والخطة</div>
+  <div class="done"><b>S2 ✓</b>توليد Unit</div>
+  <div class="next"><b>S3</b>التشغيل المعزول</div>
+  <div><b>S4</b>الإصلاح</div>
+  <div><b>S5</b>Edge</div>
+  <div><b>S6</b>Integration</div>
+</div>
+
+<h2>1. تسلسل العمل</h2>
+<table>
+<tr><th style="width:5%">#</th><th style="width:25%">المرحلة</th><th>ماذا تم</th><th style="width:13%">Commit</th></tr>
+<tr><td>1</td><td>دمج تعديلات الباك</td><td>دمج عمل Graphify (6 ملفات معدّلة و6 جديدة) فوق آخر عملنا، واختباره.</td><td><code>ed3885e</code></td></tr>
+<tr><td>2</td><td>خطة الميزة</td><td>خطة تنفيذ مفصلة (PDF من 13 صفحة) للأنواع الثلاثة والشرائح الست.</td><td><code>5be6935</code></td></tr>
+<tr><td>3</td><td>تجهيز Spec Kit</td><td>تنزيل الأداة، كتابة الدستور (7 مبادئ)، وتثبيت طريقة العمل شريحة بشريحة.</td><td rowspan="2"><code>fdcad13</code></td></tr>
+<tr><td>4</td><td>الشريحة S1</td><td>مواصفة ← توضيح ← خطة ← 47 مهمة ← تنفيذ ← تجربة Postman ← تقرير.</td></tr>
+<tr><td>5</td><td>إصلاح بعد القبول</td><td>المهمة التي لا يشغّلها العامل صارت تُعلَن فاشلة بدل أن تبقى معلّقة.</td><td><code>7d9070c</code></td></tr>
+<tr><td>6</td><td>الشريحة S2</td><td>مواصفة ← توضيح ← خطة ← 41 مهمة ← تنفيذ ← تجربة بالنموذج الحقيقي ← إصلاح ← تقرير.</td><td><code>00c4513</code></td></tr>
+</table>
+
+<h2>2. دمج Graphify</h2>
+<p>الملف المضغوط من الباك كان مبنياً على نسخة أقدم من عملنا (الخطوة 11)، فلم يُنسخ فوق المشروع. أُخذت فقط الملفات التي تغيّرت فعلاً، وباقي الفروقات (حوالي 700 ملف) كانت فروقات نهايات أسطر.</p>
+<h3>ماذا أضاف</h3>
+<ul>
+<li>شكل موحد للـ graph في كل المعالجات: <code>nodes</code> / <code>edges</code> / <code>meta</code>، مع علاقات <code>imports</code> و <code>inherits</code> و <code>calls</code> ودرجة ثقة.</li>
+<li>ملخص نصي للـ graph يُحقن في الـ prompt عند توليد الشرح.</li>
+<li><code>analyze_task</code> صار يختار المعالج عبر <code>ProcessorFactory</code>.</li>
+</ul>
+<h3>ماذا لم يُدمج، ولماذا</h3>
+<p><code>llm_client.py</code>: نسخة الباك تحذف نموذج التقييم الذي يعتمد عليه قياس كشف التناقض، فأبقينا نسختنا.</p>
+<h3>ما وجدناه عند فحص الخرج</h3>
+<table>
+<tr><th style="width:34%">الملاحظة</th><th>التفصيل</th><th style="width:20%">الأثر</th></tr>
+<tr><td>مدخل كشف التناقض لم يتغيّر</td><td>مخرجات <code>extract_features</code> متطابقة حرفياً قبل وبعد الدمج.</td><td>عملنا لم يتأثر</td></tr>
+<tr><td>Java: حقل يُحسب استدعاءً</td><td><code>items.add(item)</code> ظهرت استدعاءً مؤكداً لـ <code>OrderService.items</code>.</td><td>يؤثر على الشرح</td></tr>
+<tr><td>Python: استدعاء محلي يظهر خارجياً</td><td><code>course.add_student(self)</code> ظهرت <code>ext.course.add_student</code>.</td><td>حُلّ عندنا في S1</td></tr>
+<tr><td><code>super().__init__</code></td><td>ظهرت <code>ext.super</code> بدل باني الكلاس الأب.</td><td>حُلّ عندنا في S1</td></tr>
+<tr><td>الـ builtins تُحسب خارجيات</td><td><code>print</code> و <code>len</code> تأخذان مكاناً من حد الـ 50 علاقة.</td><td>نستبعدها في S2</td></tr>
+<tr><td>الخطة غير مكتملة</td><td>الاستهلاك الثاني (استعلامات الجيران للاختبارات) لم يكن منفّذاً.</td><td>نفّذناه في S1</td></tr>
+</table>
+
+<h2>3. طريقة العمل: Spec Kit</h2>
+<p>لكل شريحة نفس التسلسل، ولا يُكتب كود قبل الموافقة على الخطة والمهام:</p>
+<div class="flow">
+  <div><b>الدستور</b>مرة واحدة</div>
+  <div><b>المواصفة</b>ماذا</div>
+  <div><b>التوضيح</b>الأسئلة</div>
+  <div><b>الخطة</b>كيف</div>
+  <div><b>المهام</b>بأي ترتيب</div>
+  <div><b>التنفيذ</b>الكود</div>
+  <div><b>القبول</b>Postman + تقرير</div>
+</div>
+<h3>قرارات اتُّخذت خلال التوضيح</h3>
+<table>
+<tr><th style="width:36%">السؤال</th><th>القرار</th></tr>
+<tr><td>ملف بلا تحليل</td><td>المهمة تطلب تحليله وتكمل بغيره، وتعيد مرة عند الفشل، ثم تتجاوزه بسبب <code>analysis_failed</code>.</td></tr>
+<tr><td>شكل معرّف الوحدة</td><td><code>path::Class.method</code></td></tr>
+<tr><td><code>__init__</code> والدوال الخاصة</td><td><code>__init__</code> وحدة تُختبر. الدوال الخاصة (<code>_name</code>) تُتجاوز وتدخل كجيران فقط.</td></tr>
+<tr><td>تعطّل النموذج أو انتهاء الحد</td><td>المهمة تتوقف، تحتفظ بما وُلِّد، والباقي <code>pending</code>.</td></tr>
+<tr><td>حد الطلبات</td><td>حد لكل مهمة، افتراضياً 20.</td></tr>
+<tr><td>اختبار مكتوب لم يُشغَّل</td><td>حالة جديدة <code>generated</code>، ويمكن قراءة كوده مع تنبيه أنه لم يُشغَّل.</td></tr>
+<tr><td>مكان الكود</td><td>تطبيق <code>core_testing</code> داخل خدمة الذكاء بجانب <code>core_ai</code>. تغيّر القرار مرتين قبل التثبيت (القسم 9).</td></tr>
+</table>
+
+<h2 class="pb">4. الشريحة S1 — المهمة والخطة</h2>
+<p><b>الهدف:</b> المستخدم يطلب اختبارات فيأخذ رقم مهمة، ثم يقرأ الخطة: كل الدوال التي ستُختبر وكل ما تُجووز مع السبب. بدون نموذج لغوي.</p>
+<h3>ما بُني</h3>
+<table>
+<tr><th style="width:27%">الجزء</th><th>الوظيفة</th></tr>
+<tr><td>3 مسارات محمية بـ JWT</td><td>إنشاء مهمة، حالة المهمة، والخطة. التوكن من UPM ويُتحقق منه بمفتاح UPM.</td></tr>
+<tr><td>النطاق</td><td>تحديد النسخة (الأحدث افتراضياً) والملفات والأنواع، مع أخطاء 400 و 422.</td></tr>
+<tr><td>بوابة التحليل</td><td>قرار لكل ملف: جاهز، انتظر، اطلب تحليله، أو تجاوزه. بدون أن تنتظر مهمة مهمة أخرى.</td></tr>
+<tr><td>طبقة الـ graph</td><td>معرّفات فريدة على مستوى المشروع، دمج الملفات، وربط الاستدعاءات التي بقيت خارجية.</td></tr>
+<tr><td>المخطِّط</td><td>جرد الوحدات، ستة أسباب تجاوز، وعدد عناصر العمل.</td></tr>
+<tr><td>مجموعة <code>test_jobs</code></td><td>المهمة والخطة داخلها.</td></tr>
+</table>
+<h3>نتيجة ملف <code>game</code></h3>
+<p>14 وحدة، صفر متجاوز، 42 عنصر عمل. والاستدعاءات صارت مربوطة:</p>
+<table>
+<tr><th>قبل (الـ graph المخزَّن)</th><th>بعد (طبقتنا)</th></tr>
+<tr><td><code>Student.enroll → ext.course.add_student</code></td><td><code>Student.enroll → Course.add_student</code></td></tr>
+<tr><td><code>Professor.__init__ → ext.super</code></td><td><code>Professor.__init__ → Person.__init__</code></td></tr>
+<tr><td><code>University.create_department → Department</code></td><td><code>University.create_department → Department.__init__</code></td></tr>
+</table>
+<h3>تجربة القبول (Postman، النظام الحقيقي)</h3>
+<p>على مشروع <code>task_test</code>: الإنشاء رجع 202، الحالة <code>completed</code> / <code>planned</code>، والخطة 9 وحدات و27 عنصر عمل. بدون توكن 401، ورقم مهمة غير موجود 404. العامل أنهى المهمة في أقل من ثانية بدون أي استدعاء للنموذج.</p>
+
+<h2>5. الشريحة S2 — توليد اختبار Unit</h2>
+<p><b>الهدف:</b> بعد الخطة تكمل المهمة لوحدها: لكل وحدة تبني سياقاً صغيراً، تطلب من النموذج اختبار pytest، تفحصه بدون تشغيل، وتحفظه. لا شيء يصير <code>ready</code>.</p>
+<h3>ما بُني</h3>
+<table>
+<tr><th style="width:27%">الجزء</th><th>الوظيفة</th></tr>
+<tr><td>السياق</td><td>كود الوحدة، كلاسها، وتواقيع ما تستدعيه فقط. لا يحتوي جسم أي دالة أخرى ولا ملفاً كاملاً.</td></tr>
+<tr><td>واجهة النموذج</td><td>الباب الوحيد للنموذج. تسجّل كل طلب: النموذج، الرموز، والمدة.</td></tr>
+<tr><td>وحدة واحدة في كل جولة</td><td>المهمة الخلفية تعالج وحدة ثم تعود، فيظهر التقدّم بعد كل وحدة.</td></tr>
+<tr><td>الفحص بدون تشغيل</td><td>استخراج الكود، <code>ast.parse</code>، الاستيرادات، الأمان، قوة الاختبار، ثم إعادة التسمية.</td></tr>
+<tr><td>إعادة الاستعمال</td><td>نفس السياق ونفس نسخة التوجيه لا يكلّفان طلباً جديداً.</td></tr>
+<tr><td>التوقف المنظّم</td><td>عند تعطّل النموذج أو بلوغ الحد: حفظ ما وُلِّد، والباقي <code>pending</code> مع السبب.</td></tr>
+<tr><td>مساران جديدان</td><td>قائمة السجلات (بدون كود)، وسجل واحد مع كوده وتنبيه أنه لم يُشغَّل.</td></tr>
+</table>
+<p>أسباب الفشل الخمسة: <code>no_code</code> · <code>syntax_error</code> · <code>forbidden_import</code> · <code>unsafe_code</code> · <code>weak_test</code></p>
+
+<h3>تجربة القبول بالنموذج الحقيقي</h3>
+<table>
+<tr><th style="width:24%"></th><th>المهمة الأولى</th><th>المهمة الثانية (بعد الإصلاح)</th></tr>
+<tr><td>النتيجة</td><td><code>completed_with_issues</code></td><td><code>completed</code></td></tr>
+<tr><td>مولَّدة</td><td>6</td><td>9</td></tr>
+<tr><td>فاشلة</td><td>2 (جواب مقطوع)</td><td>0</td></tr>
+<tr><td>معلّقة</td><td>1 (النموذج لم يرد)</td><td>0</td></tr>
+<tr><td>طلبات مصروفة</td><td>8</td><td>3 (و6 من التخزين)</td></tr>
+<tr><td>المدة</td><td>عدة دقائق</td><td>52 ثانية</td></tr>
+</table>
+<p>كل الأجوبة جاءت من <code>cohere/north-mini-code:free</code>. كل ملف مولَّد فيه 3 دوال اختبار.</p>
+
+<h3>مثال: اختبار مولَّد لـ <code>Car.drive</code></h3>
+<pre>def test_Car_drive__unit_1(capsys):
+    driver = Mock()
+    driver.introduce = Mock()
+    car = Car("Toyota", "Camry", 150, "gas")
+    car.driver = driver
+    car.engine = Mock()
+    car.gps = Mock()
+    result = car.drive()
+    assert result is None
+    driver.introduce.assert_called_once()
+    car.engine.start.assert_called_once()
+    car.gps.locate.assert_called_once()</pre>
+
+<div class="box warn">
+<b>لماذا <code>generated</code> وليست <code>ready</code>:</b> في نفس الملف ظهر هذا السطر:
+<pre style="margin:6px 0 4px">assert "تحذير: لا يمكن القيادة因为没有 سائق!" in captured.out</pre>
+النموذج خلط حروفاً صينية بنص عربي. الاختبار مرّ من كل الفحوص لأن شكله سليم، لكنه على الأغلب سيفشل عند التشغيل. الفحص يضمن الشكل والأمان، والصحة تُكشف بالتشغيل في S3 وتُصلَّح في S4.
+</div>
+
+<h2 class="pb">6. الأخطاء والمشاكل وكيف حُلّت</h2>
+<h3>مشاكل في الكود والتصميم</h3>
+<table>
+<tr><th style="width:4%">#</th><th style="width:25%">المشكلة</th><th style="width:33%">كيف ظهرت</th><th>الحل</th></tr>
+<tr><td>1</td><td>مهمة تبقى <code>pending</code> للأبد</td><td>في تجربة S1: العامل كان يعمل بكود قديم فرمى المهمة (<code>unregistered task</code>) ولم يُخبَر المستخدم.</td><td>ملف <code>staleness.py</code>: مهمة <code>queued</code> أكثر من 120 ثانية، أو <code>running</code> بلا تغيير 720 ثانية، تتحول عند قراءتها إلى <code>failed</code> مع <code>worker_unavailable</code>.</td></tr>
+<tr><td>2</td><td>جواب النموذج ينقطع في منتصفه</td><td>في تجربة S2: وحدتان فشلتا بـ <code>no_code</code>. رموز الجواب 1998 من حد 2000.</td><td>الحد صار 4000. الجواب المقطوع يُسمّى باسمه (<code>syntax_error</code> مع "cut off"). ولا يُعاد استعماله من التخزين.</td></tr>
+<tr><td>3</td><td>الاستدعاءات المحلية تظهر خارجية</td><td>عند فحص خرج Graphify على ملف <code>game</code>.</td><td>طبقة <code>resolver</code>: تقرأ أجسام الدوال المخزَّنة وتربط <code>self.m()</code> و <code>super()</code> والبراميتر حسب نوعه والاستيراد من ملف آخر.</td></tr>
+<tr><td>4</td><td>طلب التحليل يُحسب فشلاً قبل أن يبدأ</td><td>عند تصميم البوابة: حالة الملف تبقى <code>FAILED</code> إلى أن يلتقط العامل الطلب.</td><td>البوابة تقارن وقت طلبنا مع وقت بدء آخر محاولة تحليل، فتنتظر ما دام طلبنا لم يبدأ.</td></tr>
+<tr><td>5</td><td>تعديل ملف يستخدمه كشف التناقض</td><td>S2 تحتاج اسم النموذج وعدد الرموز من <code>llm_client.py</code>.</td><td>أضيفت <code>call_model_ex</code> والدالة القديمة بقيت بنفس التوقيع والسلوك، مع 9 اختبارات تثبّت ذلك.</td></tr>
+<tr><td>6</td><td>pytest يعتبر دوالاً عادية اختبارات</td><td>دوال مساعدة اسمها يبدأ بـ <code>test_</code> (<code>test_path</code>، <code>test_name_stem</code>).</td><td>وسمها بـ <code>__test__ = False</code>.</td></tr>
+</table>
+
+<h3>مشاكل في البيئة والتشغيل</h3>
+<table>
+<tr><th style="width:4%">#</th><th style="width:25%">المشكلة</th><th style="width:33%">السبب</th><th>الحل</th></tr>
+<tr><td>7</td><td><code>docker compose up</code> يفشل بتعارض أسماء</td><td>نسخة ثانية من المشروع من مجلد آخر كانت تعمل منذ 4 أيام وتحجز نفس الأسماء.</td><td>إيقافها بـ <code>docker compose -p ... down</code> بدون <code>-v</code> حتى لا تُحذف بياناتها.</td></tr>
+<tr><td>8</td><td>خطأ <code>utf-8 codec can't decode</code> عند الرفع</td><td>رُفع الملف المضغوط على مسار يقرأ الملف كنص.</td><td>استخدام <code>upload-folder/</code> للملفات المضغوطة.</td></tr>
+<tr><td>9</td><td>401 عند تسجيل الدخول</td><td>هذه النسخة لها قاعدة بيانات مستقلة، والحساب لم يكن موجوداً فيها.</td><td>إنشاء حساب جديد.</td></tr>
+<tr><td>10</td><td>401 <code>Invalid or expired token</code></td><td>نص زائد أُلصق مع التوكن. المفتاح نفسه سليم (طابقنا بصمته بين الخدمتين).</td><td>لصق قيمة <code>access</code> وحدها.</td></tr>
+<tr><td>11</td><td>الكود الجديد لا يعمل بعد التعديل</td><td>الكود مربوط كـ volume، لكن <code>gunicorn</code> والعامل لا يعيدان التحميل.</td><td><code>docker compose restart ai_web celery_worker</code> بعد كل تعديل.</td></tr>
+<tr><td>12</td><td>502 Bad Gateway</td><td>الطلب أُرسل والخدمة ما زالت تقلع (حوالي دقيقة).</td><td>انتظار حالة <code>healthy</code>.</td></tr>
+<tr><td>13</td><td>404 ورابط لا يعمل</td><td>كُتب الرابط حرفياً مع <code>&lt;job_id=...&gt;</code>.</td><td>وضع الرقم وحده في المسار.</td></tr>
+<tr><td>14</td><td>بطء التوليد</td><td>من 7 نماذج مجانية في القائمة، واحد فقط يعمل: واحد اسمه خاطئ، اثنان أزيلا، واثنان محدودان أغلب الوقت.</td><td><span class="tag t-open">مفتوحة</span> القائمة في ملف مشترك مع كشف التناقض.</td></tr>
+</table>
+
+<h2>7. الاختبارات الآلية</h2>
+<table>
+<tr><th style="width:40%">بعد</th><th style="width:20%">عدد الاختبارات</th><th>الزيادة</th></tr>
+<tr><td>دمج Graphify</td><td>213</td><td>—</td></tr>
+<tr><td>الشريحة S1</td><td>334</td><td>+121</td></tr>
+<tr><td>إصلاح المهمة العالقة</td><td>343</td><td>+9</td></tr>
+<tr><td>الشريحة S2</td><td>450</td><td>+107</td></tr>
+<tr><td>إصلاح الجواب المقطوع</td><td>454</td><td>+4</td></tr>
+</table>
+<p>كلها تعمل داخل حاوية <code>ai_web</code> بدون قاعدة بيانات وبدون شبكة. التخزين نسخة في الذاكرة، والنموذج وهمي بأجوبة مكتوبة مسبقاً. بيانات التحليل تُبنى بتشغيل المحلل الحقيقي على ملفات عيّنات. يوجد اختبار خاص بالحدود: التطبيق لا يستورد النموذج إلا من واجهته، ولا يستورد من ميزة أخرى.</p>
+<p class="small">ملاحظة صريحة: كُتب الكود والاختبارات معاً، لا الاختبارات أولاً كما تنص قائمة المهام.</p>
+
+<h2>8. ما بقي مفتوحاً</h2>
+<table>
+<tr><th style="width:4%">#</th><th style="width:31%">البند</th><th>التفصيل</th><th style="width:16%">متى</th></tr>
+<tr><td>1</td><td>الاستدعاء عبر حقل لا يُربط</td><td><code>self.engine.start()</code>: في <code>task.py</code> ظهرت <code>Car.drive</code> بلا جيران مع أنها تستدعي ثلاث ميثودات.</td><td>قبل S6</td></tr>
+<tr><td>2</td><td>قائمة النماذج المجانية</td><td>أغلبها لا يعمل. تنظيفها يسرّع كل الميزات.</td><td>أي وقت</td></tr>
+<tr><td>3</td><td>التحقق من عضوية المشروع</td><td>الخدمة تتحقق من هوية المستخدم وملكية المهمة فقط.</td><td>قبل العرض</td></tr>
+<tr><td>4</td><td>ملف بلا امتداد</td><td>ملف مثل <code>game</code> لا يمكن استيراده في اختبار.</td><td>S3</td></tr>
+<tr><td>5</td><td>ملفات الاعتماديات</td><td><code>requirements.txt</code> يُتجاهل عند الرفع.</td><td>S3</td></tr>
+</table>
+
+<h2 class="pb">9. ملاحظات الدكتور ورأينا فيها</h2>
+
+<h3>9.1 نموذجان معاً: واحد يولّد والثاني يدقق</h3>
+<p><b>الرأي: فكرة جيدة، بشرط أن يوضع المدقق في مكانه الصحيح.</b></p>
+<p>عندنا مدقق أقوى من أي نموذج، وهو التشغيل الفعلي في S3: حكمه موضوعي ولا يهلوس. لكن التشغيل لا يكشف كل شيء:</p>
+<table>
+<tr><th style="width:44%">العيب</th><th style="width:28%">يكشفه التشغيل؟</th><th>يكشفه نموذج مدقق؟</th></tr>
+<tr><td>توقع خاطئ (مثل الحروف الصينية)</td><td>نعم</td><td>أحياناً</td></tr>
+<tr><td>خطأ استيراد أو صياغة</td><td>نعم</td><td>لا حاجة</td></tr>
+<tr><td>اختبار ينجح دائماً ولا يفحص شيئاً حقيقياً</td><td><b>لا</b></td><td><b>نعم</b></td></tr>
+<tr><td>كل شيء فيه Mock فلا يُختبر الكود فعلاً</td><td><b>لا</b></td><td><b>نعم</b></td></tr>
+<tr><td>الاختبار لا يطابق ما يقوله اسمه</td><td><b>لا</b></td><td><b>نعم</b></td></tr>
+</table>
+<p>فالنموذج المدقق يكمّل التشغيل ولا يغني عنه. المقترح:</p>
+<ul>
+<li><b>الترتيب:</b> توليد ← فحص شكلي ← تشغيل ← <b>مدقق على الاختبارات الناجحة فقط</b>. بهذا لا نصرف طلباً على اختبار سيفشل أصلاً.</li>
+<li><b>نموذج مختلف عن المولِّد</b>، حتى لا يشتركا في نفس الأخطاء.</li>
+<li><b>حكم المدقق لا يلغي نتيجة التشغيل.</b> يعطي ملاحظات تدخل حلقة الإصلاح (S4)، أو درجة جودة تُعرض للمستخدم.</li>
+<li><b>القياس:</b> نسبة الاختبارات الضعيفة التي يلتقطها، ودرجة الطفرات (mutation score) قبله وبعده.</li>
+</ul>
+<div class="box note"><b>التكلفة:</b> يضاعف عدد الطلبات تقريباً، والحد المجاني 50 طلباً في اليوم. تسع وحدات تصير 18 طلباً. لهذا يوضع بعد التشغيل، ويمكن جعله اختيارياً لكل مهمة.</div>
+<p>مكانه في الخطة: شريحة مستقلة بعد S4، أو جزء من S4 نفسها. والمشروع فيه نمط مشابه: <code>VerifierAgent</code> في الشرح المنطقي.</p>
+
+<h3>9.2 وضع الاختبارات داخل مجلد <code>services</code></h3>
+<p><b>الرأي: ملاحظة وجيهة، وتنفيذها ممكن الآن بكلفة مقبولة.</b></p>
+<p>هذا هو الخيار الذي جرّبناه ثم رجعنا عنه. الفرق بين الخيارين تنظيمي وليس معمارياً: في الحالتين الميزة داخل خدمة الذكاء، بنفس الحاوية ونفس قاعدة البيانات.</p>
+<table>
+<tr><th style="width:22%"></th><th>تطبيق مستقل <code>core_testing</code> (الحالي)</th><th>داخل <code>core_ai/services/</code> (اقتراح الدكتور)</th></tr>
+<tr><td>الاتساق</td><td>مختلف عن الميزتين الأخريين</td><td>نفس مكان كشف التناقض</td></tr>
+<tr><td>وضوح الحدود</td><td>تفرضها بنية المجلدات</td><td>تعتمد على الالتزام</td></tr>
+<tr><td>مطابقة المنطق</td><td>—</td><td>الاختبارات خدمة مثل غيرها</td></tr>
+</table>
+<p><b>حل وسط مقترح:</b> ننقل الحزمة كما هي إلى <code>core_ai/services/test_generation/</code> ونبقيها متماسكة (منطقها ومساراتها واختباراتها معاً) بدل توزيعها على مجلدات <code>views</code> و <code>models</code>. بهذا تكون داخل <code>services</code> كما قال الدكتور، ونحافظ على الحدود التي يتحقق منها اختبار آلي.</p>
+<p>النقل ميكانيكي (نقل ملفات وتعديل استيرادات) والاختبارات الـ 454 تتحقق منه. الأفضل أن يتم <b>قبل S3</b>، لأنها أكبر شريحة والكلفة تزيد بعدها. ويلزم إبلاغ أريج، لأن وثائقها مكتوبة على <code>core_testing</code>.</p>
+
+<h3>9.3 هل Graphify الحالي كافٍ للاختبارات؟</h3>
+<p><b>الجواب: كافٍ لاختبارات Unit و Edge، وغير كافٍ بعد لاختبارات Integration.</b></p>
+<table>
+<tr><th style="width:17%">النوع</th><th style="width:27%">ماذا يحتاج من الـ graph</th><th style="width:16%">الوضع</th><th>الدليل</th></tr>
+<tr><td>Unit</td><td>تواقيع ما تستدعيه الوحدة مباشرة</td><td><span class="tag t-ok">كافٍ</span></td><td>9 من 9 وُلّدت. النموذج يرى جسم الدالة فيعوّض ما ينقص.</td></tr>
+<tr><td>Edge</td><td>لا شيء إضافي. التلميحات من AST الوحدة.</td><td><span class="tag t-ok">كافٍ</span></td><td>لا تعتمد على الـ graph.</td></tr>
+<tr><td>Integration</td><td>مجموعات من دوال مترابطة فعلاً</td><td><span class="tag t-open">غير كافٍ</span></td><td><code>Car.drive</code> ظهرت بلا أي جار، فلا تتكوّن لها مجموعة.</td></tr>
+</table>
+<p>ما ينقص قبل S6، بترتيب الأهمية:</p>
+<ol>
+<li><b>الاستدعاء عبر حقل</b> (<code>self.engine.start()</code>): أهم نقص، لأنه النمط الأساسي للتركيب بين الكلاسات. الحل: معرفة نوع الحقل من الباني (<code>self.engine = Engine(...)</code>).</li>
+<li><b>وسم <code>io_kind</code></b> للخارجيات (شبكة، قاعدة بيانات، ملفات) لقرار المحاكاة.</li>
+<li><b>مستويات الثقة الثلاثة</b>، لأن المجموعات تُبنى من العلاقات المؤكدة فقط.</li>
+<li><b>استعلام المجموعات</b> بعمق حتى 2 وحجم حتى 4.</li>
+</ol>
+<p>وهناك فرق مهم: الـ graph الأصلي من الباك وحده <b>لم يكن كافياً حتى لـ Unit</b>، لأن الاستدعاءات المحلية كانت تظهر خارجية. ما جعله كافياً هو الطبقة التي أضفناها في S1.</p>
+
+<h2>10. الخطوة التالية</h2>
+<ol>
+<li><b>قرار مكان الكود</b> (البند 9.2)، قبل البدء بـ S3.</li>
+<li><b>الشريحة S3:</b> بناء مساحة العمل من الملفات الأصلية، التشغيل في حاوية معزولة بلا شبكة، قياس التغطية، حالة <code>ready</code>، وتنزيل ZIP.</li>
+<li><b>الشريحة S4:</b> حلقة الإصلاح، ومعها النموذج المدقق إن اعتُمد (البند 9.1).</li>
+</ol>
+
+<p class="small">المصادر: سجل العمل، تقريرا الشريحتين (<code>s1_job_and_plan.md</code> و <code>s2_unit_generation.md</code>)، وملفات Spec Kit في <code>specs/</code>. الأرقام من تشغيل فعلي للاختبارات ومن قاعدة البيانات بعد تجارب القبول.</p>
+
+</body>
+</html>

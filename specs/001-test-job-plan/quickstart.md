@@ -14,7 +14,7 @@
 From the repo root (Git Bash):
 
 ```bash
-MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps -T -e PYTHONIOENCODING=utf-8 --entrypoint sh ai_web -c "pip install -q pytest >/dev/null 2>&1; python -m pytest core_testing/tests core_ai/tests -q -p no:cacheprovider"
+MSYS_NO_PATHCONV=1 docker compose run --rm --no-deps -T -e PYTHONIOENCODING=utf-8 --entrypoint sh ai_web -c "pip install -q pytest >/dev/null 2>&1; python -m pytest core_ai/tests/test_generation core_ai/tests -q -p no:cacheprovider"
 ```
 
 Expected: every test passes, including the 210 that existed before this slice.

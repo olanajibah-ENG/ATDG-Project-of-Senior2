@@ -21,7 +21,7 @@ returns `usage` in the response body.
 
 ## R2. One door to the model
 
-**Decision**: `core_testing/llm_facade.py` is the only module in `core_testing` allowed to import
+**Decision**: `core_ai/services/test_generation/llm_facade.py` is the only module in `core_testing` allowed to import
 the client. `LLMFacade.complete(...)` takes the two prompt texts and the ids of the job and the
 record, calls `call_model_ex` with temperature 0, writes one attempt, and returns the text. It
 turns `LLMUnavailable`, a missing API key and network failures into one exception,
@@ -112,7 +112,7 @@ extension and `<unit>` the unit name, both with `/` and `.` replaced by `_`
 | Cause | Detected by | Job ends as | `error.code` |
 |-------|-------------|-------------|--------------|
 | every model busy, quota used up, no API key, network down | `ModelUnavailable` from the facade | `completed_with_issues` | `model_unavailable` |
-| the job spent its request limit | counter on the job ≥ `CORE_TESTING_MAX_REQUESTS_PER_JOB` | `completed_with_issues` | `request_limit_reached` |
+| the job spent its request limit | counter on the job ≥ `TESTGEN_MAX_REQUESTS_PER_JOB` | `completed_with_issues` | `request_limit_reached` |
 
 In both cases the record being handled stays `pending`, records already `generated` are kept, and
 the job's `error` field carries the code and a readable message. `error` is therefore no longer
@@ -133,7 +133,7 @@ the file (completion tokens 1998). Free models spend part of the limit on their 
 fence was never closed, so the check found no code and reported `no_code`, which is misleading.
 A stored cut-off answer would also have been reused by every later job, failing forever.
 
-**Decision**: the limit is 4000 (`CORE_TESTING_LLM_MAX_TOKENS`). An answer with an odd number of
+**Decision**: the limit is 4000 (`TESTGEN_LLM_MAX_TOKENS`). An answer with an odd number of
 fence markers is treated as cut off: its text is still extracted, a parse failure is reported as
 `syntax_error` with a detail saying the answer was cut off, and such an answer is never reused —
 the unit is asked again. A cut-off answer that happens to stop between two complete tests still

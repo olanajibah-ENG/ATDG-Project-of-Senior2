@@ -67,8 +67,8 @@ stage:   queued ──► planning ──► planned
 `completed_with_issues` and `cancelled` are valid job statuses of the API but are not produced in
 S1.
 
-A job that stops moving is failed when it is read (`core_testing/staleness.py`): `pending` /
-`queued` for more than `CORE_TESTING_QUEUE_TIMEOUT_SECONDS` (120), or `running` with no update for
+A job that stops moving is failed when it is read (`core_ai/services/test_generation/staleness.py`): `pending` /
+`queued` for more than `TESTGEN_QUEUE_TIMEOUT_SECONDS` (120), or `running` with no update for
 more than the gate's maximum wait plus that timeout. Its `error.code` is `worker_unavailable`.
 
 ### Skip reason codes

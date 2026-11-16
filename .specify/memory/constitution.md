@@ -2,25 +2,29 @@
 
 ## Core Principles
 
-### I. Feature 1 Only, One Module
+### I. Feature 1 Only, Same Layout as the Other Features
 
 This constitution governs Feature 1 (Generate Trusted Tests) and nothing else.
 
-- Feature 1 lives inside the existing AI service (`Ai_project`). It is not a new microservice.
-- Inside that service it is its own Django app: all new code MUST live in
-  `Ai_project/core_testing/`, beside `core_ai`.
-- Existing code outside that app MUST NOT change, except for the small changes a slice's plan
-  lists by file (for example registering the app, adding `call_model_ex`, keeping dependency
-  manifests at upload, adding queues and workers).
-- `core_testing` MAY read what `core_ai` stores and MAY call its analysis task. It MUST NOT
-  import from another feature (`core_ai/services/conflict_detection`, the explanation engine),
-  and no existing code may import from `core_testing`.
+- Feature 1 lives inside the existing AI service, inside the `core_ai` app, laid out the same way
+  as logical explanation and conflict detection. It is not a separate Django app and not a new
+  microservice.
+- Its logic MUST live in the package `Ai_project/core_ai/services/test_generation/`.
+- Its entry points are shared with the other features, one file each:
+  `core_ai/views/testgen_views.py`, `core_ai/serializers/testgen_serializer.py`,
+  `core_ai/celery_tasks/testgen_tasks.py`, `core_ai/models/testgen.py`, routes in `core_ai/urls.py`,
+  tests under `core_ai/tests/test_generation/`, reports under `core_ai/tests/reports/`.
+- Other existing files MUST NOT change, except for the small changes a slice's plan lists by file
+  (for example adding settings, adding `call_model_ex`, keeping dependency manifests at upload,
+  adding queues and workers).
+- The package MAY read what analysis stores and MAY call its analysis task. It MUST NOT import
+  from another feature (`core_ai/services/conflict_detection`, the explanation engine), and no
+  other feature may import from it. A test checks this on every run.
 - Conflict detection (`core_ai/services/conflict_detection`) and its evaluation MUST keep
   producing the same results after every slice.
 
-Rationale: three features share this service, and this one is the largest (sandbox, workers,
-several collections). A boundary drawn by the folder structure is harder to break by accident
-than one that depends on agreement.
+Rationale: three features share this service. One layout for all three keeps the code easy to
+find; the boundary between them is kept by an automated test instead of by a separate app.
 
 ### II. Trusted Means Proven (NON-NEGOTIABLE)
 
@@ -41,7 +45,7 @@ Rationale: the product promise is that a delivered test really runs. Anything we
 - A test MUST be repaired at most 3 times.
 - Every LLM call MUST be recorded with its purpose, model and token counts.
 - All LLM access MUST go through `LLMFacade`.
-- Automated tests of `core_testing` MUST NOT make real LLM calls.
+- Automated tests of this feature MUST NOT make real LLM calls.
 
 Rationale: the free tier allows about 50 requests a day, and measurements must be repeatable.
 
@@ -60,7 +64,7 @@ Rationale: the free tier allows about 50 requests a day, and measurements must b
   logical-explanation module reads.
 - Graphify additions for testing (call resolution, builtins, confidence tiers, `io_kind`,
   file-qualified ids, project merge, neighbour queries, cache) MUST be implemented under
-  `core_testing/graphify/`.
+  `core_ai/services/test_generation/graphify/`.
 - Branch, boundary and exception hints MUST come from the unit's own AST, not from the graph.
 - Integration groups MUST use `EXTRACTED` call edges only, with depth ≤ 2 and size ≤ 4.
 
@@ -108,7 +112,7 @@ a second language runtime, whole-system end-to-end tests.
 - Per slice: specify → clarify → plan → tasks → implement → acceptance check.
 - Tests run inside the `ai_web` Docker image, because the local tree-sitter version differs.
 - Every slice ships tests for its own code, and an Arabic `.md` report under
-  `Ai_project/core_testing/tests/reports/` saying what was tested and what the results were.
+  `Ai_project/core_ai/tests/reports/` saying what was tested and what the results were.
 - One commit (or a small series) per slice, made after its acceptance check passes.
 - Results are reported as they are: a failing test is reported as failing, with its output.
 
@@ -120,4 +124,4 @@ a second language runtime, whole-system end-to-end tests.
 - Every plan MUST include a constitution check, and any deviation MUST be justified in writing
   in that plan.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-13
+**Version**: 2.0.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-16

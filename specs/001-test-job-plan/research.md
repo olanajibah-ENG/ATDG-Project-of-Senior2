@@ -9,9 +9,9 @@ set aside.
 `role_type` and `full_name`. The AI service has a different `SECRET_KEY`, no `SIMPLE_JWT`
 settings, and its views set `AllowAny`. The AI service has no table of UPM users.
 
-**Decision**: `core_testing/auth.py` holds a small DRF authentication class that decodes the
+**Decision**: `core_ai/services/test_generation/auth.py` holds a small DRF authentication class that decodes the
 `Authorization: Bearer <token>` header with simplejwt's `TokenBackend`, using a dedicated setting
-`CORE_TESTING_JWT_SIGNING_KEY`. It accepts only `token_type == "access"`, and returns a light user
+`TESTGEN_JWT_SIGNING_KEY`. It accepts only `token_type == "access"`, and returns a light user
 object built from the claims, with no database lookup. docker compose passes the UPM key to
 `ai_web` as `UPM_JWT_SIGNING_KEY`. If the setting is empty, every test route answers 401.
 
@@ -34,12 +34,12 @@ triggers `analyze_code_file_task` for every file. Completion is visible on the f
 `analysis_status` moves `PENDING → IN_PROGRESS → COMPLETED | FAILED`, and `analysis_id` is set on
 success.
 
-**Decision**: one Celery task, `core_testing.tasks.advance_job(job_id)`, runs a single short pass
+**Decision**: one Celery task, `core_ai.celery_tasks.testgen_tasks.advance_job(job_id)`, runs a single short pass
 and returns. If some file is still waiting, the task re-enqueues itself with
-`apply_async(countdown=CORE_TESTING_GATE_POLL_SECONDS)`. It never calls `.get()` on anything.
+`apply_async(countdown=TESTGEN_GATE_POLL_SECONDS)`. It never calls `.get()` on anything.
 A missing analysis is requested with `analyze_code_file_task.delay(file_id)` and not awaited.
 The job stores, per file, how many times it requested analysis (maximum 2) and one deadline for
-the whole gate (`CORE_TESTING_GATE_MAX_WAIT_SECONDS`, default 600).
+the whole gate (`TESTGEN_GATE_MAX_WAIT_SECONDS`, default 600).
 
 Gate rules per selected Python file:
 
@@ -85,7 +85,7 @@ sample file the stored graph reports `course.add_student(self)` as `ext.course.a
 `super().__init__` as `ext.super`, and uses ids such as `Student.enroll` and `__module__` that
 repeat across files.
 
-**Decision**: a thin layer in `core_testing/graphify/`, in four steps:
+**Decision**: a thin layer in `core_ai/services/test_generation/graphify/`, in four steps:
 
 1. `loader` reads, for one file, the stored graph, the unit list from `class_diagram_data`, and
    the top-level imports from the stored AST.
@@ -144,7 +144,7 @@ are not units.
 **Finding**: the existing tests run with plain pytest and never call `django.setup()`. Importing
 DRF views or simplejwt needs the app registry.
 
-**Decision**: `core_testing/tests/conftest.py` calls `django.setup()` once, blocks
+**Decision**: `core_ai/tests/test_generation/conftest.py` calls `django.setup()` once, blocks
 `LLMClient.call_model` for every test, and provides the in-memory repo and reader. Views are
 called with DRF's `APIRequestFactory`. Stored-analysis fixtures are produced by running the real
 `PythonProcessor` on small source files kept under `tests/fixtures/sources/`, so the fixtures
@@ -160,7 +160,7 @@ The API document names error codes but not the body. One shape is used for every
 
 ## R9. Proving that no LLM is called
 
-Two automated checks: a static test that no module under `core_testing/` imports the LLM client,
+Two automated checks: a static test that no module under `core_ai/services/test_generation/` imports the LLM client,
 and a run of a full job with `LLMClient.call_model` replaced by a function that raises.
 
 ## R10. Where the code lives

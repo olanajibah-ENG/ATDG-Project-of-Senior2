@@ -4,6 +4,31 @@
 
 **Input**: Feature specification from `/specs/001-test-job-plan/spec.md`
 
+## Layout update (2026-11-16)
+
+On the supervisor's advice the owner moved Feature 1 out of its own Django app and into `core_ai`,
+laid out like logical explanation and conflict detection. File paths in this folder were updated
+to the new places. Where the text still says "the `core_testing` app", read it by this table.
+
+| Was | Is now |
+|-----|--------|
+| `Ai_project/core_testing/` (logic) | `Ai_project/core_ai/services/test_generation/` |
+| `core_testing/views.py` | `core_ai/views/testgen_views.py` |
+| `core_testing/serializers.py` | `core_ai/serializers/testgen_serializer.py` |
+| `core_testing/tasks.py` | `core_ai/celery_tasks/testgen_tasks.py` |
+| `core_testing/urls.py` | merged into `core_ai/urls.py` (block "Test Generation") |
+| `core_testing/apps.py`, `INSTALLED_APPS` entry | removed: `core_ai` is the app |
+| document builders in `repo.py` / `records.py` | `core_ai/models/testgen.py` |
+| `core_testing/tests/` | `core_ai/tests/test_generation/` |
+| `core_testing/tests/reports/s*.md` | `core_ai/tests/reports/testgen_s*.md` |
+| settings `CORE_TESTING_*` | `TESTGEN_*` |
+| Celery task `core_testing.advance_job` | `core_ai.testgen.advance_job` |
+
+Routes, request and response shapes, collections and behaviour are unchanged. The boundary that
+the separate app used to give is now checked by `core_ai/tests/test_generation/test_boundaries.py`:
+only Feature 1's own entry files import the package, the package imports no other feature, and
+only `llm_facade.py` imports the model client.
+
 ## Summary
 
 A signed-in user starts a test job for a project version and reads back a plan: the functions and
@@ -74,11 +99,11 @@ Dependency rules:
 
 | Principle | Status | How this plan complies |
 |-----------|--------|------------------------|
-| I. Feature 1 only, one module | PASS | All new code is under `Ai_project/core_testing/`. Three existing files change, each by a few lines (listed below). The four dependency rules above are checked by a test. |
+| I. Feature 1 only, one module | PASS | All new code is under `Ai_project/core_ai/services/test_generation/`. Three existing files change, each by a few lines (listed below). The four dependency rules above are checked by a test. |
 | II. Trusted means proven | N/A in S1 | No record can become `ready` in this slice: there is no sandbox and no acceptance gate yet. Work items stay `pending`. |
 | III. Bounded, recorded LLM use | PASS | `core_testing` imports no LLM client in this slice. A test asserts it, and another blocks `LLMClient.call_model` during a full job run. |
 | IV. Python + pytest first | PASS | Non-Python files are skipped with `unsupported_language`. Unit extraction sits in `languages/python_adapter.py`. The adapter interface and registry are deferred to the slice that adds generation (see Complexity Tracking). |
-| V. One shared graph | PASS | The stored graph is read, never rewritten. Additions live in `core_testing/graphify/` and keep the nodes / edges / meta shape. Only additions 1, 5, 6, 7 are built now. |
+| V. One shared graph | PASS | The stored graph is read, never rewritten. Additions live in `core_ai/services/test_generation/graphify/` and keep the nodes / edges / meta shape. Only additions 1, 5, 6, 7 are built now. |
 | VI. Small slices, reviewed before code | PASS | Spec approved 2026-11-13. This plan and the task list are reviewed before any code. Out-of-scope list is explicit in the spec. |
 | VII. Honest statuses, batch continues | PASS | Every skip carries one of six reason codes. A failed or skipped file never stops the job. |
 
@@ -106,7 +131,7 @@ specs/001-test-job-plan/
 
 ```text
 Ai_project/
-├── core_testing/                      # NEW app
+├── core_ai/services/test_generation/                      # NEW app
 │   ├── __init__.py
 │   ├── apps.py                        # app config
 │   ├── urls.py                        # the three routes
@@ -162,7 +187,7 @@ the whole slice is testable without Mongo, Redis or Celery.
 
 | File | Change |
 |------|--------|
-| `Ai_project/Ai_project/settings.py` | Add `'core_testing'` to `INSTALLED_APPS`. Add `TEST_JOBS_COLLECTION`, `CORE_TESTING_JWT_SIGNING_KEY` (from env `UPM_JWT_SIGNING_KEY`), `CORE_TESTING_GATE_POLL_SECONDS` (5), `CORE_TESTING_GATE_MAX_WAIT_SECONDS` (600). |
+| `Ai_project/Ai_project/settings.py` | Add `'core_testing'` to `INSTALLED_APPS`. Add `TEST_JOBS_COLLECTION`, `TESTGEN_JWT_SIGNING_KEY` (from env `UPM_JWT_SIGNING_KEY`), `TESTGEN_GATE_POLL_SECONDS` (5), `TESTGEN_GATE_MAX_WAIT_SECONDS` (600). |
 | `Ai_project/Ai_project/urls.py` | Add `path('api/analysis/tests/', include('core_testing.urls'))` before the `core_ai` include. |
 | `docker-compose.yml` | Add `UPM_JWT_SIGNING_KEY=${UPM_DJANGO_SECRET_KEY}` to the `ai_web` environment. |
 
