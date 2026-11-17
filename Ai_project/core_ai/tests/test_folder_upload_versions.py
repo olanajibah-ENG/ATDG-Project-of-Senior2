@@ -254,3 +254,14 @@ def test_a_version_saved_with_a_duplicate_is_shown_correctly(db):
     t = tree(2)
     assert [f["file_id"] for f in t["flat_files"]] == [new]
     assert t["tree"]["demo"]["children"]["course.py"]["file_id"] == new
+
+
+def test_versions_list_shows_modified_and_deleted_counts(db):
+    upload(zip_files=V1)
+    upload(zip_files=V2)
+    upload(zip_files={"demo/student.py": STUDENT, "demo/course.py": COURSE_V2})
+    response = project_tree_view.ProjectVersionsView.as_view()(factory.get("/x"), upm_project_id=PROJECT)
+    response.render()
+    rows = {v["version_number"]: v for v in response.data["versions"]}
+    assert (rows[2]["total_files"], rows[2]["modified_files"], rows[2]["unchanged_files"]) == (3, 1, 2)
+    assert (rows[3]["total_files"], rows[3]["deleted_files"], rows[3]["unchanged_files"]) == (2, 1, 2)

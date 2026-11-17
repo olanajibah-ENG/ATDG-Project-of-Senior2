@@ -72,6 +72,8 @@ class ProjectVersionsView(APIView):
                 "total_files"    : doc.get("total_files", len(doc.get("file_ids", []))),
                 "new_files"      : doc.get("new_files", None),       # عدد الملفات الجديدة/المعدّلة
                 "unchanged_files": doc.get("unchanged_files", None), # عدد الملفات غير المتغيرة
+                "modified_files" : doc.get("modified_files", None),  # عدد الملفات المعدّلة (الإصدارات بعد تصحيح المسارات)
+                "deleted_files"  : doc.get("deleted_files", None),   # عدد الملفات المحذوفة
                 "created_at"     : created_at.isoformat() if created_at else None,
             })
 
