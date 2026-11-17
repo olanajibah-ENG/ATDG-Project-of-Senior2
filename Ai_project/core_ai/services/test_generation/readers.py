@@ -104,22 +104,37 @@ class MongoAnalysisReader:
         ) is not None
 
     def files_of_version(self, project_id, version_number):
+        import core_ai.services.project_versioning as project_versioning
+
         version = self._database()["project_versions"].find_one(
             {"project_id": project_id, "version_number": version_number}
         )
         if not version:
             return []
-        ids = [oid for oid in (self._oid(i) for i in version.get("file_ids", [])) if oid is not None]
-        docs = self._col("CODE_FILES_COLLECTION", "code_files").find(
+        # one file per path, deleted ones left out; the path is the one the file has in THIS version
+        entries = project_versioning.visible_files(version)
+        if entries is None:     # older document without file_changes
+            entries = [{"file_id": str(i)} for i in version.get("file_ids", [])]
+        ids = [oid for oid in (self._oid(e["file_id"]) for e in entries) if oid is not None]
+        docs = {str(d["_id"]): d for d in self._col("CODE_FILES_COLLECTION", "code_files").find(
             {"_id": {"$in": ids}},
-            {"filepath": 1, "filename": 1, "file_type": 1, "analysis_status": 1},
-        )
-        out = [{
-            "file_id": str(d["_id"]),
-            "path": d.get("filepath") or d.get("filename") or "",
-            "file_type": d.get("file_type") or "unknown",
-            "analysis_status": d.get("analysis_status"),
-        } for d in docs]
+            {"filepath": 1, "filename": 1, "file_type": 1, "analysis_status": 1, "version_number": 1},
+        )}
+        rows = []
+        for entry in entries:
+            d = docs.get(str(entry["file_id"]))
+            if d is None:
+                continue
+            rows.append({
+                "file_id": str(d["_id"]),
+                "filepath": entry.get("filepath") or d.get("filepath") or d.get("filename") or "",
+                "file_type": d.get("file_type") or entry.get("file_type") or "unknown",
+                "analysis_status": d.get("analysis_status"),
+                "version_number": d.get("version_number"),
+            })
+        out = [{"file_id": r["file_id"], "path": r["filepath"], "file_type": r["file_type"],
+                "analysis_status": r["analysis_status"]}
+               for r in project_versioning.dedupe_by_path(rows)]
         out.sort(key=lambda f: f["path"])
         return out
 

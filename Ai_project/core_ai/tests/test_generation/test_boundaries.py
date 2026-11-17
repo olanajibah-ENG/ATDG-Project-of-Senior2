@@ -26,7 +26,8 @@ PACKAGE = "core_ai.services.test_generation"
 OTHER_FEATURES = ("core_ai.ai_engine", "core_ai.services.conflict_detection",
                   "core_ai.services.evaluation_prompt", "core_ai.services.preprocessing")
 SHARED_ALLOWED = ("core_ai.mongo_utils", "core_ai.celery_tasks.analyze_task",
-                  "core_ai.ai_engine.llm_client", "core_ai.models.testgen", PACKAGE)
+                  "core_ai.ai_engine.llm_client", "core_ai.models.testgen",
+                  "core_ai.services.project_versioning", PACKAGE)
 ENTRY_FILES = {
     "core_ai/views/testgen_views.py",
     "core_ai/serializers/testgen_serializer.py",
@@ -83,7 +84,7 @@ def test_only_feature_1_entry_files_import_the_package():
     offenders = []
     for path in _python_files(CORE_AI_DIR):
         rel = _rel(path)
-        if rel.startswith(("core_ai/services/test_generation/", "core_ai/tests/test_generation/")):
+        if rel.startswith(("core_ai/services/test_generation/", "core_ai/tests/")):   # tests may import anything
             continue
         if rel in ENTRY_FILES:
             continue

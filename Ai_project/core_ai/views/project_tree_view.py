@@ -19,6 +19,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 
 from core_ai.mongo_utils import get_mongo_db, read_from_gridfs
+from core_ai.services import project_versioning
 
 logger = logging.getLogger(__name__)
 
@@ -159,8 +160,16 @@ class ProjectTreeView(APIView):
 
         # ── استخدام file_changes لو موجودة (الإصدار الجديد من الكود) ───────
         file_changes = version_doc.get("file_changes")
+        deleted_files = []
 
         if file_changes:
+            # one entry per path (older versions could list a modified file twice); deleted files
+            # are not part of the version, they are listed apart
+            deleted_files = [
+                {"filepath": fc.get("filepath"), "filename": fc.get("filename"), "file_id": fc.get("file_id")}
+                for fc in file_changes if fc.get("status") == project_versioning.DELETED
+            ]
+            file_changes = project_versioning.visible_files(version_doc)
             # البيانات جاهزة مع إشارات التغيير
             flat_files = [
                 {
@@ -210,6 +219,7 @@ class ProjectTreeView(APIView):
             "version_number": version_number,
             "tree"          : tree,
             "flat_files"    : flat_files,
+            "deleted_files" : deleted_files,
         })
 
     def _build_tree(self, flat_files):

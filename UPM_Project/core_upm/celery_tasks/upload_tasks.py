@@ -3,6 +3,7 @@ upload_tasks.py ← معدّل
 إصلاح: إضافة user_email في الـ data المُرسَل لـ AI
 """
 
+import json
 import logging
 import requests
 from celery import shared_task
@@ -12,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 AI_UPLOAD_URL        = 'http://ai_django_app:8000/api/analysis/upload-folder/'
 UPM_MYSQL_CALLBACK_URL = 'http://web:8000/api/upm/internal/upload-complete/'
+
+
+def _paths_of(files_data):
+    """The real path of each loose file, in the order they are forwarded (Django keeps only the
+    base name of an uploaded file, so the paths travel in their own field)."""
+    return [f['filename'] for f in files_data if not f.get('is_zip', False)]
 
 
 def _build_files_to_forward(files_data):
@@ -123,7 +130,8 @@ def process_upload_task(self, project_id, project_name, user_email, files_data):
     default_retry_delay=120,
     name='upload_tasks.process_github_sync'
 )
-def process_github_sync_task(self, project_id, project_name, user_email, files_data, repo_id, new_sha):
+def process_github_sync_task(self, project_id, project_name, user_email, files_data, repo_id, new_sha,
+                             deleted_paths=None):
     task_id = self.request.id
     logger.info(
         f"[GITHUB-TASK] Started — task:{task_id}, project:{project_id}, "
@@ -133,16 +141,21 @@ def process_github_sync_task(self, project_id, project_name, user_email, files_d
     try:
         files_to_forward = _build_files_to_forward(files_data)
 
-        if not files_to_forward:
+        deleted_paths = list(deleted_paths or [])
+        if not files_to_forward and not deleted_paths:
             logger.info(f"[GITHUB-TASK] No files — task:{task_id}")
             return {'status': 'no_changes'}
 
+        # GitHub sends only what changed: keep the rest, delete what GitHub says was removed
         ai_response = requests.post(
             AI_UPLOAD_URL,
             data={
                 'project_name':   project_name,
                 'upm_project_id': str(project_id),
                 'user_email':     user_email or '',
+                'upload_mode':    'partial',
+                'paths':          json.dumps(_paths_of(files_data)),
+                'deleted_paths':  json.dumps(deleted_paths),
             },
             files=files_to_forward,
             headers={'Host': 'localhost'},
