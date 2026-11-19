@@ -3,8 +3,9 @@
 UPM issues the tokens (HS256, signed with UPM's own key). This service has no table of UPM users,
 so the token is checked by signature and expiry only and the user is built from its claims.
 
-Known gap (stated in specs/001-test-job-plan/research.md, R1): project membership is not checked
-in this slice — only that the caller is signed in and that a job is read by its creator.
+A job is read only by its creator (require_owner). Who may START a job on a project is decided by
+UPM, with the caller's token, in project_access.py (added 18/11/2026; it closes the gap noted in
+specs/001-test-job-plan/research.md, R1).
 """
 from django.conf import settings
 from rest_framework.authentication import BaseAuthentication, get_authorization_header

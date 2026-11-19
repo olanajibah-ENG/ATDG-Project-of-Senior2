@@ -49,6 +49,29 @@ def _signing_key(monkeypatch):
     monkeypatch.setattr(settings, "TESTGEN_JWT_SIGNING_KEY", TEST_KEY, raising=False)
 
 
+class FakeProjectAccess:
+    """Stands in for UPM's project check. `status` is what UPM would answer (None = no answer)."""
+
+    def __init__(self, status=200):
+        self.status = status
+        self.calls = []
+
+    def status_of(self, project_id, token):
+        self.calls.append((project_id, token))
+        return self.status
+
+
+@pytest.fixture(autouse=True)
+def upm_access():
+    """Every test runs as the project's owner unless it changes `upm_access.status`."""
+    from core_ai.services.test_generation import project_access
+
+    fake = FakeProjectAccess()
+    project_access.set_project_access(fake)
+    yield fake
+    project_access.set_project_access(None)
+
+
 @pytest.fixture
 def repo():
     instance = InMemoryJobRepo()

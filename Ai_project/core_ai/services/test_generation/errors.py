@@ -37,6 +37,10 @@ def no_python_files(message="The selection contains no Python file."):
     return ApiError(422, "no_python_files", message)
 
 
+def service_unavailable(message="A service this route needs did not answer. Try again shortly."):
+    return ApiError(503, "service_unavailable", message)
+
+
 def to_response(err):
     from rest_framework.response import Response
 

@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core_ai.serializers import testgen_serializer as serializers
-from core_ai.services.test_generation import errors, staleness
+from core_ai.services.test_generation import errors, project_access, staleness
 from core_ai.services.test_generation import repo as repo_module
 from core_ai.services.test_generation import readers as readers_module
 from core_ai.services.test_generation import records as records_module
@@ -25,6 +25,11 @@ from core_ai.services.test_generation.auth import UpmJWTAuthentication, require_
 from core_ai.services.test_generation.statuses import FileStatus, JobStatus
 
 logger = logging.getLogger(__name__)
+
+
+def _bearer_token(request):
+    parts = request.META.get("HTTP_AUTHORIZATION", "").split()
+    return parts[1] if len(parts) == 2 else ""
 
 
 def _enqueue(job_id):
@@ -67,6 +72,8 @@ class JobApiView(APIView):
 class JobListView(JobApiView):
     def post(self, request):
         data = serializers.validate_start_request(request.data)
+        # Only the project's owner may start a job on it: UPM decides, with the caller's token.
+        project_access.ensure_can_use_project(data["project_id"], _bearer_token(request))
         scope = scope_module.resolve(data, readers_module.get_reader())
 
         files = [{

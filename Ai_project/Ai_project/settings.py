@@ -124,6 +124,8 @@ TEST_JOBS_COLLECTION = 'test_jobs'
 # Test routes check the user's token with the key UPM signs it with.
 # Empty key → every test route answers 401.
 TESTGEN_JWT_SIGNING_KEY = os.environ.get('UPM_JWT_SIGNING_KEY', '')
+# Before a job starts, UPM is asked (with the caller's token) whether the project is theirs.
+UPM_INTERNAL_URL = os.environ.get('UPM_INTERNAL_URL', 'http://web:8000')
 # Analysis gate: how often a waiting job checks again, and when it gives up.
 TESTGEN_GATE_POLL_SECONDS = 5
 TESTGEN_GATE_MAX_WAIT_SECONDS = 600

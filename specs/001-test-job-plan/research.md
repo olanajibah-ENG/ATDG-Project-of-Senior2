@@ -5,6 +5,10 @@ set aside.
 
 ## R1. Checking the user token
 
+> **Update 18/11/2026**: the membership gap below is closed. Before a job is created,
+> `core_ai/services/test_generation/project_access.py` calls UPM's `GET /api/upm/projects/<id>/`
+> with the caller's token: 200 → allowed, 403/404 → 404, no answer → 503.
+
 **Finding**: UPM signs tokens with HS256 and its own `SECRET_KEY`. Tokens carry `user_id`,
 `role_type` and `full_name`. The AI service has a different `SECRET_KEY`, no `SIMPLE_JWT`
 settings, and its views set `AllowAny`. The AI service has no table of UPM users.
