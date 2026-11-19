@@ -1,0 +1,1226 @@
+{
+  "info": {
+    "_postman_id": "cf43618b-cd40-447a-8174-dae358303d0a",
+    "name": "Feature 1 + versions: full test (19-11-2026)",
+    "description": "كل روابط الاختبار لهلق: النسخ، حماية الرفع، حالة المهمة، التحليل، و S1 و S2 تبع توليد الاختبارات. كل طلب فيه Tests بتبيّن إذا الجواب متل المتوقع.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. تسجيل الدخول",
+      "description": "اكتب username و password بمتغيّرات المجموعة (Variables) قبل أول طلب.",
+      "item": [
+        {
+          "name": "POST login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "login"
+              ]
+            },
+            "description": "بيرجّع access و refresh. السكربت بيحفظ access بمتغيّر token، وكل الطلبات التانية بتستعمله.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json(); pm.collectionVariables.set(\"token\", d.access);",
+                  "pm.test(\"token saved\", () => pm.expect(d.access).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. النسخ",
+      "description": "مشروع demo3: 8 نسخ. الحالات new / modified / unchanged / deleted.",
+      "item": [
+        {
+          "name": "GET versions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/projects/{{project_id}}/versions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "projects",
+                "{{project_id}}",
+                "versions"
+              ]
+            },
+            "description": "لستة النسخ مع عدد الملفات الجديدة والمعدّلة والمحذوفة. المتوقع: 8 نسخ، الأحدث أول.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const v = pm.response.json().versions; pm.test(\"8 versions\", () => pm.expect(v.length).to.eql(8));",
+                  "pm.test(\"has modified_files and deleted_files\", () => pm.expect(v[0]).to.have.keys(\"version_number\",\"total_files\",\"new_files\",\"unchanged_files\",\"modified_files\",\"deleted_files\",\"created_at\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET tree v3 (main.py deleted)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/projects/{{project_id}}/tree/?version=3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "projects",
+                "{{project_id}}",
+                "tree"
+              ],
+              "query": [
+                {
+                  "key": "version",
+                  "value": "3"
+                }
+              ]
+            },
+            "description": "النسخة 3 انرفعت بدون main.py: الشجرة فيها ملفين، و main.py بـ deleted_files.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test(\"2 files\", () => pm.expect(d.flat_files.length).to.eql(2));",
+                  "pm.test(\"main.py deleted\", () => pm.expect(d.deleted_files.map(f => f.filepath)).to.include(\"demo/main.py\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET tree v7 (course.py by name went back to demo/)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/projects/{{project_id}}/tree/?version=7",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "projects",
+                "{{project_id}}",
+                "tree"
+              ],
+              "query": [
+                {
+                  "key": "version",
+                  "value": "7"
+                }
+              ]
+            },
+            "description": "النسخة 7: course.py انرفع لحالو بالاسم بس، ورجع لـ demo/course.py بحالة modified.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const f = pm.response.json().flat_files;",
+                  "pm.test(\"3 files, all under demo/\", () => { pm.expect(f.length).to.eql(3); f.forEach(x => pm.expect(x.filepath).to.match(/^demo\\//)); });",
+                  "pm.test(\"course.py modified\", () => pm.expect(f.find(x => x.filepath === \"demo/course.py\").status).to.eql(\"modified\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET project-tree (AI, latest)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/project-tree/{{project_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "project-tree",
+                "{{project_id}}"
+              ]
+            },
+            "description": "نفس الشجرة من خدمة الـ AI، آخر نسخة (8).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"version 8\", () => pm.expect(pm.response.json().version_number).to.eql(8));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. حماية الرفع وحالة المهمة",
+      "description": "الرفع بيرجّع task_id، والنتيجة بتطلع برابط tasks.",
+      "item": [
+        {
+          "name": "POST upload zip without demo/ (refused)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/projects/{{project_id}}/folder-upload/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "projects",
+                "{{project_id}}",
+                "folder-upload"
+              ]
+            },
+            "description": "zip فيه student.py و course.py و main.py بدون مجلد demo/. رح يترفض بالمهمة (حذف 3 من 3)، وما بينحفظ شي. السكربت بيحفظ task_id. استنى 5 ثواني وابعت الطلب يلي بعده.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/C:/Users/kamar aldiab/Desktop/Senior-project1ATDG/docs/demo_versions/demo_v2_without_top_folder.zip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.collectionVariables.set(\"task_id\", pm.response.json().task_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET task status (rejected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/tasks/{{task_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "tasks",
+                "{{task_id}}"
+              ]
+            },
+            "description": "المتوقع 409: status rejected، code mass_deletion، و top_folder: demo/.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));",
+                  "const d = pm.response.json();",
+                  "pm.test(\"rejected\", () => pm.expect(d.status).to.eql(\"rejected\"));",
+                  "pm.test(\"top folder hint\", () => pm.expect(d.top_folder.top_folder).to.eql(\"demo/\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET task status (unknown id)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/tasks/11111111-2222-3333-4444-555555555555/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "tasks",
+                "11111111-2222-3333-4444-555555555555"
+              ]
+            },
+            "description": "id ما انبعت أبداً، أو مهمة قديمة انمسحت نتيجتها: 404 unknown (قبل كان pending).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"unknown\", () => pm.expect(pm.response.json().status).to.eql(\"unknown\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET task status (old task from 17/11)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/tasks/05841d28-3e6b-47e0-8033-9a420b91e4f7/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "tasks",
+                "05841d28-3e6b-47e0-8033-9a420b91e4f7"
+              ]
+            },
+            "description": "مهمة الرفع الأولى تبع 17/11: نتيجتها انمسحت، فـ 404 unknown.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. التحليل",
+      "description": "analysis-results: آخر تحليل لكل ملف، والكل بـ history=true.",
+      "item": [
+        {
+          "name": "GET analysis course.py (latest only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/analysis-results/?code_file_id={{course_file_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "analysis-results"
+              ],
+              "query": [
+                {
+                  "key": "code_file_id",
+                  "value": "{{course_file_id}}"
+                }
+              ]
+            },
+            "description": "سجل واحد بس، الأحدث، بدون تحذير weird underscores، و quality_score 99.2. فيه dependency_graph (graph الشرح للملف).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json().results;",
+                  "pm.test(\"one result\", () => pm.expect(r.length).to.eql(1));",
+                  "pm.test(\"no auto-fix warning\", () => pm.expect(r[0].semantic_analysis_data.warnings).to.eql([]));",
+                  "pm.test(\"has the graph\", () => pm.expect(r[0].dependency_graph.nodes.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET analysis course.py (history)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/analysis-results/?code_file_id={{course_file_id}}&history=true",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "analysis-results"
+              ],
+              "query": [
+                {
+                  "key": "code_file_id",
+                  "value": "{{course_file_id}}"
+                },
+                {
+                  "key": "history",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "كل السجلات، الأحدث أول (5 سجلات).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json().results;",
+                  "pm.test(\"more than one\", () => pm.expect(r.length).to.be.above(1));",
+                  "pm.test(\"newest first\", () => pm.expect(r[0].analysis_completed_at >= r[1].analysis_completed_at).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. S1: test job والخطة",
+      "description": "job جديد على آخر نسخة. الشغل بيصير بالخلفية: ابعت GET job كذا مرة لحتى status يصير completed أو completed_with_issues.",
+      "item": [
+        {
+          "name": "POST start job (whole project)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs"
+              ]
+            },
+            "description": "المتوقع 202 و job_id. السكربت بيحفظ job_id. ملاحظة: الـ job بيبعت طلبات للنموذج (S2)، وحد OpenRouter 50 طلب باليوم.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.collectionVariables.set(\"job_id\", pm.response.json().job_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET job status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs",
+                "{{job_id}}"
+              ]
+            },
+            "description": "status و stage و progress و files. المراحل: queued ← waiting_analysis ← planning ← planned ← generating ← generated.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET job plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/plan/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs",
+                "{{job_id}}",
+                "plan"
+              ]
+            },
+            "description": "الوحدات (ميثودات ودوال) يلي رح ينكتبلها اختبارات، والملفات المتروكة وسببها. 409 إذا الخطة لسا ما جهزت.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"has units\", () => pm.expect(pm.response.json().units.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST start job (one file, unit level)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs"
+              ]
+            },
+            "description": "job على ملف واحد ونسخة محددة. (بيبعت طلبات للنموذج كمان.)",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"version_number\": 8,\n  \"paths\": [\n    \"demo/course.py\"\n  ],\n  \"levels\": [\n    \"unit\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. S1: أخطاء متوقعة",
+      "description": "كل خطأ بنفس الشكل: {error: {code, message, details}}.",
+      "item": [
+        {
+          "name": "POST job without token (401)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs"
+              ]
+            },
+            "description": "بدون توكن.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST job with snapshot (400)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs"
+              ]
+            },
+            "description": "محتوى الملفات ما بينبعت أبداً، بس project_id و version_number و paths.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"snapshot\": {\n    \"a.py\": \"x=1\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST job on a missing version (400)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs"
+              ]
+            },
+            "description": "نسخة مش موجودة.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"version_number\": 999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST job on a project that is not yours (404)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs"
+              ]
+            },
+            "description": "UPM بيقول المشروع مش إلك، فـ 404 Project not found، وما بينعمل job.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"00000000-0000-0000-0000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET a job that does not exist (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/job_does_not_exist/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs",
+                "job_does_not_exist"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. S2: الاختبارات المولّدة (records)",
+      "description": "كل وحدة × مستوى = record. generated = انكتب وانفحص شكله، بس ما انشغّل (التشغيل بـ S3).",
+      "item": [
+        {
+          "name": "GET records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/records/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs",
+                "{{job_id}}",
+                "records"
+              ]
+            },
+            "description": "لستة بدون كود. السكربت بيحفظ id أول record حالته generated.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json(); const gen = d.items.find(x => x.status === \"generated\") || d.items[0];",
+                  "pm.test(\"total matches items\", () => pm.expect(d.total).to.eql(d.items.length));",
+                  "if (gen) pm.collectionVariables.set(\"record_id\", gen.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET records (generated only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/records/?status=generated",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs",
+                "{{job_id}}",
+                "records"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "generated"
+                }
+              ]
+            },
+            "description": "فلترة حسب الحالة. (status=wrong بيرجّع 400.)",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET one record (with test code)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/records/{{record_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "analysis",
+                "tests",
+                "jobs",
+                "{{job_id}}",
+                "records",
+                "{{record_id}}"
+              ]
+            },
+            "description": "الكود المولّد بـ test_code (إذا generated)، و executed=false، و model.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"not run yet\", () => pm.expect(pm.response.json().executed).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. اختياري: رفع ملف لحالو (بيعمل نسخة 9)",
+      "description": "بيغيّر البيانات: بيعمل نسخة جديدة لـ demo3.",
+      "item": [
+        {
+          "name": "POST upload course.py alone (by name)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upm/projects/{{project_id}}/folder-upload/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "upm",
+                "projects",
+                "{{project_id}}",
+                "folder-upload"
+              ]
+            },
+            "description": "متل الواجهة: اسم الملف بس. لازم يروح لـ demo/course.py (مش ملف جديد). بعدها شوف tree?version=9.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": "/C:/Users/kamar aldiab/Desktop/Senior-project1ATDG/docs/demo_versions/loose/course.py"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.collectionVariables.set(\"task_id\", pm.response.json().task_id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost"
+    },
+    {
+      "key": "username",
+      "value": "user3"
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "project_id",
+      "value": "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77"
+    },
+    {
+      "key": "course_file_id",
+      "value": "6afca9e0fea0f5429af8553e"
+    },
+    {
+      "key": "job_id",
+      "value": "job_3e16353b0e15"
+    },
+    {
+      "key": "record_id",
+      "value": ""
+    },
+    {
+      "key": "task_id",
+      "value": ""
+    }
+  ]
+}

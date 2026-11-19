@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تقرير الميزة 1: S1 و S2</title>
+<style>
+  :root { --ink:#1b2330; --muted:#5b6578; --line:#d6dce6; --soft:#f4f6fa; --accent:#2f5fb3; --ok:#1d7a4f; --bad:#b33a3a; --warn:#a8650f; }
+  @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink); font-family:"Segoe UI",Tahoma,Arial,sans-serif; font-size:12.5px; line-height:1.75; }
+  main { max-width: 900px; margin: 0 auto; padding: 0 4px; }
+  h1 { font-size:24px; margin:0 0 4px; color:var(--accent); }
+  h2 { font-size:18px; margin:26px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--accent); color:var(--accent); break-after:avoid; }
+  h3 { font-size:14.5px; margin:16px 0 6px; break-after:avoid; }
+  h4 { font-size:13px; margin:10px 0 4px; color:var(--muted); break-after:avoid; }
+  p { margin:5px 0; }
+  ul, ol { margin:4px 0; padding-inline-start:22px; }
+  li { margin:2px 0; }
+  code, pre { font-family:Consolas,"Courier New",monospace; direction:ltr; unicode-bidi:embed; }
+  code { background:var(--soft); padding:0 3px; border-radius:3px; font-size:11.5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:10.8px; line-height:1.45;
+        text-align:left; white-space:pre-wrap; word-break:break-word; margin:6px 0; break-inside:avoid; }
+  table { width:100%; border-collapse:collapse; margin:6px 0 10px; font-size:11.5px; break-inside:auto; }
+  tr { break-inside:avoid; }
+  th, td { border:1px solid var(--line); padding:4px 7px; text-align:right; vertical-align:top; }
+  th { background:#e9eef7; }
+  td code { font-size:10.8px; }
+  .cover { border-bottom:3px solid var(--accent); padding:18px 0 12px; margin-bottom:10px; }
+  .sub { color:var(--muted); }
+  .box { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin:8px 0; break-inside:avoid; }
+  .ok { color:var(--ok); font-weight:600; } .bad { color:var(--bad); font-weight:600; } .warn { color:var(--warn); font-weight:600; }
+  .kpi { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0; }
+  .kpi div { border:1px solid var(--line); border-radius:8px; padding:6px 8px; text-align:center; }
+  .kpi b { display:block; font-size:20px; color:var(--accent); }
+  .toc ol { columns:2; }
+  .pagebreak { break-before:page; }
+  .ltr { direction:ltr; text-align:left; }
+</style>
+</head>
+<body><main>
+
+<div class="cover">
+  <h1>الميزة 1: توليد اختبارات موثوقة (Generate Trusted Tests)</h1>
+  <div class="sub">تقرير شامل لشغل الشريحتين S1 و S2، والتعديلات يلي انعملت بالكود وبالـ graph، والاختبارات، وروابط Postman مع نتائجها الحقيقية.</div>
+  <div class="sub">مشروع AutoTest &amp; DocGen Manager · خدمة الـ AI (<code>Ai_project/core_ai</code>) و UPM · 19/11/2026</div>
+</div>
+
+<div class="kpi">
+  <div><b>2</b>شريحة خالصة (S1، S2)</div>
+  <div><b>545</b>اختبار ناجح من 545</div>
+  <div><b>256</b>منهن لميزة الاختبارات</div>
+  <div><b>24</b>طلب Postman انجرب</div>
+</div>
+
+<div class="box toc">
+<b>المحتوى</b>
+<ol>
+  <li>الفكرة باختصار</li>
+  <li>S1: المهمة والبوابة والـ graph والخطة</li>
+  <li>S2: توليد اختبار unit بدون تشغيل</li>
+  <li>الـ graph: الشرح مقابل الاختبارات، وشو تحسّن</li>
+  <li>تعديلات برّا الميزة (النسخ، التحليل، UPM، النموذج)</li>
+  <li>الـ unit tests</li>
+  <li>روابط Postman ونتائجها</li>
+  <li>شو ضل، وحدود معروفة</li>
+</ol>
+</div>
+
+<h2>1. الفكرة باختصار</h2>
+<p>المستخدم بيطلب اختبارات لمشروعه (أو لملفات منه). النظام ما بيبعت كود الملفات بالطلب: بيعتمد على التحليل
+المخزّن أصلاً لكل ملف (AST، الكلاسات والميثودات، والـ graph)، وبيبني خطة بالوحدات (ميثود أو دالة)، وبيكتب
+لكل وحدة اختبار pytest بنموذج لغوي، وبيفحصه بدون ما يشغّله. التشغيل الحقيقي بالـ sandbox هو الشريحة الجاية (S3).</p>
+<table>
+<tr><th>الشريحة</th><th>شو بتعمل</th><th>الحالة</th></tr>
+<tr><td>S1</td><td>مهمة (job) + بوابة التحليل + graph المشروع + الخطة. بدون نموذج لغوي.</td><td class="ok">خالصة</td></tr>
+<tr><td>S2</td><td>توليد اختبار unit لكل وحدة، وفحصه بدون تشغيل. الحالة <code>generated</code>.</td><td class="ok">خالصة</td></tr>
+<tr><td>S3</td><td>تشغيل الاختبارات بـ sandbox. الحالة <code>ready</code> بس من بوابة القبول.</td><td class="warn">الجاية</td></tr>
+</table>
+<p><b>مكان الكود:</b> كل الميزة جوّا <code>Ai_project/core_ai/services/test_generation/</code>، متل باقي الميزات.
+الـ views والـ serializers والـ models ومهمة Celery بأماكنها المشتركة بـ <code>core_ai</code>. الروابط تحت
+<code>/api/analysis/tests/jobs/</code>. وفي اختبار (<code>test_boundaries.py</code>) بيتأكد إنو الميزة ما بتستورد
+النموذج إلا من باب واحد (<code>llm_facade.py</code>)، وما بتستورد من ميزة تانية.</p>
+
+<h2>2. S1: المهمة والبوابة والـ graph والخطة</h2>
+<h3>2.1 كيف بتمشي المهمة</h3>
+<pre>POST /api/analysis/tests/jobs/  {project_id, version_number?, paths?, levels?}
+   └─► 202 {job_id, status: pending}
+        Celery: core_ai.testgen.advance_job
+          queued ─► waiting_analysis ─► planning ─► planned ─► (S2) generating ─► generated</pre>
+<ol>
+  <li><b>التحقق والنطاق</b> (<code>scope.py</code>): النسخة (الأحدث إذا ما انحددت)، الملفات، والمستويات <code>unit / edge / integration</code>.
+      محتوى الملفات ما بينبعت أبداً (<code>snapshot</code> ← 400).</li>
+  <li><b>ملكية المشروع</b> (<code>project_access.py</code>، انضاف بعد S1): UPM بيقرر بتوكن المستخدم. مشروع مش إلك ← 404.</li>
+  <li><b>بوابة التحليل</b> (<code>gate.py</code>): لكل ملف قرار: محلّل، بانتظار التحليل (بيطلبه)، فشل مرتين، أو مش Python ← متروك مع السبب.</li>
+  <li><b>الـ graph</b> (<code>graphify/</code>): دمج graphs الملفات المخزّنة بمعرّفات فريدة <code>path::Class.method</code> وربط الاستدعاءات (القسم 4).</li>
+  <li><b>الخطة</b> (<code>planner.py</code>): الوحدات، والمتروك وسببه، و <code>work_items_count</code> = الوحدات × المستويات. وكل وحدة معها <code>callees</code> (يلي بتناديهم جوّا المشروع) و <code>externals</code>.</li>
+</ol>
+<h3>2.2 الأمان والأخطاء</h3>
+<ul>
+  <li>كل رابط بيطلب توكن UPM (<code>auth.py</code>): بيتحقق من التوقيع والانتهاء ونوع <code>access</code>. والـ job ما بيقراه غير صاحبه (403).</li>
+  <li>شكل موحّد لكل خطأ: <code>{"error": {"code", "message", "details"}}</code>. الأكواد: 400، 401، 403، 404، 409 (الخطة لسا ما جهزت)، 422 (ما في ملف Python)، 503 (UPM ما جاوب).</li>
+  <li><b>إصلاح المهمة العالقة</b> (<code>staleness.py</code>): job ما شغّله العامل أكتر من المهلة بيتحوّل <code>failed</code> مع السبب، بدل ما يضل <code>pending</code> للأبد.</li>
+</ul>
+<h3>2.3 ملفات S1</h3>
+<table>
+<tr><th>الملف</th><th>شو بيعمل</th></tr>
+<tr><td><code>auth.py</code>، <code>project_access.py</code></td><td>التوكن، ملكية الـ job، وملكية المشروع عن طريق UPM</td></tr>
+<tr><td><code>errors.py</code>، <code>statuses.py</code></td><td>الأخطاء الموحّدة، والحالات والمراحل والأسباب</td></tr>
+<tr><td><code>repo.py</code>، <code>readers.py</code></td><td>حفظ الـ jobs (<code>test_jobs</code>)، وقراءة التحليل (قراءة بس، ملف واحد لكل مسار)</td></tr>
+<tr><td><code>scope.py</code>، <code>gate.py</code>، <code>planner.py</code>، <code>runner.py</code>، <code>staleness.py</code></td><td>النطاق، البوابة، الخطة، جولة المهمة، والمهمة العالقة</td></tr>
+<tr><td><code>graphify/loader.py</code>، <code>merge.py</code>، <code>resolver.py</code>، <code>queries.py</code></td><td>تحميل الـ graph المخزّن، الدمج، الربط، والاستعلام</td></tr>
+<tr><td><code>languages/python_adapter.py</code></td><td>جرد وحدات Python وأسباب الترك</td></tr>
+<tr><td><code>views/testgen_views.py</code>، <code>serializers/testgen_serializer.py</code>، <code>celery_tasks/testgen_tasks.py</code>، <code>models/testgen.py</code></td><td>الروابط، شكل الطلب والرد، المهمة الخلفية، وشكل الـ job</td></tr>
+</table>
+
+<h2>3. S2: توليد اختبار unit بدون تشغيل</h2>
+<h3>3.1 الخطوات لكل وحدة</h3>
+<ol>
+  <li><b>الـ context</b> (<code>context.py</code>): جسم الوحدة، توقيعها مع القيم الافتراضية، الكلاس حواليها (الباني والخصائص)،
+      <b>توقيعات</b> الوحدات يلي بتناديها (مش أجسامها)، والأسماء الخارجية. ما في ملف كامل، وما في جسم وحدة تانية.</li>
+  <li><b>طلب واحد للنموذج لكل وحدة</b> (<code>generation.py</code>، <code>llm_facade.py</code>): وحدة وحدة بكل جولة، وكل طلب بينسجّل
+      (النموذج، الرموز، المدة) بـ <code>test_attempts</code>. حد أعلى: 20 طلب لكل job.</li>
+  <li><b>إعادة الاستعمال</b>: إذا نفس الـ context ونفس نسخة التوجيه انطلبوا قبل، بيرجع الجواب المحفوظ بدون طلب جديد.</li>
+  <li><b>الفحص بدون تشغيل</b> (<code>validation/</code>): استخراج الكود، جواب مقطوع؟، تحليل AST، الاستيرادات المسموحة، قوة الاختبار
+      (في assert؟)، أسماء الاختبارات، وقواعد أمان (ما في شبكة ولا عمليات ولا <code>eval</code> ولا نوم ولا كتابة برّا <code>tmp_path</code>).</li>
+  <li><b>الحفظ</b> (<code>records.py</code>): record لكل وحدة × مستوى بـ <code>test_records</code>. النجاح ← <code>generated</code> مع مسار الملف ورأسه
+      (<code>assembler.py</code>). الفشل ← <code>generation_failed</code> مع السبب. <code>ready</code> ممنوع هون.</li>
+</ol>
+<h3>3.2 روابط S2</h3>
+<pre>GET /api/analysis/tests/jobs/{job_id}/records/?status=&amp;level=&amp;path=     لستة بدون كود
+GET /api/analysis/tests/jobs/{job_id}/records/{record_id}/              record مع test_code و executed: false</pre>
+<h3>3.3 مشاكل كشفتها التجارب وانصلحت</h3>
+<table>
+<tr><th>المشكلة</th><th>كيف انكشفت</th><th>التصليح</th></tr>
+<tr><td>أجوبة مقطوعة عند 1998 رمز من 2000</td><td>تجربة القبول الأولى (<code>job_2a91551bd731</code>): وحدتين <code>no_code</code></td>
+    <td>الحد صار 4000، كشف الجواب المقطوع، وما بنرجع نستعمل جواب مقطوع</td></tr>
+<tr><td><b>القيمة الافتراضية وصلت كنص</b>: الاختبار توقّع <code>capacity == "2"</code> والصح <code>2</code></td>
+    <td>تجربة Postman اليوم (<code>job_8fb2c99e2ca4</code>)، والنموذج كاتب "per context"</td>
+    <td>التوقيع صار فيه القيم الافتراضية، الحقل صار <code>default_code</code>، قاعدة بالتوجيه، و <code>unit-v2</code></td></tr>
+<tr><td>كل النماذج "busy"</td><td>4 من 7 نماذج انشالوا من OpenRouter، والحد اليومي 50 طلب</td>
+    <td>تحديث لستة النماذج، و "not a valid model ID" بيريّح النموذج ساعة</td></tr>
+</table>
+<h4>قبل وبعد تصليح القيمة الافتراضية (نفس النموذج <code>cohere/north-mini-code:free</code>)</h4>
+<pre># قبل (unit-v1، job_8fb2c99e2ca4)
+course = Course(title)
+# default capacity is "2" (string) per context
+assert course.capacity == "2"          # كان رح يفشل
+
+# بعد (unit-v2، job_b3bcc1a6681b)
+course = Course("Python Basics")
+assert course.title == "Python Basics"
+assert course.capacity == 2
+assert course.students == []</pre>
+<div class="box"><b>الدرس:</b> الفحص بـ S2 بيضمن الشكل والأمان، مش الصحة. الاختبار الغلط مرّ من كل الفحوص. الصحة بتبيّن بالتشغيل (S3)،
+وغلط بالـ context بيطلع غلط بالاختبار.</div>
+
+<h2 class="pagebreak">4. الـ graph: الشرح مقابل الاختبارات، وشو تحسّن</h2>
+<h3>4.1 الفرق بين الاتنين</h3>
+<table>
+<tr><th></th><th>graph الشرح</th><th>graph الاختبارات</th></tr>
+<tr><td>من وين</td><td><code>dependency_graph</code> المخزّن لكل ملف (يلي بيطلع بـ <code>analysis-results</code>)</td><td>نفس الـ graphs بعد الدمج والربط بـ <code>test_generation/graphify</code></td></tr>
+<tr><td>المدى</td><td>ملف واحد</td><td>كل ملفات النسخة</td></tr>
+<tr><td>المعرّف</td><td><code>Student.enroll</code></td><td><code>demo/student.py::Student.enroll</code></td></tr>
+<tr><td>استدعاء لملف تاني</td><td>عقدة خارجية بالاسم: <code>ext.course.add_student</code></td><td>الميثود الحقيقية: <code>demo/course.py::Course.add_student</code></td></tr>
+<tr><td>بيتغيّر المخزّن؟</td><td>—</td><td>لأ. نسخة بالذاكرة بس</td></tr>
+<tr><td>مين بيستعمله</td><td>الشرح (بيتحوّل لنص بالـ prompt)</td><td>الخطة (<code>callees</code>) والـ context تبع الاختبارات</td></tr>
+</table>
+<p><b>هل هو على مستوى الميثود؟</b> إي: كل ميثود ودالة عقدة لحالها، و <code>calls</code> من ميثود لميثود. <code>inherits</code> على مستوى الكلاس، و <code>imports</code> على مستوى الملف.</p>
+<h3>4.2 قواعد الربط (<code>resolver.py</code>)</h3>
+<table>
+<tr><th>الاستدعاء</th><th>بيروح لـ</th></tr>
+<tr><td><code>self.m()</code> / <code>cls.m()</code></td><td>الكلاس نفسه، وبعدين أهله</td></tr>
+<tr><td><code>super().m()</code></td><td>الأهل</td></tr>
+<tr><td><code>param.m()</code></td><td>نوع الباراميتر</td></tr>
+<tr><td><code>var.m()</code></td><td>متغيّر انعطى من كلاس محلي بنفس الجسم</td></tr>
+<tr><td><code>Class()</code>، <code>func()</code></td><td>الباني <code>__init__</code> أو الدالة المحلية</td></tr>
+<tr><td>أسماء مستوردة</td><td>الوحدة بالملف التاني بالمشروع</td></tr>
+<tr><td><b>جديد:</b> <code>self.engine.start()</code></td><td>نوع الخاصية من جدول خصائص الكلاس (من كل ميثوداته): <code>self.x = Cls()</code>، <code>self.x = param</code> عليه نوع، <code>self.x: Cls = ...</code>. <code>None</code> ما بيغيّر. نوعين أو قيمة مجهولة ← ما بينربط. الابن بيورث جدول أبوه. مستوى واحد بس.</td></tr>
+</table>
+<h3>4.3 الدقة على بيانات حقيقية</h3>
+<table>
+<tr><th>الحالة</th><th>استدعاءات حقيقية جوّا المشروع</th><th>graph الشرح لقى</th><th>graph الاختبارات لقى</th><th>ربط غلط</th></tr>
+<tr><td>demo3 النسخة 1</td><td>4</td><td>0</td><td class="ok">4</td><td>0</td></tr>
+<tr><td>demo3 النسخة 2</td><td>5</td><td>1</td><td class="ok">5</td><td>0</td></tr>
+<tr><td>demo3 النسخة 3</td><td>2</td><td>1</td><td class="ok">2</td><td>0</td></tr>
+<tr><td>task.py (Car)</td><td>5</td><td>0</td><td>قبل: 2 · <span class="ok">بعد ربط الخصائص: 5</span></td><td>0</td></tr>
+</table>
+<p>الأسهم الجديدة بـ task.py: <code>Car.drive → Engine.start</code>، <code>Car.drive → GPS.locate</code>، <code>Car.drive → Driver.introduce</code>.
+النسخ 4 و 5 و 6 إلها نفس graph النسخ 2 و 3 و 1 لأنها نفس الملفات: الـ graph بيتبع محتوى النسخة.
+الرسمة بالألوان: <code>docs/graph_compare.html</code>.</p>
+<p><b>ما بيغطّي:</b> <code>self.a.b.m()</code>، خاصية بتنحط من برّا الكلاس، اللستات (<code>self.wheels[0].spin()</code>). وgraph الشرح ما استفاد من الربط لسا (بيستعمل المخزّن متل ما هو).</p>
+
+<h2>5. تعديلات برّا الميزة</h2>
+<table>
+<tr><th>التعديل</th><th>الملفات</th><th>الأثر</th></tr>
+<tr><td><b>النسخ حسب المسار</b>: ملف واحد لكل مسار، zip = المشروع كامل (الناقص بينحذف)، ملفات لحالها = بيتغيّر يلي انبعت بس. الحالات new / modified / unchanged / deleted. GitHub بيبعت المحذوف والمعاد تسميته.</td>
+    <td><code>project_versioning.py</code>، <code>folder_upload.py</code>، <code>project_tree_view.py</code>، UPM: <code>github_service.py</code>، <code>github_views.py</code>، <code>upload_tasks.py</code></td>
+    <td>قبل: ملف معدّل بيطلع مرتين بالنسخة والشجرة بتأشّر عالقديم</td></tr>
+<tr><td>لستة النسخ فيها <code>modified_files</code> و <code>deleted_files</code>، والشجرة فيها <code>deleted_files</code></td><td><code>project_tree_view.py</code></td><td>بيبيّن شو تغيّر بكل نسخة</td></tr>
+<tr><td><b>حماية الحذف الجماعي</b>: zip بيحذف نص المشروع أو أكتر (وملفين أو أكتر) ← 409 إلا مع <code>confirm_deletions=true</code>، مع تلميح المجلد الرئيسي</td>
+    <td><code>project_versioning.py</code>، <code>folder_upload.py</code>، UPM: proxy، task، task status</td><td>ما في نسخة غلط من zip غلط</td></tr>
+<tr><td><b>ملفات لحالها بالاسم بس</b> (متل الواجهة) بترجع لمجلدها إذا الاسم بيطابق مسار واحد. أكتر من مسار ← 409. UPM بيقبل <code>paths</code></td>
+    <td><code>project_versioning.py</code>، <code>folder_upload.py</code>، UPM proxy و task</td><td>تعديل <code>course.py</code> بيوصل لـ <code>demo/course.py</code></td></tr>
+<tr><td><b>analysis-results</b>: آخر تحليل بس لكل ملف، والكل بـ <code>history=true</code></td><td><code>views/analysis.py</code></td><td>الفرونت بياخد الأحدث دايماً (8 KB بدل 41 KB)</td></tr>
+<tr><td><b>weird underscores</b>: <code>'__'</code> كانت بلستة الرموز الغريبة، فكل ملف فيه <code>__init__</code> كان "انصلّح"</td><td><code>python_processor.py</code></td><td>تحذير غلط انشال، والتقييم 99.2 بدل 97.2</td></tr>
+<tr><td><b>لستة النماذج</b>: 4 من 7 انشالوا من OpenRouter. <code>laguna-s</code> بيضل (نموذج التقييم). "not a valid model ID" بيريّح النموذج ساعة</td><td><code>llm_client.py</code></td><td>كل طلب ما عاد يبلّش بنموذج ميت</td></tr>
+<tr><td><b>حالة المهمة بـ UPM</b>: <code>unknown</code> (404) و <code>expired</code> (410) بدل <code>pending</code> المضلّل، و <code>rejected</code> (409)</td><td>UPM: <code>task_registry.py</code>، <code>apps.py</code>، <code>task_status_view.py</code></td><td>مهمة خالصة ما عادت تبيّن كأنها ناطرة</td></tr>
+<tr><td>تنظيف: 3 مشاريع demo3 فاضية انحذفوا بدالة UPM نفسها (بدون إيميل)</td><td>—</td><td>المشروع الأصلي ما انلمس</td></tr>
+</table>
+
+<h2>6. الـ unit tests</h2>
+<p>كلهن بينشغّلوا جوّا container خدمة الـ AI:</p>
+<pre>docker compose run --rm --no-deps -T --entrypoint sh ai_web -c \
+  "pip install -q pytest; python -m pytest core_ai/tests test_graphify_implementation.py -q"
+→ 545 passed</pre>
+<table>
+<tr><th>المجموعة</th><th>ملفات</th><th>العدد</th></tr>
+<tr><td>S1</td><td><code>test_auth</code> 12، <code>test_scope</code> 11، <code>test_gate</code> 9، <code>test_python_adapter</code> 9، <code>test_graphify_merge</code> 9، <code>test_graphify_resolver</code> 22، <code>test_planner</code> 9، <code>test_runner</code> 15، <code>test_api</code> 27، <code>test_staleness</code> 7، <code>test_repo_readers</code> 7، <code>test_boundaries</code> 4، <code>test_project_access</code> 9</td><td>150</td></tr>
+<tr><td>S2</td><td><code>test_validator</code> 47، <code>test_context</code> 19، <code>test_generation</code> 18، <code>test_api_records</code> 12، <code>test_records</code> 10</td><td>106</td></tr>
+<tr><td>النسخ والتحليل والنموذج</td><td><code>test_project_versioning</code> 24، <code>test_folder_upload_versions</code> 24، <code>test_analysis_results_order</code> 7، <code>test_python_normalization</code> 5، <code>test_llm_client_ex</code> 13</td><td>73</td></tr>
+<tr><td>كشف التعارض و Graphify (قبلنا، ما انكسر شي)</td><td>14 ملف</td><td>216</td></tr>
+<tr><td colspan="2"><b>المجموع</b></td><td><b>545</b></td></tr>
+</table>
+<p>بكل تصليح، الاختبارات الجديدة انشغّلت أول شي على الكود القديم وفشلت (يعني بتمسك المشكلة)، وبعدين نجحت مع التصليح.
+UPM ما فيه إعداد اختبارات، فتعديلاته انجربت حقيقي.</p>
+
+<h2 class="pagebreak">7. روابط Postman ونتائجها</h2>
+<p>كل الطلبات على <code>http://localhost</code>. الطلبات المعلّمة 🔒 بدها <b>Bearer Token</b> (الـ <code>access</code> من تسجيل الدخول).
+المشروع: <code>demo3</code> = <code>c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77</code>. النتيجة الفعلية من تجربتك اليوم (19/11).</p>
+<table>
+<tr><th>#</th><th>الطلب</th><th>الـ body</th><th>المتوقع</th><th>الفعلي</th></tr>
+<tr><td>0</td><td>POST <code>/api/upm/login/</code></td><td><code>{"username","password"}</code></td><td>200 + access</td><td class="ok">✓</td></tr>
+<tr><td>1.1</td><td>🔒 GET <code>/api/upm/projects/{id}/versions/</code></td><td>—</td><td>النسخ مع modified و deleted</td><td class="ok">✓</td></tr>
+<tr><td>1.2</td><td>🔒 GET <code>.../tree/?version=3</code></td><td>—</td><td>ملفين، main.py محذوف</td><td class="ok">✓</td></tr>
+<tr><td>1.3</td><td>🔒 GET <code>.../tree/?version=7</code></td><td>—</td><td>demo/course.py modified</td><td class="ok">✓ (والنسخة 8 كمان)</td></tr>
+<tr><td>2.1</td><td>🔒 POST <code>.../folder-upload/</code></td><td>form-data <code>file</code> = demo_v2_without_top_folder.zip</td><td>202 + task_id</td><td class="ok">✓</td></tr>
+<tr><td>2.2</td><td>🔒 GET <code>/api/upm/tasks/{task_id}/</code></td><td>—</td><td>409 rejected، mass_deletion، top_folder demo/</td><td class="ok">✓</td></tr>
+<tr><td>2.3</td><td>🔒 GET <code>/api/upm/tasks/11111111-…/</code></td><td>—</td><td>404 unknown</td><td class="ok">✓</td></tr>
+<tr><td>2.4</td><td>🔒 GET <code>/api/upm/tasks/05841d28-…/</code></td><td>—</td><td>404 unknown (قبل: pending)</td><td class="ok">✓</td></tr>
+<tr><td>3.1</td><td>GET <code>/api/analysis/analysis-results/?code_file_id=6afca9e0…553e</code></td><td>—</td><td>سجل واحد، 99.2، بدون تحذير</td><td class="ok">✓</td></tr>
+<tr><td>3.2</td><td>نفسه + <code>&amp;history=true</code></td><td>—</td><td>5 سجلات، الأحدث أول</td><td class="ok">✓</td></tr>
+<tr><td>4.1</td><td>🔒 POST <code>/api/analysis/tests/jobs/</code></td><td><code>{"project_id": "…"}</code></td><td>202 + job_id</td><td class="ok">✓ job_8fb2c99e2ca4</td></tr>
+<tr><td>4.2</td><td>🔒 GET <code>/api/analysis/tests/jobs/{job_id}/</code></td><td>—</td><td>completed / generated</td><td class="ok">✓ 5 generated، 10 pending</td></tr>
+<tr><td>4.3</td><td>🔒 GET <code>.../{job_id}/plan/</code></td><td>—</td><td>الوحدات</td><td class="ok">✓ 5 وحدات، 15 عنصر</td></tr>
+<tr><td>4.4</td><td>🔒 POST <code>/api/analysis/tests/jobs/</code></td><td><code>{"project_id","version_number": 8,"paths": ["demo/course.py"],"levels": ["unit"]}</code></td><td>202</td><td class="ok">✓ job_7f810bda56d7</td></tr>
+<tr><td>5.1</td><td>POST jobs بدون توكن</td><td><code>{"project_id"}</code></td><td>401</td><td class="ok">✓</td></tr>
+<tr><td>5.2</td><td>🔒 POST jobs</td><td>+ <code>"snapshot"</code></td><td>400</td><td class="ok">✓</td></tr>
+<tr><td>5.3</td><td>🔒 POST jobs</td><td><code>"version_number": 999</code></td><td>400</td><td class="ok">✓</td></tr>
+<tr><td>5.4</td><td>🔒 POST jobs</td><td><code>"project_id": "00000000-…"</code></td><td>404 Project not found</td><td class="ok">✓</td></tr>
+<tr><td>5.5</td><td>🔒 GET <code>.../jobs/job_does_not_exist/</code></td><td>—</td><td>404</td><td class="ok">✓</td></tr>
+<tr><td>6.1</td><td>🔒 GET <code>.../{job_id}/records/</code></td><td>—</td><td>items + total</td><td class="ok">✓ 15</td></tr>
+<tr><td>6.2</td><td>🔒 GET <code>.../records/?status=generated</code></td><td>—</td><td>generated بس</td><td class="ok">✓ 5</td></tr>
+<tr><td>6.3</td><td>🔒 GET <code>.../records/{id}/</code></td><td>— (الـ id من 6.1)</td><td>test_code، executed: false</td><td class="warn">✓ بس الاختبار فيه <code>"2"</code> ← انصلح (3.3)</td></tr>
+<tr><td>7</td><td>🔒 POST <code>.../folder-upload/</code> (اختياري)</td><td>form-data <code>files</code> = loose/course.py</td><td>يروح لـ demo/course.py</td><td class="ok">✓ (انجرب بالنسختين 7 و 8)</td></tr>
+</table>
+<h4>خرج 4.2 (job_8fb2c99e2ca4، النسخة 10)</h4>
+<pre>{"status": "completed", "stage": "generated",
+ "progress": {"total": 15, "done": 5, "by_status": {"pending": 10, "generated": 5, ...}},
+ "files": [{"path": "demo/course.py",  "levels": {"unit": "generated", "edge": "pending", "integration": "pending"}},
+           {"path": "demo/student.py", "levels": {"unit": "generated", "edge": "pending", "integration": "pending"}}]}</pre>
+<p>النسخة 10 انرفعت من <code>demo_v3_without_main.zip</code>، فـ main.py محذوف والخطة فيها 5 وحدات من ملفين. و <code>edge</code> و <code>integration</code>
+بيضلّوا <code>pending</code> لأنو S2 بيولّد <code>unit</code> بس.</p>
+
+<h2>8. شو ضل، وحدود معروفة</h2>
+<ul>
+  <li><b>S3</b>: تشغيل الاختبارات بـ sandbox، وبوابة القبول يلي بس هي بتعطي <code>ready</code>.</li>
+  <li><b>الفرونت</b>: بعد رفع zip ما بيقرا حالة المهمة (فالرفض بيبيّن انتهاء وقت)، وما فيه "أكّد الحذف" ولا اختيار مجلد. منقارن مع الفرونت الأخير ومنكتب ملاحظة لأريج.</li>
+  <li><b>روابط التحليل</b> (<code>analysis-results</code>، <code>project-tree</code>، ...) <code>AllowAny</code> بدون توكن: بدها قرار وتنسيق مع الفريق.</li>
+  <li><b>حد OpenRouter المجاني</b>: 50 طلب باليوم لكل النماذج مع بعض. و <code>laguna-s</code> (نموذج التقييم) ما عاد موجود.</li>
+  <li><b>graph الشرح</b> ما بيستفيد من ربط الاختبارات لسا. ورابط graph كامل للمشروع (البند 2) مأجّل.</li>
+  <li>كل إعادة تحليل بتزيد سجل (ما بينمسح القديم). الرابط بيرجّع الأحدث، بس السجلات بتكبر.</li>
+  <li>بعد <code>restart ai_web</code> لازم <code>restart upm_api_gateway</code>، وإلا 502.</li>
+</ul>
+<div class="box"><b>التقارير التفصيلية</b> (بالعربي، بـ <code>Ai_project/core_ai/tests/reports/</code>):
+<code>testgen_s1_job_and_plan.md</code>، <code>testgen_s2_unit_generation.md</code>، <code>testgen_attribute_calls.md</code>،
+<code>testgen_default_values_fix.md</code>، <code>testgen_project_access.md</code>، <code>fix_weird_underscores.md</code>،
+<code>llm_models_update.md</code>، <code>versions_mass_deletion_guard.md</code>، <code>versions_loose_files_paths.md</code>،
+<code>upm_task_status_and_cleanup.md</code>.</div>
+
+</main></body></html>
