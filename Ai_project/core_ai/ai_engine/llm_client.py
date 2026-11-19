@@ -47,18 +47,20 @@ class LLMClient:
             # the model our evaluation (CASCADE / NPM) was measured with — kept first on purpose
             {"model": "poolside/laguna-s-2.1:free", "name": "Poolside Laguna S 2.1",
              "description": "Coding agent (evaluation model)", "context": "262K tokens"},
+            # (18/11/2026: no longer listed on OpenRouter; kept for the record. It returns 404 and
+            #  rests for an hour, so it costs one failed request per hour.)
+            # the models below were checked against openrouter.ai/api/v1/models on 18/11/2026
+            {"model": "cohere/north-mini-code:free", "name": "Cohere North Mini Code",
+             "description": "Coding (the one that answered in our runs)", "context": "256K tokens"},
             {"model": "google/gemma-4-31b-it:free", "name": "Gemma 4 31B",
              "description": "Dense, strong at coding & reasoning", "context": "262K tokens"},
             {"model": "google/gemma-4-26b-a4b-it:free", "name": "Gemma 4 26B A4B",
              "description": "Fast MoE", "context": "262K tokens"},
-            {"model": "nvidia/nemotron-3-nano-omni:free", "name": "Nemotron 3 Nano Omni",
-             "description": "General purpose", "context": "256K tokens"},
-            {"model": "z-ai/glm-5.2:free", "name": "GLM 5.2",
-             "description": "Coding and tool use", "context": "256K tokens"},
-            {"model": "cohere/north-mini-code:free", "name": "Cohere North Mini Code",
-             "description": "Coding", "context": "256K tokens"},
-            {"model": "poolside/laguna-xs-2.1:free", "name": "Poolside Laguna XS 2.1",
-             "description": "Software engineering", "context": "262K tokens"},
+            # not tried yet: fallbacks only
+            {"model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "name": "Nemotron 3 Nano Omni 30B",
+             "description": "General purpose (new name of nemotron-3-nano-omni)", "context": "256K tokens"},
+            {"model": "nvidia/nemotron-3-ultra-550b-a55b:free", "name": "Nemotron 3 Ultra 550B",
+             "description": "General purpose, large", "context": "1M tokens"},
         ]
 
     @staticmethod
@@ -252,9 +254,14 @@ class LLMClient:
                     continue            # -> next model
 
                 if resp.status_code == 400:
-                    # 400 is usually caused by the request itself (e.g. prompt too long),
-                    # not by the model, so don't rest the model — just try the next one.
                     last_error = f"400 on {current_model}: {resp.text[:300]}"
+                    if "not a valid model id" in resp.text.lower():
+                        # the model was removed or renamed: skip it like a 404
+                        LLMClient._block_model(current_model, LLMClient.MISSING_BLOCK)
+                        logger.warning(f"[LLM] {last_error}")
+                        continue        # -> next model
+                    # any other 400 is usually caused by the request itself (e.g. prompt too long),
+                    # not by the model, so don't rest the model — just try the next one.
                     logger.warning(f"[LLM] {last_error}")
                     continue            # -> next model
 

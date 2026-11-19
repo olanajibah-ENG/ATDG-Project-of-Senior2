@@ -124,3 +124,61 @@ def test_missing_api_key_raises_llm_unavailable(http, monkeypatch):
     monkeypatch.setattr(settings, "OPENROUTER_API_KEY", None, raising=False)
     with pytest.raises(LLMUnavailable):
         REAL_CALL_MODEL_EX("sys", "user")
+
+
+# ── removed or renamed models (18/11/2026) ───────────────────────────────────
+
+class TextResponse(FakeResponse):
+    def __init__(self, status_code, text):
+        super().__init__(status_code=status_code)
+        self.text = text
+
+
+INVALID_ID = '{"error":{"message":"vendor/gone:free is not a valid model ID","code":400}}'
+
+
+def test_invalid_model_id_400_rests_that_model_and_moves_on(http):
+    sent, state = http
+    calls = []
+
+    def answer(body):
+        calls.append(body["model"])
+        if len(calls) == 1:
+            return TextResponse(400, INVALID_ID)
+        return FakeResponse()
+
+    state["response"] = answer
+    result = REAL_CALL_MODEL_EX("sys", "user", model="vendor/gone:free")
+    assert result["text"] == "ANSWER" and result["model"] != "vendor/gone:free"
+    assert LLMClient._block_remaining("vendor/gone:free") > LLMClient.RATE_BLOCK_MAX   # rests ~1 hour
+
+
+def test_a_rested_invalid_model_is_not_tried_again(http):
+    sent, state = http
+    LLMClient._block_model("vendor/gone:free", LLMClient.MISSING_BLOCK)
+    REAL_CALL_MODEL_EX("sys", "user", model="vendor/gone:free")
+    assert "vendor/gone:free" not in [b["model"] for b in sent]
+
+
+def test_other_400_does_not_rest_the_model(http):
+    sent, state = http
+    calls = []
+
+    def answer(body):
+        calls.append(body["model"])
+        if len(calls) == 1:
+            return TextResponse(400, '{"error":{"message":"prompt is too long","code":400}}')
+        return FakeResponse()
+
+    state["response"] = answer
+    REAL_CALL_MODEL_EX("sys", "user", model="vendor/chosen:free")
+    assert LLMClient._block_remaining("vendor/chosen:free") == 0
+
+
+def test_model_list_keeps_the_evaluation_model_and_drops_the_removed_ones():
+    models = [m["model"] for m in LLMClient.get_available_free_models()]
+    assert models[0] == "poolside/laguna-s-2.1:free"          # kept on purpose (evaluation model)
+    assert models[1] == "cohere/north-mini-code:free"         # the one that answered in our runs
+    for gone in ("nvidia/nemotron-3-nano-omni:free", "z-ai/glm-5.2:free", "poolside/laguna-xs-2.1:free"):
+        assert gone not in models
+    assert len(models) == len(set(models))
