@@ -110,3 +110,72 @@ def test_unparseable_or_truncated_body_keeps_stored_edges():
     assert ("game.py::Student.enroll", "game.py::Course.add_student") not in calls
     assert ("game.py::Student.enroll", "ext.course.add_student") in calls   # stored edge untouched
     assert ("game.py::Student.drop_course", "game.py::Course.remove_student") in calls
+
+
+# ── calls through attributes: self.x.m() ────────────────────────────────────
+
+ATTRS = {"attributes.py": "attributes.py"}
+A = "attributes.py::"
+
+
+def _from(calls, unit):
+    return {to for frm, to in calls if frm == A + unit}
+
+
+def test_attribute_set_from_a_constructor_is_linked():
+    calls = _calls(_graph(ATTRS))
+    assert (A + "Car.drive", A + "Engine.start") in calls
+
+
+def test_attribute_set_from_a_typed_parameter_or_local_variable_or_annotation():
+    drive = _from(_calls(_graph(ATTRS)), "Car.drive")
+    assert A + "Battery.charge" in drive     # self.battery = battery  (battery: Battery)
+    assert A + "Radio.play" in drive         # self.spare = spare      (spare = Radio())
+                                             # and self.radio = radio  (radio: Radio)
+
+
+def test_none_says_nothing_and_a_later_typed_value_counts():
+    # self.radio = None in __init__, self.radio = radio (radio: Radio) in install_radio
+    graph = _graph(ATTRS)
+    assert (A + "Car.drive", A + "Radio.play") in _calls(graph)
+
+
+def test_two_different_classes_or_an_unknown_value_are_never_linked():
+    calls = _calls(_graph(ATTRS))
+    assert _from(calls, "Car.use_part") == set()     # self.part: Engine() here, Radio() there
+    assert _from(calls, "Car.use_log") == set()      # self.log = make_logger(): class unknown
+    drive = _from(calls, "Car.drive")
+    assert drive == {A + "Engine.start", A + "Battery.charge", A + "Radio.play"}
+
+
+def test_attribute_set_in_the_parent_class_is_inherited():
+    race = _from(_calls(_graph(ATTRS)), "SportsCar.race")
+    assert race == {A + "Engine.start"}      # self.missing.start() stays unlinked
+
+
+def test_method_of_the_attribute_class_is_found_on_its_parent():
+    service = _from(_calls(_graph(ATTRS)), "Garage.service")
+    assert service == {A + "Engine.start", A + "TurboEngine.boost"}
+
+
+def test_two_levels_deep_is_not_linked():
+    assert _from(_calls(_graph(ATTRS)), "Car.deep") == set()
+
+
+def test_real_task_file_drive_reaches_engine_gps_and_driver():
+    calls = _calls(_graph({"task.py": "task.py"}))
+    drive = {to for frm, to in calls if frm == "task.py::Car.drive" and not to.startswith("ext.")}
+    assert drive == {"task.py::Engine.start", "task.py::GPS.locate", "task.py::Driver.introduce"}
+    # the constructor links are still there
+    assert ("task.py::Car.__init__", "task.py::Engine.__init__") in calls
+    assert ("task.py::Car.__init__", "task.py::GPS.__init__") in calls
+
+
+def test_attribute_graph_is_still_well_formed():
+    for files in (ATTRS, {"task.py": "task.py"}):
+        graph = _graph(files)
+        node_ids = {n["id"] for n in graph["nodes"]}
+        for edge in graph["edges"]:
+            assert edge["from"] in node_ids and edge["to"] in node_ids, edge
+        keys = [(e["from"], e["to"], e["relation"]) for e in graph["edges"]]
+        assert len(keys) == len(set(keys))

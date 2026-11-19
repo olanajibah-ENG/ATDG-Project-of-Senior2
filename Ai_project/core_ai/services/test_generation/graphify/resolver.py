@@ -8,6 +8,7 @@ body with Python's `ast` and resolves, in order:
   super().m()          → the bases
   param.m()            → the parameter's type annotation
   var.m()              → a variable assigned from a local class in the same body
+  self.attr.m()        → the class the object gives `attr` in any of its methods (_attribute_types)
   Class.m()            → that class
   name()               → a local function, or a local class's constructor
   imported names       → the unit in the other project file
@@ -22,6 +23,7 @@ import textwrap
 
 from core_ai.services.test_generation.graphify.merge import finalize, qualify
 
+_CONFLICT = "conflict"   # an attribute given more than one class, or one we cannot tell: never linked
 _TYPE_RE = re.compile(r"^(?:Optional\[)?\s*([A-Za-z_][\w.]*)\s*\]?(?:\s*\|\s*None)?$")
 
 
@@ -89,6 +91,30 @@ class _Index:
                 table[name] = ("function", path, name)
             self.names[path] = table
 
+        self.attributes = {}   # (path, class) -> {attr: (path, class) | _CONFLICT}
+        for fg in file_graphs:
+            for name, cls in fg["classes"].items():
+                self.attributes[(fg["path"], name)] = _attribute_types(self, fg["path"], cls["methods"])
+
+    def attribute_type(self, owner, attr, _seen=None):
+        """(path, class) of `self.attr` for instances of `owner`, from the class or its bases."""
+        seen = _seen if _seen is not None else set()
+        if owner in seen or owner not in self.classes:
+            return None
+        seen.add(owner)
+        found = self.attributes.get(owner, {}).get(attr)
+        if found == _CONFLICT:
+            return None
+        if found:
+            return found
+        for base in self.classes[owner]["bases"]:
+            base_ref = self.class_ref(owner[0], str(base).split(".")[-1])
+            if base_ref:
+                found = self.attribute_type(base_ref, attr, seen)
+                if found:
+                    return found
+        return None
+
     def class_ref(self, path, name):
         ref = self.names.get(path, {}).get(name)
         return (ref[1], ref[2]) if ref and ref[0] == "class" else None
@@ -115,15 +141,18 @@ def _method_id(owner, method):
     return qualify(owner[0], f"{owner[1]}.{method}")
 
 
-def _resolve_unit(index, path, class_name, entry):
-    """→ (targets, handled) or None when the body cannot be read."""
+def _parse_body(entry):
+    """The unit's stored body as an AST, or None when it is truncated or does not parse."""
     if entry.get("body_truncated"):
         return None
     try:
-        tree = ast.parse(textwrap.dedent(entry.get("body") or ""))
+        return ast.parse(textwrap.dedent(entry.get("body") or ""))
     except SyntaxError:
         return None
 
+
+def _local_types(index, path, entry, tree):
+    """{name: (path, class)} for the unit's parameters and local variables whose class is known."""
     var_types = {}
     for param in entry.get("parameters") or []:
         ref = index.class_ref(path, _clean_type(param.get("type")) or "")
@@ -140,6 +169,67 @@ def _resolve_unit(index, path, class_name, entry):
             ref = index.class_ref(path, _clean_type(ast.unparse(node.annotation)) or "")
             if ref:
                 var_types[node.target.id] = ref
+    return var_types
+
+
+def _self_attr(node):
+    """'x' for the expression `self.x`, else None."""
+    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "self":
+        return node.attr
+    return None
+
+
+def _attribute_types(index, path, methods):
+    """{attr: (path, class) | _CONFLICT} from every `self.attr = ...` in one class's methods.
+
+    A class is taken from `self.x = Cls(...)`, `self.x = name` (a typed parameter, or a local
+    variable of a known class) and `self.x: Cls = ...`. `self.x = None` says nothing. Any other
+    value, or two different classes, makes the attribute a conflict: a call through it stays unlinked.
+    """
+    found = {}
+
+    def note(attr, ref):
+        if attr in found and found[attr] != ref:
+            found[attr] = _CONFLICT
+        else:
+            found[attr] = ref
+
+    for entry in methods.values():
+        tree = _parse_body(entry)
+        if tree is None:
+            continue
+        local = _local_types(index, path, entry, tree)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.AnnAssign):
+                attr = _self_attr(node.target)
+                if attr:
+                    ref = index.class_ref(path, _clean_type(ast.unparse(node.annotation)) or "")
+                    note(attr, ref or _CONFLICT)
+                continue
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                attr = _self_attr(target)
+                if not attr:
+                    continue
+                value = node.value
+                if isinstance(value, ast.Constant) and value.value is None:
+                    continue
+                ref = None
+                if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
+                    ref = index.class_ref(path, value.func.id)
+                elif isinstance(value, ast.Name):
+                    ref = local.get(value.id)
+                note(attr, ref or _CONFLICT)
+    return found
+
+
+def _resolve_unit(index, path, class_name, entry):
+    """→ (targets, handled) or None when the body cannot be read."""
+    tree = _parse_body(entry)
+    if tree is None:
+        return None
+    var_types = _local_types(index, path, entry, tree)
 
     targets, handled = [], set()
 
@@ -172,6 +262,9 @@ def _resolve_unit(index, path, class_name, entry):
                     owner = var_types[value.id]
                 else:
                     owner = index.class_ref(path, value.id)
+            elif _self_attr(value) and own:
+                raw = f"self.{value.attr}.{func.attr}"
+                owner = index.attribute_type(own, value.attr)
             elif isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
                 if value.func.id == "super" and own:
                     owner, raw, skip_self = own, "super", True
