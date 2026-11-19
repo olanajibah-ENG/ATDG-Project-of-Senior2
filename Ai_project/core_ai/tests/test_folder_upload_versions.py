@@ -265,3 +265,105 @@ def test_versions_list_shows_modified_and_deleted_counts(db):
     rows = {v["version_number"]: v for v in response.data["versions"]}
     assert (rows[2]["total_files"], rows[2]["modified_files"], rows[2]["unchanged_files"]) == (3, 1, 2)
     assert (rows[3]["total_files"], rows[3]["deleted_files"], rows[3]["unchanged_files"]) == (2, 1, 2)
+
+
+# ── guard: a full upload that would delete half the project or more ─────────
+
+def test_deleting_one_file_of_three_needs_no_confirmation(db):
+    upload(zip_files=V1)
+    r2 = upload(zip_files={k: v for k, v in V1.items() if k != "demo/main.py"})
+    assert r2.status_code == 201 and r2.data["deleted"] == ["demo/main.py"]
+
+
+def test_deleting_two_of_three_is_refused_and_nothing_is_saved(db):
+    upload(zip_files=V1)
+    files_before = len(db["code_files"].docs)
+    r2 = upload(zip_files={"demo/student.py": STUDENT})
+    assert r2.status_code == 409
+    assert r2.data["code"] == "mass_deletion"
+    assert r2.data["would_delete"] == ["demo/course.py", "demo/main.py"]
+    assert r2.data["deleted_count"] == 2 and r2.data["previous_count"] == 3
+    assert "confirm_deletions=true" in r2.data["error"]
+    assert db["project_versions"].find_one({"version_number": 2}) is None   # no new version
+    assert len(db["code_files"].docs) == files_before                         # no new file saved
+
+
+def test_the_same_upload_goes_through_when_confirmed(db):
+    upload(zip_files=V1)
+    r2 = upload(zip_files={"demo/student.py": STUDENT}, confirm_deletions="true")
+    assert r2.status_code == 201
+    assert sorted(r2.data["deleted"]) == ["demo/course.py", "demo/main.py"]
+
+
+def test_zip_without_the_top_folder_is_refused_with_a_hint(db):
+    upload(zip_files=V1)
+    r2 = upload(zip_files={k.split("/", 1)[1]: v for k, v in V1.items()})   # course.py, not demo/course.py
+    assert r2.status_code == 409
+    assert r2.data["top_folder"] == {"top_folder": "demo/", "zip_has_it": False}
+    assert "missing the top folder 'demo/'" in r2.data["error"]
+
+
+def test_zip_with_an_extra_top_folder_is_refused_with_a_hint(db):
+    upload(zip_files=V1)
+    r2 = upload(zip_files={"project/" + k: v for k, v in V1.items()})
+    assert r2.status_code == 409
+    assert r2.data["top_folder"] == {"top_folder": "project/", "zip_has_it": True}
+
+
+def test_first_version_is_never_refused(db):
+    r1 = upload(zip_files={"a.py": "x = 1\n"})
+    assert r1.status_code == 201
+
+
+def test_partial_upload_is_not_checked(db):
+    upload(zip_files=V1)
+    r2 = upload(data_files=[("student.py", STUDENT)], paths='["demo/student.py"]')
+    assert r2.status_code == 201 and r2.data["upload_mode"] == "partial"
+
+
+# ── loose files sent by name only (the UI keeps no folders) ─────────────────
+
+def test_loose_file_by_name_goes_back_to_its_folder(db):
+    upload(zip_files=V1, project_name="demo3")
+    files_before = len(db["code_files"].docs)
+    r2 = upload(data_files=[("course.py", COURSE_V2)], project_name="demo3")
+    assert r2.status_code == 201 and r2.data["upload_mode"] == "partial"
+    assert r2.data["matched_paths"] == {"course.py": "demo/course.py"}
+    assert r2.data["changes"]["modified_files"] == 1 and r2.data["changes"]["new_files"] == 0
+    flat = by_path(tree(2)["flat_files"])
+    assert set(flat) == {"demo/course.py", "demo/student.py", "demo/main.py"}     # no demo3/course.py
+    assert flat["demo/course.py"]["status"] == "modified"
+    assert len(db["code_files"].docs) == files_before + 1
+
+
+def test_a_name_that_matches_two_files_is_refused(db):
+    upload(zip_files={"models/user.py": "class U: pass\n", "views/user.py": "def v(): pass\n",
+                      "app.py": "x = 1\n"}, project_name="shop")
+    files_before = len(db["code_files"].docs)
+    r2 = upload(data_files=[("user.py", "class U:\n    pass\n")], project_name="shop")
+    assert r2.status_code == 409 and r2.data["code"] == "ambiguous_name"
+    assert r2.data["ambiguous"] == {"user.py": ["models/user.py", "views/user.py"]}
+    assert db["project_versions"].find_one({"version_number": 2}) is None
+    assert len(db["code_files"].docs) == files_before
+
+
+def test_a_new_name_is_a_new_file(db):
+    upload(zip_files=V1, project_name="demo3")
+    r2 = upload(data_files=[("extra.py", "y = 2\n")], project_name="demo3")
+    assert r2.status_code == 201 and r2.data["matched_paths"] == {}
+    assert by_path(tree(2)["flat_files"])["demo3/extra.py"]["status"] == "new"
+
+
+def test_given_paths_win_over_name_matching(db):
+    upload(zip_files=V1, project_name="demo3")
+    r2 = upload(data_files=[("course.py", COURSE_V2)], project_name="demo3", paths='["lib/course.py"]')
+    assert r2.status_code == 201 and r2.data["matched_paths"] == {}
+    flat = by_path(tree(2)["flat_files"])
+    assert flat["lib/course.py"]["status"] == "new"
+    assert flat["demo/course.py"]["status"] == "unchanged"
+
+
+def test_first_upload_of_loose_files_keeps_the_project_folder(db):
+    r1 = upload(data_files=[("course.py", COURSE_V1)], project_name="demo3")
+    assert r1.status_code == 201 and r1.data["matched_paths"] == {}
+    assert set(by_path(tree(1)["flat_files"])) == {"demo3/course.py"}

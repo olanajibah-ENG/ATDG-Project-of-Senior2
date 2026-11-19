@@ -21,6 +21,14 @@ def _paths_of(files_data):
     return [f['filename'] for f in files_data if not f.get('is_zip', False)]
 
 
+def _given_paths(files_data):
+    """The paths of the loose files when every one of them came with its path, else None."""
+    loose = [f for f in files_data if not f.get('is_zip', False)]
+    if loose and all(f.get('path') for f in loose):
+        return [f['path'] for f in loose]
+    return None
+
+
 def _build_files_to_forward(files_data):
     """يحول files_data لـ multipart list مناسب لـ requests.post"""
     result = []
@@ -43,7 +51,7 @@ def _build_files_to_forward(files_data):
     default_retry_delay=60,
     name='upload_tasks.process_upload'
 )
-def process_upload_task(self, project_id, project_name, user_email, files_data):
+def process_upload_task(self, project_id, project_name, user_email, files_data, confirm_deletions=False):
     task_id = self.request.id
     logger.info(f"[UPLOAD-TASK] Started — task:{task_id}, project:{project_id}, files:{len(files_data)}")
 
@@ -62,11 +70,30 @@ def process_upload_task(self, project_id, project_name, user_email, files_data):
                 'project_name':   project_name,
                 'upm_project_id': str(project_id),
                 'user_email':     user_email or '',
+                **({'confirm_deletions': 'true'} if confirm_deletions else {}),
+                **({'paths': json.dumps(_given_paths(files_data))} if _given_paths(files_data) else {}),
             },
             files=files_to_forward,
             headers={'Host': 'localhost'},
             timeout=600
         )
+
+        # 409 = the AI service refused the upload on purpose (it would delete half the project or
+        # more). Nothing was saved. Retrying would only be refused again, so report it and stop.
+        if ai_response.status_code == 409:
+            try:
+                body = ai_response.json()
+            except ValueError:
+                body = {"error": ai_response.text[:500]}
+            logger.warning(f"[UPLOAD-TASK] Refused by AI — task:{task_id}: {body.get('error')}")
+            return {
+                'status':        'rejected',
+                'project_id':    str(project_id),
+                'reason':        body.get('error'),
+                'code':          body.get('code'),
+                'would_delete':  body.get('would_delete', []),
+                'top_folder':    body.get('top_folder'),
+            }
 
         # لو طلع error، نسجل التفاصيل قبل ما raise
         if not ai_response.ok:

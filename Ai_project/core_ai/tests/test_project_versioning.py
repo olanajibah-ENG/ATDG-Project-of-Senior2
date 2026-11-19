@@ -139,3 +139,53 @@ def test_visible_files_hides_deleted_and_duplicates():
            + [dict(f("x1", "demo/old.py"), status="deleted")]}
     assert [e["file_id"] for e in pv.visible_files(doc)] == ["s1", "c2", "m1"]
     assert pv.visible_files({"file_ids": ["a"]}) is None              # older document: caller resolves
+
+
+# ── check_deletions ──────────────────────────────────────────────────────────
+
+PREV = [f("1", "demo/a.py"), f("2", "demo/b.py"), f("3", "demo/c.py"), f("4", "demo/d.py")]
+
+
+def test_check_deletions_is_quiet_below_half():
+    assert pv.check_deletions(PREV, ["demo/a.py", "demo/b.py", "demo/c.py"]) is None       # 1 of 4
+
+
+def test_check_deletions_flags_half_or_more():
+    risk = pv.check_deletions(PREV, ["demo/a.py", "demo/b.py"])                             # 2 of 4
+    assert risk["would_delete"] == ["demo/c.py", "demo/d.py"]
+    assert risk["deleted_count"] == 2 and risk["previous_count"] == 4
+    assert risk["top_folder"] is None
+
+
+def test_check_deletions_needs_at_least_two_files():
+    assert pv.check_deletions([f("1", "a.py"), f("2", "b.py")], ["a.py"]) is None          # 1 of 2
+
+
+def test_check_deletions_first_version():
+    assert pv.check_deletions([], ["a.py"]) is None
+
+
+def test_check_deletions_sees_a_missing_or_extra_top_folder():
+    lost = pv.check_deletions(PREV, ["a.py", "b.py", "c.py", "d.py"])
+    assert lost["top_folder"] == {"top_folder": "demo/", "zip_has_it": False}
+    extra = pv.check_deletions([f("1", "a.py"), f("2", "b.py")], ["src/a.py", "src/b.py"])
+    assert extra["top_folder"] == {"top_folder": "src/", "zip_has_it": True}
+
+
+# ── match_bare_names ─────────────────────────────────────────────────────────
+
+def test_bare_name_matching_one_path():
+    mapping, ambiguous = pv.match_bare_names([f("1", "demo/course.py"), f("2", "demo/main.py")],
+                                             {"demo3/course.py": "course.py"})
+    assert mapping == {"demo3/course.py": "demo/course.py"} and ambiguous == {}
+
+
+def test_bare_name_matching_two_paths_is_ambiguous():
+    mapping, ambiguous = pv.match_bare_names([f("1", "a/user.py"), f("2", "b/user.py")], {"p/user.py": "user.py"})
+    assert mapping == {} and ambiguous == {"user.py": ["a/user.py", "b/user.py"]}
+
+
+def test_bare_name_that_is_new_or_already_a_path_is_left_alone():
+    prev = [f("1", "demo3/course.py"), f("2", "demo/main.py")]
+    mapping, ambiguous = pv.match_bare_names(prev, {"demo3/course.py": "course.py", "demo3/new.py": "new.py"})
+    assert mapping == {} and ambiguous == {}

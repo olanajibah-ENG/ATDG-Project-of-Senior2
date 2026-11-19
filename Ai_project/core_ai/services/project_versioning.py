@@ -140,3 +140,71 @@ def visible_files(version_doc):
     if not changes:
         return None
     return dedupe_by_path([c for c in changes if c.get("status") != DELETED])
+
+
+# ── guard against a full upload that would delete most of the project ────────
+
+MASS_DELETION_MIN_FILES = 2      # deleting fewer files than this never needs a confirmation
+
+
+def _top_folder_hint(prev_paths, new_paths):
+    """'demo/' when the new paths are the old ones with a top folder added or taken away, else None."""
+    prev_paths, new_paths = set(prev_paths), set(new_paths)
+    if not prev_paths or not new_paths:
+        return None
+    tops = {p.split("/", 1)[0] + "/" for p in prev_paths if "/" in p}
+    for top in tops:                                   # the zip lost the top folder: demo/x.py → x.py
+        if {top + n for n in new_paths} & prev_paths:
+            return {"top_folder": top, "zip_has_it": False}
+    tops = {n.split("/", 1)[0] + "/" for n in new_paths if "/" in n}
+    for top in tops:                                   # the zip added a top folder: x.py → demo/x.py
+        stripped = {n[len(top):] for n in new_paths if n.startswith(top)}
+        if stripped & prev_paths:
+            return {"top_folder": top, "zip_has_it": True}
+    return None
+
+
+def check_deletions(prev_entries, uploaded_paths):
+    """For a FULL upload: None when it is safe, else what it would delete.
+
+    It is not safe when it would delete at least MASS_DELETION_MIN_FILES files and at least half
+    of the previous version. The caller refuses such an upload unless it is confirmed.
+    """
+    prev_paths = [_path(e) for e in dedupe_by_path(prev_entries)]
+    if not prev_paths:
+        return None                                    # first version: nothing to delete
+    new_paths = {str(p).replace("\\", "/") for p in uploaded_paths or () if p}
+    would_delete = sorted(p for p in prev_paths if p not in new_paths)
+    if len(would_delete) < MASS_DELETION_MIN_FILES or len(would_delete) * 2 < len(prev_paths):
+        return None
+    return {
+        "would_delete": would_delete,
+        "deleted_count": len(would_delete),
+        "previous_count": len(prev_paths),
+        "top_folder": _top_folder_hint(prev_paths, new_paths),
+    }
+
+
+# ── loose files sent by name only (the UI keeps no folders) ─────────────────
+
+def match_bare_names(prev_entries, bare):
+    """Put files that arrived with their name only back at the path they had.
+
+    bare : {guessed_path: file_name} for files that came without a folder.
+    → (mapping, ambiguous)
+      mapping   : {guessed_path: real_path} for each name that matches exactly one previous path
+      ambiguous : {file_name: [paths]} for names that match more than one previous path
+    A guessed path that already exists, or a name no previous path has, stays as it is (new file).
+    """
+    prev_paths = [_path(e) for e in dedupe_by_path(prev_entries)]
+    prev_set = set(prev_paths)
+    mapping, ambiguous = {}, {}
+    for guessed, name in (bare or {}).items():
+        if guessed in prev_set:
+            continue
+        candidates = sorted(p for p in prev_paths if p.rsplit("/", 1)[-1] == name)
+        if len(candidates) == 1:
+            mapping[guessed] = candidates[0]
+        elif len(candidates) > 1:
+            ambiguous[name] = candidates
+    return mapping, ambiguous

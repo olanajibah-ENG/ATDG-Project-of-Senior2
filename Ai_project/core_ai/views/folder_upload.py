@@ -119,6 +119,29 @@ class FolderUploadView(APIView):
         logger.info(f"[FOLDER-UPLOAD] project_id={upm_project_id}, version={version_number}, "
                     f"prev_files={len(prev_entries)}, mode={upload_mode}, deleted_paths={len(deleted_paths)}")
 
+        # Loose files sent by name only (the UI keeps no folders) go back to the path they had.
+        matched_paths = {}
+        bare = getattr(self, '_bare_names', {})
+        if not has_zip and bare:
+            matched_paths, ambiguous = project_versioning.match_bare_names(prev_entries, bare)
+            if ambiguous:
+                names = ", ".join(f"{n} ({' / '.join(ps)})" for n, ps in sorted(ambiguous.items()))
+                return Response({
+                    "error": (f"These file names match more than one file of the previous version: {names}. "
+                              f"Nothing was saved. Send each file's path in 'paths', or upload a zip."),
+                    "code": "ambiguous_name",
+                    "ambiguous": ambiguous,
+                }, status=status.HTTP_409_CONFLICT)
+            files_data = [(matched_paths.get(path, path), content) for path, content in files_data]
+            matched_paths = {bare[g]: real for g, real in matched_paths.items()}
+
+        # A full upload that would delete half the project or more is refused unless confirmed:
+        # it is usually the wrong zip, or a zip with a different top folder. Nothing is saved.
+        if upload_mode == project_versioning.FULL and not self._is_true(request.data.get('confirm_deletions')):
+            risk = project_versioning.check_deletions(prev_entries, [path for path, _ in files_data])
+            if risk:
+                return Response(self._mass_deletion_body(risk), status=status.HTTP_409_CONFLICT)
+
         try:
             file_ids_list, skipped = self._save_files(
                 db, files_data, upm_project_id, project_name, version_number, request
@@ -146,7 +169,27 @@ class FolderUploadView(APIView):
             "version_files":  built["counts"]["total_files"],
             "changes":        built["counts"],
             "deleted":        [c["filepath"] for c in built["file_changes"] if c["status"] == project_versioning.DELETED],
+            "matched_paths":  matched_paths,
         }, status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def _is_true(value):
+        return str(value or '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+    @staticmethod
+    def _mass_deletion_body(risk):
+        message = (f"This upload would delete {risk['deleted_count']} of the {risk['previous_count']} files "
+                   f"of the previous version. Nothing was saved. If that is what you want, upload again "
+                   f"with confirm_deletions=true.")
+        hint = risk.get("top_folder")
+        if hint:
+            if hint["zip_has_it"]:
+                message += (f" The zip seems to have an extra top folder '{hint['top_folder']}' "
+                            f"that the previous version did not have.")
+            else:
+                message += (f" The zip seems to be missing the top folder '{hint['top_folder']}' "
+                            f"that the previous version had: zip the folder itself, not its contents.")
+        return {"error": message, "code": "mass_deletion", **risk}
 
     @staticmethod
     def _read_list(request, key):
@@ -235,7 +278,9 @@ class FolderUploadView(APIView):
 
     # ── File Extraction ────────────────────────────────────────────────────────
     def _extract_files(self, request, project_name, allow_empty=False):
-        """→ (files, has_zip). files = [(filepath, content)]"""
+        """→ (files, has_zip). files = [(filepath, content)]
+        Files that came with their name only are listed in self._bare_names {guessed path: name}."""
+        self._bare_names = {}
         all_files = (
             list(request.FILES.getlist('file')) +
             list(request.FILES.getlist('files')) +
@@ -306,6 +351,8 @@ class FolderUploadView(APIView):
                     filepath = given.replace('\\', '/').lstrip('/')
                 else:
                     filepath = f.name if os.path.dirname(f.name) else f"{project_name}/{f.name}"
+                    if not os.path.dirname(f.name):
+                        self._bare_names[filepath] = f.name
                 result.append((filepath, content))
             except Exception as e:
                 logger.warning(f"[FOLDER-UPLOAD] Skipping {f.name}: {e}")
