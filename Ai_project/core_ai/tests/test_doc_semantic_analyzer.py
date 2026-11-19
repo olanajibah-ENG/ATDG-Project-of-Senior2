@@ -182,6 +182,15 @@ def test_all_attempts_fail_no_crash(monkeypatch):
     assert analyzer.stats.failed_requests == 1 and analyzer.stats.failed_classes == ["Cache"]
 
 
+def test_code_quote_with_escaped_newline_accepted():
+    # نفس غلط الخطوة 11: نهاية السطر مكتوبة كنص "\n" وأرقام الأسطر جوا النسخة
+    from core_ai.services.conflict_detection.doc_prompt_builder import CodeDocItem
+    item = CodeDocItem(id="A.f", class_name="A", member="f", doc_text="Returns x.",
+                       code_lines={1: "def f(self, x):", 2: "    if x is None:", 3: "        raise KeyError(x)"})
+    assert dsa.code_quote_ok("   2 |     if x is None:\\n   3 |         raise KeyError(x)", [2, 3], item)
+    assert not dsa.code_quote_ok("if x is None:\\n    return 0", [2], item)
+
+
 @pytest.mark.parametrize("raw", ["", None, "Sorry, I cannot help with that.", '{"answer": 1}'])
 def test_bad_responses_count_as_failure(monkeypatch, raw):
     fake_llm(monkeypatch, raw if raw is not None else "")

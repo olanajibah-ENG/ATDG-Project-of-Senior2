@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>نتائج الخطوة 11</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm 15mm 14mm; }
+  :root { --ink: #1c2430; --muted: #5a6573; --line: #d9dee5; --accent: #1f5fa8; --accent-bg: #eef4fb;
+          --ok: #1e7d4f; --ok-bg: #e9f6ef; --bad: #b3261e; --warn-bg: #fff6e0; --code-bg: #f4f6f8; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: var(--ink); background: #fff; font-size: 10pt; line-height: 1.7; margin: 0; }
+  h1 { font-size: 19pt; color: var(--accent); margin: 0 0 4px; line-height: 1.35; }
+  h2 { font-size: 13.5pt; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 3px; margin: 20px 0 8px; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin: 12px 0 5px; page-break-after: avoid; }
+  p { margin: 5px 0; } ul, ol { margin: 5px 0; padding-right: 22px; padding-left: 0; } li { margin: 2px 0; }
+  code, .ltr { font-family: Consolas, monospace; font-size: 8.6pt; direction: ltr; unicode-bidi: isolate; }
+  code { background: var(--code-bg); padding: 0 4px; border-radius: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9pt; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; text-align: right; }
+  th { background: var(--accent-bg); font-weight: 600; }
+  td.n, th.n { text-align: center; font-variant-numeric: tabular-nums; }
+  tr.hl td { background: #f3f8f4; font-weight: 700; }
+  .cover { border-bottom: 3px solid var(--accent); padding-bottom: 8px; margin-bottom: 10px; }
+  .sub { color: var(--muted); font-size: 10pt; }
+  .kpis { display: flex; gap: 8px; margin: 10px 0; }
+  .kpi { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 7px; text-align: center; }
+  .kpi .v { font-size: 16pt; font-weight: 700; color: var(--accent); line-height: 1.2; }
+  .kpi .l { font-size: 8.4pt; color: var(--muted); }
+  .box { border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; margin: 8px 0; page-break-inside: avoid; }
+  .box.ok { background: var(--ok-bg); border-color: #b7dfc8; } .box.warn { background: var(--warn-bg); border-color: #f0d9a0; }
+  .box.info { background: var(--accent-bg); border-color: #c8dbf0; }
+  .box b.t { display: block; margin-bottom: 2px; }
+  .pb { page-break-before: always; }
+  .small { font-size: 8.6pt; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <h1>نتائج الخطوة 11: الذكاء الاصطناعي بـ Code vs Code</h1>
+  <div class="sub">عينة من قسم التطوير تبع بيانات NPM · 2026-11-18 · موديل <span class="ltr">cohere/north-mini-code:free</span></div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">14 من 34</div><div class="l">تعديل بيكسر انكشف<br>(كانوا كلهم ضايعين قبل الخطوة 11)</div></div>
+  <div class="kpi"><div class="v">12 من 14</div><div class="l">منهم تغييرات سلوكية<br>(النوع يلي كان مستحيل ينكشف)</div></div>
+  <div class="kpi"><div class="v">4 من 16</div><div class="l">إنذار كاذب<br>على تعديلات سليمة</div></div>
+  <div class="kpi"><div class="v">19 من 34</div><div class="l">بعد تصليح غلط بفحص الدليل<br>(تقدير ببلاش، القسم 5)</div></div>
+</div>
+
+<h2>1. شو كنا عم نقيس</h2>
+<p>الخطوة 11 بتبعت للذكاء الاصطناعي جسم كل دالة تغيّرت، <b>قبل وبعد</b> التعديل، ومعه الفرق بينهن، وبتسأله: "هل هالتغيير بيكسر يلي عم يستعمل الدالة؟" والهدف هو <b>التغييرات السلوكية</b>، يعني نفس اسم الدالة ونفس معاملاتها بس صارت تشتغل بشكل تاني. هالنوع هو ثلثين بيانات NPM، وقبل الخطوة 11 ما كان ينكشف إلا بالصدفة.</p>
+
+<h2>2. العينة، وليش هيك</h2>
+<ul>
+  <li><b>التعديل يلي انكشف بالخطوات 7 لـ 10 بيضل منكشف</b>، والذكاء الاصطناعي بس بيزيد تنبيهات. فمنقيس على يلي <b>ما انكشفوا</b> وفيهم دالة جسمها تغيّر.</li>
+  <li><b>من قسم التطوير:</b> 34 تعديل بيكسر (عشوائي، seed 42، من أصل 104 مؤهّلين)، و<b>كل</b> الـ 16 تعديل سليم المؤهّلين.</li>
+  <li>هيك منعرف بالزبط: قديش <b>بيزيد كشف</b> (من الـ 34)، وقديش <b>بيزيد إنذارات كاذبة</b> (من الـ 16).</li>
+  <li><b>القياس أخد 4 أيام</b> بسبب الحد اليومي (50 طلب)، لأنه بعض التعديلات كبيرة: تعديل واحد فيه 46 دالة تغيّرت.</li>
+</ul>
+
+<h2>3. النتائج</h2>
+<table>
+  <tr><th style="width:34%"></th><th class="n">انكشف</th><th class="n">ما انكشف</th><th class="n">النسبة</th></tr>
+  <tr><td>تعديلات بتكسر (34)</td><td class="n">14</td><td class="n">20</td><td class="n">Recall = 0.41</td></tr>
+  <tr><td>منها سلوكية (27)</td><td class="n">12</td><td class="n">15</td><td class="n">0.44</td></tr>
+  <tr><td>منها بنيوية فاتت الخطوات 7 لـ 10 (7)</td><td class="n">2</td><td class="n">5</td><td class="n">0.29</td></tr>
+  <tr><td>تعديلات سليمة (16)</td><td class="n">4 إنذار كاذب</td><td class="n">12 سكت</td><td class="n">Specificity = 0.75</td></tr>
+</table>
+<p>Precision = 0.78 (14 من 18 تنبيه صح)، و F1 = 0.54.</p>
+
+<div class="box warn"><b class="t">قبل ما نقرا الأرقام: مش كل العينة انفحصت</b>
+<ul>
+  <li><b>6 تعديلات بتكسر</b> ما رجع لأي دالة فيهن جواب ينقرا: جواب فاضي (الموديل "بيفكّر" لحد ما يخلص حده)، أو JSON مكسور، أو الحد اليومي. هدول انحسبوا "ما انكشف".</li>
+  <li><b>5 تعديلات سليمة</b> صار فيهن نفس الشي، وانحسبوا "سكت". يعني الـ Specificity الحقيقية أقل: على التعديلات السليمة يلي انفحصت فعلاً (11)، في 4 إنذارات كاذبة، يعني حوالي <b>0.64</b>.</li>
+  <li>وعلى التعديلات يلي بتكسر يلي انفحصت فعلاً (28)، الكشف <b>0.50</b>.</li>
+</ul></div>
+
+<h2>4. تحليل الأخطاء</h2>
+<h3>أ. التعديلات يلي بتكسر وما انكشفت (20 من 34)، وليش</h3>
+<table>
+  <tr><th style="width:36%">السبب</th><th class="n" style="width:7%">العدد</th><th>أمثلة، وشو كان التغيير حسب الورقة</th></tr>
+  <tr><td><b>الدليل انرفض بالغلط</b>: الموديل قال "بيكسر" ونسخ السطر صح، بس فحصنا للدليل ما لقاه (القسم 5)</td><td class="n">8</td><td><span class="ltr">pnpm</span>: <code>--store-path</code> ما عاد اسم تاني لـ <code>--store</code>. و<span class="ltr">slonik</span>: حقل <code>dataTypeID</code> صار <code>dataTypeId</code>. و<span class="ltr">parse-server</span>: طلب بالمفتاح الرئيسي بينرفض من IP مش مسموح. و<span class="ltr">conventional-changelog</span> و<span class="ltr">aurelia</span> و<span class="ltr">ioredis</span></td></tr>
+  <tr><td><b>ما انفحص</b>: كل جواب رجع فاضي أو مكسور أو انقطع بالحد اليومي</td><td class="n">6</td><td><span class="ltr">yargs</span> (أولوية الـ context)، و<span class="ltr">promster</span> (قيمة افتراضية)، و<span class="ltr">router5</span>، و<span class="ltr">umbrella</span> (صارت async)</td></tr>
+  <tr><td><b>الموديل قال "ما في تغيير بيشوفه المستخدم"</b>، والتغيير الحقيقي مش جوا الدوال يلي انبعتت</td><td class="n">5</td><td><span class="ltr">Sage/carbon</span>: ملف انتقل لمجلد تاني. و<span class="ltr">jsdoc</span>: module انحذفت كلها. و<span class="ltr">oidc-provider</span> و<span class="ltr">parse-server</span>: قيمة افتراضية بملف الإعدادات، مش بدالة</td></tr>
+  <tr><td><b>الموديل شافه بس قال "ما بيكسر"</b></td><td class="n">1</td><td><span class="ltr">react-with-gesture</span>: ضافوا <code>setPointerCapture</code>. فعلاً تغيير سلوك، بس الموديل اعتبره إضافة ما بتأثر</td></tr>
+</table>
+
+<h3>ب. الإنذارات الكاذبة (4 من 16 تعديل سليم)</h3>
+<table>
+  <tr><th style="width:36%">السبب</th><th class="n" style="width:7%">العدد</th><th>أمثلة</th></tr>
+  <tr><td><b>تصليح خطأ انعتبر كسر</b>: الدالة صارت أكثر تساهلاً</td><td class="n">2</td><td><span class="ltr">IgniteUI merge</span>: صارت ترجع فوراً إذا المدخل فاضي بدل ما ترمي خطأ. و<span class="ltr">lerna hasTags</span>: صارت تلتقط الخطأ وترجّع false. هي فعلاً تغيير بسلوك يلي بيلتقط الخطأ، بس غالباً ما بتكسر حدا</td></tr>
+  <tr><td><b>تغيير سلوك حقيقي ممكن</b> بتعديل "سليم على الأرجح"</td><td class="n">2</td><td><span class="ltr">pnpm isInnerLink</span> (طريقة حساب المسار تغيّرت)، و<span class="ltr">renovate getConfig</span> (متغيرات البيئة). وتذكّري إنه الأمثلة السليمة نحنا جبناها، ومش موسومة من مؤلفين الورقة</td></tr>
+</table>
+
+<h3>ج. هل التنبيه الصح كان للسبب الصح؟</h3>
+<p>قارنّا شرح الموديل بوصف التغيير بالورقة نفسها:</p>
+<ul>
+  <li><b>11 من 14</b>: نفس السبب. أمثلة:
+    <ul>
+      <li><span class="ltr">testplane</span>: "الحدث ما عاد فيه <code>browser</code>"، والورقة: "do not pass browser id on file events".</li>
+      <li><span class="ltr">oidc-provider</span>: <code>whitelistedJWA</code> صار <code>enabledJWA</code>.</li>
+      <li><span class="ltr">renovate</span>: إلغاء دعم GitLab API v3.</li>
+      <li><span class="ltr">rxjs</span>: <code>useDeprecatedNextContext</code> انشال.</li>
+    </ul></li>
+  <li><b>3 من 14</b>: تعديل صح، بس سبب تاني أو مش واضح (<span class="ltr">mongoose</span>، و<span class="ltr">formBuilder</span>، وواحد من <span class="ltr">oidc-provider</span>).</li>
+</ul>
+
+<h2 class="pb">5. غلط لقيناه بفحص الدليل، وقديش بيأثر</h2>
+<p>متل Code vs Doc، الموديل لازم ينسخ السطر القديم والجديد كما هم، ومنرمي الجواب إذا السطر مش موجود فعلاً بالكود. لقينا إنه بأغلب الحالات المرفوضة، الموديل نسخ صح، بس:</p>
+<ul>
+  <li>كتب نهاية السطر كنص <code>\n</code> (رمزين) بدل نهاية سطر حقيقية.</li>
+  <li>وترك أرقام الأسطر (<code>2 |</code>) بنص النسخة.</li>
+</ul>
+<p>ففحصنا ما لقى النص ورفضه، كأنه مخترع.</p>
+<div class="box info"><b class="t">قديش رح يتغيّر إذا صلّحناه؟ (تقدير بالأجوبة المحفوظة، بدون ولا طلب، وبدون ما نغيّر الكود)</b>
+<table>
+  <tr><th></th><th class="n">انكشف من 34</th><th class="n">إنذار كاذب من 16</th><th class="n">Recall</th><th class="n">Specificity</th></tr>
+  <tr><td>هلق</td><td class="n">14</td><td class="n">4</td><td class="n">0.41</td><td class="n">0.75</td></tr>
+  <tr class="hl"><td>بعد التصليح</td><td class="n">19</td><td class="n">5</td><td class="n">0.56</td><td class="n">0.69</td></tr>
+</table>
+5 تعديلات بتكسر زيادة انكشفوا (<span class="ltr">aurelia، conventional-changelog، slonik، parse-server، pnpm</span>)، مقابل إنذار كاذب واحد زيادة. التصليح بسيط: نحوّل <code>\n</code> لنهاية سطر قبل المقارنة. وممكن نفس الغلط يكون موجود بفحص Code vs Doc كمان، فلازم نتأكّد هونيك.</div>
+
+<h2>6. شو بيعني هاد لقسم التطوير كله (تقدير)</h2>
+<p>قبل الخطوة 11، الكشف بكل قسم التطوير كان 93 من 266 (0.35). بالقسم في 104 تعديل بيكسر من نوع العينة، فإذا الذكاء الاصطناعي كشف منهم بنفس النسبة:</p>
+<table>
+  <tr><th></th><th class="n">الكشف بكل التطوير</th><th class="n">الإنذارات الكاذبة بكل التطوير</th></tr>
+  <tr><td>قبل الخطوة 11</td><td class="n">0.35</td><td class="n">15 من 49 (Specificity 0.69)</td></tr>
+  <tr><td>بعد الخطوة 11 (هلق)</td><td class="n">حوالي 0.51</td><td class="n">19 من 49 (حوالي 0.61)</td></tr>
+  <tr><td>بعد الخطوة 11 مع تصليح الدليل</td><td class="n">حوالي 0.57</td><td class="n">20 من 49 (حوالي 0.59)</td></tr>
+</table>
+<p class="small">هاد تقدير من عينة: 34 من 104 تعديل بيكسر. والتعديلات السليمة دخلت كلها، فرقمها مش تقدير.</p>
+
+<h2>7. الخلاصة</h2>
+<div class="box ok"><b class="t">يلي اشتغل</b>
+<ul>
+  <li>الذكاء الاصطناعي <b>كشف تغييرات سلوكية</b> كانت مستحيلة قبل، وبـ 11 من 14 حالة للسبب الصح.</li>
+  <li>الدقة منيحة: 14 من 18 تنبيه صح.</li>
+  <li>ما بيبعت طلب إلا للدوال يلي فعلاً تغيّرت (الخطوة 9).</li>
+</ul></div>
+<div class="box warn"><b class="t">يلي لازم يتصلّح</b>
+<ol>
+  <li><b>فحص الدليل</b> (القسم 5): أكبر سبب للضياع، وتصليحه بسيط وبيرجّع 5 تعديلات.</li>
+  <li><b>الأجوبة الفاضية بالتعديلات الكبيرة:</b> الموديل بيفكّر لحد ما يخلص حده. الحل: نقسّم الطلب لأصغر، أو نبعت الدوال الأهم بس.</li>
+  <li><b>التغييرات برّا الدوال</b> (ملفات الإعدادات، ونقل ملفات، وحذف module كامل): الخطوة 11 ما بتشوفها أصلاً. هاد سقف الطريقة الحالية، متل ما قلنا بالخطوة 8.</li>
+</ol></div>
+<p class="small">المصادر: <code>evaluation/paper_sets/results/npm_dev_step11sample34__current__20261118T165520Z.json</code>، وتفاصيل كل تعديل أُعيد بناؤها من الأجوبة المحفوظة بدون طلبات جديدة. ما فتحنا قسم الاختبار أبداً.</p>
+</body>
+</html>
