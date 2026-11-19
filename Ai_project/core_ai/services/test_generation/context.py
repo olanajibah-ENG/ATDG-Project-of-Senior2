@@ -23,8 +23,46 @@ def test_name_stem(unit_id):
 test_name_stem.__test__ = False      # a helper, not a pytest test
 
 
-def _signature(entry):
+def _stored_signature(entry):
     return str(entry.get("signature") or entry.get("name") or "").lstrip("+-# ").strip()
+
+
+def _signature(entry, in_class=False):
+    """The unit's signature as Python source, with its default values: `__init__(self, title: str,
+    capacity: int = 2)`. The stored signature leaves the defaults out, and a default sent alone as a
+    JSON string ("2") read like the text "2" to the model. Without stored parameters, the stored
+    signature is used as it is."""
+    params = entry.get("parameters")
+    name = entry.get("name")
+    if params is None or not name:
+        return _stored_signature(entry)
+
+    decorators = [str(d) for d in entry.get("decorators") or []]
+    parts = []
+    if in_class and "staticmethod" not in decorators:
+        parts.append("cls" if "classmethod" in decorators else "self")
+
+    kinds = [p.get("kind") for p in params]
+    last_positional_only = max((i for i, k in enumerate(kinds) if k == "positional_only"), default=None)
+    star_written = "var_positional" in kinds
+    for i, p in enumerate(params):
+        kind = p.get("kind")
+        if kind == "keyword_only" and not star_written:
+            parts.append("*")
+            star_written = True
+        text = {"var_positional": "*", "var_keyword": "**"}.get(kind, "") + str(p.get("name"))
+        if p.get("type"):
+            text += f": {p['type']}"
+        if p.get("default") is not None:
+            text += f" = {p['default']}" if p.get("type") else f"={p['default']}"
+        parts.append(text)
+        if last_positional_only is not None and i == last_positional_only:
+            parts.append("/")
+
+    signature = f"{name}({', '.join(parts)})"
+    if entry.get("return_type") and entry.get("return_type") != "Any":
+        signature += f" -> {entry['return_type']}"
+    return ("async " if entry.get("is_async") else "") + signature
 
 
 def _importable(unit_id):
@@ -50,9 +88,10 @@ def build_unit_context(unit, analyses_by_path, adapter, level="unit"):
             "name": entry.get("name"),
             "kind": unit.get("kind"),
             "import_statement": adapter.import_statement(path, import_name),
-            "signature": _signature(entry),
+            "signature": _signature(entry, in_class=class_entry is not None),
+            # default_code is Python source: "2" is the integer 2, "'2'" would be the text '2'
             "parameters": [
-                {"name": p.get("name"), "type": p.get("type"), "default": p.get("default")}
+                {"name": p.get("name"), "type": p.get("type"), "default_code": p.get("default")}
                 for p in entry.get("parameters") or []
             ],
             "return_type": entry.get("return_type"),
@@ -74,7 +113,7 @@ def build_unit_context(unit, analyses_by_path, adapter, level="unit"):
         context["class"] = {
             "name": class_entry.get("name"),
             "bases": list(class_entry.get("base_classes") or []),
-            "constructor": _signature(constructor) if constructor else None,
+            "constructor": _signature(constructor, in_class=True) if constructor else None,
             "attributes": [{"name": a.get("name"), "type": a.get("type")}
                            for a in class_entry.get("attributes") or []],
         }
@@ -85,9 +124,10 @@ def build_unit_context(unit, analyses_by_path, adapter, level="unit"):
                 "import_statement": adapter.import_statement(callee_path, callee_import)}
         callee_analysis = analyses_by_path.get(callee_path)
         if callee_analysis is not None:
-            _, callee_entry = adapter.find_entry(callee_analysis, callee_id)
+            callee_class, callee_entry = adapter.find_entry(callee_analysis, callee_id)
             if callee_entry is not None:
-                item["signature"] = _signature(callee_entry)   # the signature only, never the body
+                # the signature only, never the body
+                item["signature"] = _signature(callee_entry, in_class=callee_class is not None)
         context["callees"].append(item)
 
     return context

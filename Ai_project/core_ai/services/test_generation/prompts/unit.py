@@ -1,7 +1,7 @@
 """Instructions for the unit level. Changing any text here means changing PROMPT_VERSION, so that
 answers stored under the old instructions are not reused."""
 
-PROMPT_VERSION = "unit-v1"
+PROMPT_VERSION = "unit-v2"   # v2: signatures carry default values; defaults are Python source
 
 SYSTEM = """You write unit tests for one Python function or method at a time.
 
@@ -26,4 +26,5 @@ Rules:
 - Build the objects you need yourself, using the constructor signature in the context.
 - For the functions listed under "callees" you know only the signature. Use the real object when \
 it is simple to build; otherwise replace it with a small stand-in object.
-- Assert only what the unit's code in the context guarantees."""
+- Assert only what the unit's code in the context guarantees.
+- Signatures and "default_code" are Python source code: `capacity: int = 2` means the integer 2, not the text "2"."""

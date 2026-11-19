@@ -27,7 +27,7 @@ def test_unit_part_of_the_context():
     assert unit["import_statement"] == "from game import Student"
     assert unit["signature"].startswith("enroll(")
     assert unit["return_type"] == "bool"
-    assert {"name": "course", "type": "Course", "default": None} in unit["parameters"]
+    assert {"name": "course", "type": "Course", "default_code": None} in unit["parameters"]
     assert "self.courses.append(course)" in unit["body"]
 
 
@@ -119,10 +119,10 @@ def test_prompt_holds_the_context_and_the_rules_and_nothing_else_from_the_projec
 
 def test_prompt_version_and_request_hash():
     strategy = UnitStrategy()
-    assert strategy.prompt_version == unit_prompt.PROMPT_VERSION == "unit-v1"
+    assert strategy.prompt_version == unit_prompt.PROMPT_VERSION == "unit-v2"
     assert strategy.level == "unit"
     ctx = _game_context()
-    assert strategy.request_hash(ctx) == context.context_hash(ctx, "unit-v1")
+    assert strategy.request_hash(ctx) == context.context_hash(ctx, "unit-v2")
 
 
 # ── assembler ────────────────────────────────────────────────────────────────
@@ -139,3 +139,67 @@ def test_assembled_file_has_a_header_and_still_parses():
     assert "game.py::Student.enroll" in text and "abc123" in text and "NOT RUN YET" in text
     ast.parse(text)
     assert text.endswith("assert True\n")
+
+
+# ── default values reach the model as Python code (the "2" vs 2 bug, 19/11/2026) ──
+
+from core_ai.tests.test_generation import helpers  # noqa: E402
+
+COURSE_SRC = '''
+class Course:
+    def __init__(self, title: str, capacity: int = 2, tag="new", *names, limit=None, **extra):
+        self.title = title
+        self.capacity = capacity
+
+    @staticmethod
+    def make(title: str = "x") -> "Course":
+        return Course(title)
+
+    @classmethod
+    def empty(cls, n: int = 0):
+        return cls("e", n)
+
+    async def load(self, src: str = "db") -> bool:
+        return True
+
+def pair(a, b=1, /, c=2):
+    return a + b + c
+'''
+
+
+def _course_ctx(name, kind="method"):
+    return context.build_unit_context(_unit(f"demo/course.py::{name}", kind=kind),
+                                      {"demo/course.py": helpers.build_analysis(COURSE_SRC)}, ADAPTER)
+
+
+def test_signature_carries_default_values_as_code():
+    unit = _course_ctx("Course.__init__")["unit"]
+    assert unit["signature"] == "__init__(self, title: str, capacity: int = 2, tag='new', *names, limit=None, **extra)"
+
+
+def test_default_code_is_python_source_not_a_plain_string():
+    params = {p["name"]: p for p in _course_ctx("Course.__init__")["unit"]["parameters"]}
+    assert params["capacity"]["default_code"] == "2"            # the integer 2, written as code
+    assert params["tag"]["default_code"] == "'new'"             # a string keeps its quotes
+    assert params["title"]["default_code"] is None
+    assert "default" not in params["capacity"]
+
+
+def test_class_constructor_signature_has_the_defaults():
+    ctx = _course_ctx("Course.make")
+    assert "capacity: int = 2" in ctx["class"]["constructor"]
+
+
+def test_static_class_and_async_methods():
+    assert _course_ctx("Course.make")["unit"]["signature"] == "make(title: str = 'x') -> Course"
+    assert _course_ctx("Course.empty")["unit"]["signature"] == "empty(cls, n: int = 0)"
+    assert _course_ctx("Course.load")["unit"]["signature"] == "async load(self, src: str = 'db') -> bool"
+
+
+def test_positional_only_marker_for_a_module_function():
+    assert _course_ctx("pair", kind="function")["unit"]["signature"] == "pair(a, b=1, /, c=2)"
+
+
+def test_prompt_says_defaults_are_code_and_version_moved():
+    assert unit_prompt.PROMPT_VERSION == "unit-v2"
+    assert "not the text" in unit_prompt.USER_TEMPLATE
