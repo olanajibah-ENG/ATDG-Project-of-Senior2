@@ -71,7 +71,7 @@ class PythonProcessor(ILanguageProcessorStrategy):
             normalized_code = re.sub(super_pattern, 'super().__init__(', normalized_code)
             fixes_applied.append("Fixed 'super().init()' → 'super().__init__()'")
         
-        weird_underscores = ['\u2013\u2013', '\u2014\u2014', '––', '__']
+        weird_underscores = ['\u2013\u2013', '\u2014\u2014', '––']
         for weird in weird_underscores:
             if weird in normalized_code:
                 normalized_code = normalized_code.replace(weird, '__')
