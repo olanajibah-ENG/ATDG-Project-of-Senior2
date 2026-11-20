@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>الشريحة S1 — المهمة والخطة</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 10.8pt; line-height: 1.65; color: #1c2430; margin: 0; }
+  h1 { font-size: 20pt; margin: 0 0 4px; color: #12305a; }
+  .sub { color: #56637a; font-size: 10.5pt; margin-bottom: 12px; }
+  h2 { font-size: 13.5pt; color: #fff; background: #1f5f4a; padding: 5px 12px; border-radius: 5px; margin: 18px 0 8px; break-after: avoid; }
+  p { margin: 5px 0; }
+  ul, ol { margin: 4px 0 8px; padding-right: 20px; }
+  li { margin: 2px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 10px; font-size: 9.9pt; }
+  tr { break-inside: avoid; }
+  th { background: #e8eef7; color: #12305a; text-align: right; padding: 5px 8px; border: 1px solid #c3cede; }
+  td { padding: 5px 8px; border: 1px solid #d3dbe7; vertical-align: top; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 9.3pt; direction: ltr; unicode-bidi: embed; background: #eef2f7; padding: 0 3px; border-radius: 3px; }
+  pre { direction: ltr; text-align: left; font-family: Consolas, "Courier New", monospace; font-size: 8.8pt; line-height: 1.45; background: #f4f6fa; border: 1px solid #d3dbe7; border-radius: 5px; padding: 8px 11px; margin: 6px 0 10px; white-space: pre-wrap; break-inside: avoid; }
+  .box { border: 1px solid #8cc5a8; background: #eaf6f0; border-radius: 6px; padding: 8px 12px; margin: 8px 0 10px; break-inside: avoid; }
+  .flow { display: flex; gap: 5px; margin: 8px 0 12px; }
+  .flow div { flex: 1; text-align: center; border: 1px solid #c3cede; background: #f7f9fc; border-radius: 5px; padding: 6px 4px; font-size: 9.8pt; }
+  .flow div b { display: block; color: #12305a; }
+  .small { font-size: 9.4pt; color: #56637a; }
+</style>
+</head>
+<body>
+
+<h1>الشريحة S1 — المهمة والخطة</h1>
+<div class="sub">الميزة 1: توليد اختبارات موثوقة · بدون نموذج لغوي وبدون تشغيل · التاريخ 13/11/2026</div>
+
+<div class="box"><b>الهدف:</b> المستخدم يطلب اختبارات لمشروع، فيأخذ رقم مهمة. بعدها يقرأ الخطة: كل الدوال والميثودات التي ستُختبر، وكل ما تم تجاوزه مع السبب. لا يُولَّد أي اختبار في هذه الشريحة.</div>
+
+<h2>1. المسار</h2>
+<div class="flow">
+  <div><b>1. النطاق</b>النسخة، الملفات، الأنواع</div>
+  <div><b>2. بوابة التحليل</b>لكل ملف</div>
+  <div><b>3. الـ Graph</b>تحميل، ربط، دمج</div>
+  <div><b>4. الخطة</b>وحدات + تجاوز</div>
+  <div><b>5. الـ API</b>المهمة والخطة</div>
+</div>
+
+<h2>2. الدخل والخرج</h2>
+<table>
+<tr><th style="width:10%">Method</th><th style="width:42%">المسار</th><th>الوظيفة</th></tr>
+<tr><td>POST</td><td><code>/api/analysis/tests/jobs/</code></td><td>إنشاء مهمة. يرد فوراً بـ 202.</td></tr>
+<tr><td>GET</td><td><code>/api/analysis/tests/jobs/{job_id}/</code></td><td>حالة المهمة، المرحلة، التقدّم، وسطر لكل ملف.</td></tr>
+<tr><td>GET</td><td><code>/api/analysis/tests/jobs/{job_id}/plan/</code></td><td>الوحدات، المتجاوز، وعدد عناصر العمل.</td></tr>
+</table>
+
+<p><b>طلب الإنشاء:</b></p>
+<pre>{
+  "project_id": "&lt;project UUID from UPM&gt;",
+  "version_number": 2,                      // optional -> latest
+  "paths": ["MyProject/utils.py"],          // optional -> all files of the version
+  "levels": ["unit", "edge", "integration"] // optional -> all three
+}</pre>
+<p><b>الرد (202):</b></p>
+<pre>{ "job_id": "job_7f3a91", "status": "pending", "project_id": "...", "version_number": 2 }</pre>
+<p><b>الخطة:</b></p>
+<pre>{
+  "units":   [{"id": "game.py::Student.enroll", "file": "game.py", "kind": "method"}],
+  "skipped": [{"path": "readme.md", "reason": "unsupported_language"}],
+  "work_items_count": 42
+}</pre>
+<p><b>الأخطاء:</b></p>
+<table>
+<tr><th style="width:30%">الكود</th><th>متى</th></tr>
+<tr><td><code>400 validation_error</code></td><td>حقل غير صحيح: نسخة أو مسار غير موجود، أو نوع غير معروف</td></tr>
+<tr><td><code>401</code></td><td>الطلب بدون token أو بـ token غير صالح</td></tr>
+<tr><td><code>403</code></td><td>المهمة تخص مستخدماً آخر</td></tr>
+<tr><td><code>422 no_python_files</code></td><td>لا يوجد أي ملف Python ضمن الملفات المختارة</td></tr>
+</table>
+
+<h2>3. القواعد</h2>
+<ul>
+<li><b>المسارات</b> تؤخذ من شجرة المشروع التي تعرضها الواجهة.</li>
+<li><b>ملف غير Python:</b> يُتجاوز بسبب <code>unsupported_language</code> والمهمة تستمر.</li>
+<li><b>ملف بلا تحليل:</b> المهمة تطلب تحليله وتكمل بباقي الملفات، ثم ترجع له. إذا فشل مرتين يُتجاوز بسبب <code>analysis_failed</code> ويرى المستخدم ذلك.</li>
+<li><b>ممنوع</b> أن تنتظر مهمة خلفية مهمة أخرى. الفحص يُعاد لاحقاً.</li>
+<li><b>الوحدات:</b> كل دالة وميثود، ومنها <code>__init__</code>. الدوال الخاصة (<code>_name</code>) تُتجاوز بسبب <code>private</code>.</li>
+<li><b>معرّف الوحدة:</b> <code>path::Class.method</code>.</li>
+<li><b>المصادقة:</b> JWT من UPM. كل مهمة يقرؤها صاحبها فقط.</li>
+</ul>
+<p><b>أسباب التجاوز الستة:</b> <code>unsupported_language</code> · <code>analysis_failed</code> · <code>no_units</code> · <code>empty_or_abstract</code> · <code>body_truncated</code> · <code>private</code></p>
+
+<h2>4. الملفات</h2>
+<p>كل الملفات الجديدة داخل <code>Ai_project/core_testing/</code>.</p>
+<table>
+<tr><th style="width:38%">الملف</th><th>الوظيفة</th></tr>
+<tr><td><code>apps.py</code>، <code>urls.py</code>، <code>views.py</code>، <code>serializers.py</code></td><td>التطبيق والمسارات الثلاثة</td></tr>
+<tr><td><code>auth.py</code></td><td>التحقق من JWT وملكية المهمة</td></tr>
+<tr><td><code>repo.py</code></td><td>الكتابة على <code>test_jobs</code> والقراءة من المجموعات الموجودة</td></tr>
+<tr><td><code>statuses.py</code></td><td>حالات المهمة والملف</td></tr>
+<tr><td><code>scope.py</code></td><td>تحديد النسخة والملفات والأنواع، وأخطاء 400 و 422</td></tr>
+<tr><td><code>gate.py</code></td><td>بوابة التحليل لكل ملف</td></tr>
+<tr><td><code>graphify/loader.py</code></td><td>قراءة الـ graph المخزَّن لكل ملف</td></tr>
+<tr><td><code>graphify/resolver.py</code></td><td>ربط الاستدعاء بالوحدة المحلية الصحيحة</td></tr>
+<tr><td><code>graphify/merge.py</code></td><td>معرّفات فريدة ودمج graph المشروع</td></tr>
+<tr><td><code>graphify/queries.py</code></td><td>الدوال التي تستدعيها وحدة مباشرة</td></tr>
+<tr><td><code>languages/python_adapter.py</code></td><td>جرد الوحدات من التحليل المخزَّن</td></tr>
+<tr><td><code>planner.py</code></td><td>الوحدات، التجاوز، وعدد عناصر العمل</td></tr>
+<tr><td><code>tasks.py</code></td><td>مهمة الخلفية</td></tr>
+<tr><td><code>tests/</code></td><td>ملف اختبار لكل ملف أعلاه + تقرير بالعربية</td></tr>
+</table>
+<p><b>ملفات موجودة تُعدَّل:</b> <code>settings.py</code> (تسجيل التطبيق وإعداد JWT) · <code>Ai_project/urls.py</code> (ربط المسارات) · <code>docker-compose.yml</code> (تمرير مفتاح JWT من UPM).</p>
+<p><b>التخزين:</b> مجموعة جديدة واحدة <code>test_jobs</code> والخطة محفوظة داخلها. نقرأ من <code>project_versions</code> و <code>code_files</code> و <code>analysis_results</code> بدون تعديلها.</p>
+
+<h2>5. ترتيب الشغل</h2>
+<table>
+<tr><th style="width:5%">#</th><th style="width:52%">الخطوة</th><th>كيف نتأكد</th></tr>
+<tr><td>1</td><td>إنشاء التطبيق وتسجيله وربط المسارات</td><td>المسار يرد 401 بدون token</td></tr>
+<tr><td>2</td><td>JWT والملكية</td><td>token صحيح يمر، ومستخدم آخر يأخذ 403</td></tr>
+<tr><td>3</td><td>الحالات والتخزين</td><td>اختبارات على نسخة تخزين في الذاكرة</td></tr>
+<tr><td>4</td><td>النطاق وإنشاء المهمة</td><td>اختبار لكل حالة خطأ، والرد 202</td></tr>
+<tr><td>5</td><td>بوابة التحليل</td><td>محلَّل، ناقص، فاشل مرتين، مهلة</td></tr>
+<tr><td>6</td><td>الـ graph: تحميل، معرّفات، ربط، دمج، جيران</td><td><code>Student.enroll</code> يرتبط بـ <code>Course.add_student</code></td></tr>
+<tr><td>7</td><td>جرد الوحدات والمخطِّط</td><td>14 وحدة في ملف <code>game</code></td></tr>
+<tr><td>8</td><td>مسارا الحالة والخطة</td><td>الشكل مطابق للقسم 2</td></tr>
+<tr><td>9</td><td>فحص القبول والتقرير</td><td>القسم 6</td></tr>
+</table>
+
+<h2>6. فحص القبول</h2>
+<ol>
+<li>طلب على مشروع فيه ملفات Python محلَّلة يرجع 202 ورقم مهمة.</li>
+<li>الخطة لملف <code>game</code> ترجع 14 وحدة و 0 متجاوز.</li>
+<li>ملف غير Python يظهر متجاوزاً والباقي يُخطَّط.</li>
+<li>بدون token يرجع 401، ومستخدم آخر يأخذ 403.</li>
+<li>صفر استدعاءات للنموذج اللغوي.</li>
+<li>الاختبارات الموجودة قبل الشريحة (213) ما زالت ناجحة.</li>
+</ol>
+
+<h2>7. خارج S1</h2>
+<p>النموذج اللغوي، توليد الاختبارات، الإصلاح، التشغيل المعزول، التغطية، تنزيل ZIP، اختبارات Edge و Integration، إلغاء المهمة، قائمة السجلات، وباقي تعديلات الـ graph (الـ builtins، مستويات الثقة، <code>io_kind</code>، التخزين المؤقت).</p>
+
+<h2>8. التسليمات</h2>
+<ul>
+<li>كود S1 مع اختباراته.</li>
+<li>تقرير بالعربية: نتائج الاختبارات، المجموعات والحقول التي ارتبطنا بها، طريقة استدعاء المسارات الثلاثة في Postman، وقائمة المؤجَّل.</li>
+</ul>
+
+<p class="small">المصادر: ملف خطة التنفيذ (القسم 9)، ملف الـ API، ورسالة أريج. حيث اختلفت المصادر اعتُمد الأبسط: مجموعة تخزين واحدة، وبدون أنماط التصميم الكاملة في هذه الشريحة.</p>
+
+</body>
+</html>

@@ -1,0 +1,988 @@
+{
+  "info": {
+    "_postman_id": "f2102811-544b-4456-9e4c-d0e02c001998",
+    "name": "testing",
+    "description": "## Overview\n\nThis collection covers end-to-end testing of a locally hosted API (`http://localhost`) built around two core modules: **UPM (User & Project Management)** and **Analysis**.\n\n## Modules\n\n### UPM — User & Project Management\nHandles authentication and resource management for projects and tasks:\n- **Authentication** — User login (`/api/upm/login/`)\n- **Projects** — List, create, retrieve, and update projects (`/api/upm/projects/`)\n- **Tasks** — Manage and query tasks associated with projects (`/api/upm/tasks/`)\n\n### Analysis\nProvides static analysis and conflict-detection workflows:\n- **Upload Folder** — Submit a folder of source files for analysis (`/api/analysis/upload-folder/`)\n- **Detect Conflict** — Identify conflicts within uploaded content (`/api/analysis/detect-conflict/`)\n- **Test Jobs** — Create and monitor async analysis jobs (`/api/analysis/tests/jobs/`)\n- **Analysis Results** — Retrieve the output of completed analysis runs (`/api/analysis/analysis-results/`)\n\n## Usage\n\nRequests target a local development server. Ensure the backend service is running before executing any requests. Authentication should be performed first to obtain any required session tokens or credentials used by subsequent calls.\n\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "45894850",
+    "_collection_link": "https://go.postman.co/collection/45894850-f2102811-544b-4456-9e4c-d0e02c001998?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "http://localhost/api/upm/login/",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"user3\",\r\n \"password\": \"123456789\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost/api/upm/login/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "login",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": " http://localhost/api/upm/projects/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0zjy}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"demo3\", \"description\": \"تجربة النسخ\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost/api/upm/projects/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/folder-upload/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0zjy}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [
+                "/C:/Users/kamar aldiab/Desktop/Senior-project1ATDG/docs/demo_versions/demo_v1.zip"
+              ]
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/folder-upload/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "folder-upload",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/tasks/05841d28-3e6b-47e0-8033-9a420b91e4f7/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/tasks/05841d28-3e6b-47e0-8033-9a420b91e4f7/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "tasks",
+            "05841d28-3e6b-47e0-8033-9a420b91e4f7",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/versions/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/versions/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "versions",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/tree/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/tree/?version=1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "tree",
+            ""
+          ],
+          "query": [
+            {
+              "key": "version",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afca902fea0f5429af85531",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afca902fea0f5429af85531"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afca903fea0f5429af85535",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afca903fea0f5429af85535"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afca902fea0f5429af8552d",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afca902fea0f5429af8552d"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/folder-upload/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [
+                "/C:/Users/kamar aldiab/Desktop/Senior-project1ATDG/docs/demo_versions/demo_v2.zip"
+              ]
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/folder-upload/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "folder-upload",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/tasks/1f5bf42e-8fe2-471e-b66b-b7ebe1fc8889/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/tasks/1f5bf42e-8fe2-471e-b66b-b7ebe1fc8889/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "tasks",
+            "1f5bf42e-8fe2-471e-b66b-b7ebe1fc8889",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/versions/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/versions/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "versions",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/tree/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/tree/?version=2",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "tree",
+            ""
+          ],
+          "query": [
+            {
+              "key": "version",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afc8153257688e150f052cd",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afc8153257688e150f052cd"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afc8153257688e150f052d1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afc8153257688e150f052d1"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afc8153257688e150f052d5",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afc8153257688e150f052d5"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/bbcaae8d-cfd3-48ee-a2ab-2db9d9db8059/tree/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/projects/bbcaae8d-cfd3-48ee-a2ab-2db9d9db8059/tree/?version=2",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "bbcaae8d-cfd3-48ee-a2ab-2db9d9db8059",
+            "tree",
+            ""
+          ],
+          "query": [
+            {
+              "key": "version",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afc85d5257688e150f052de",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afc85d5257688e150f052de"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/folder-upload/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [
+                "/C:/Users/kamar aldiab/Desktop/Senior-project1ATDG/docs/demo_versions/demo_v3_without_main.zip"
+              ]
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/folder-upload/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "folder-upload",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/tasks/c18c7fc9-937c-4991-8b14-f672f8ada768/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/tasks/c18c7fc9-937c-4991-8b14-f672f8ada768/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "tasks",
+            "c18c7fc9-937c-4991-8b14-f672f8ada768",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/versions/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/versions/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "versions",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/tree/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/upm/projects/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/tree/?version=3",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "upm",
+            "projects",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            "tree",
+            ""
+          ],
+          "query": [
+            {
+              "key": "version",
+              "value": "3"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/project-tree/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/project-tree/c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "project-tree",
+            "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afca9e0fea0f5429af8553e",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afca9e0fea0f5429af8553e"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analyze/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"code_file_id\": \"6afca9e0fea0f5429af8553e\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost/api/analysis/analyze/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analyze",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "http://localhost/api/analysis/analysis-results/",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{json_web_token_0crz}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/analysis/analysis-results/?code_file_id=6afca9e0fea0f5429af8553e",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "path": [
+            "api",
+            "analysis",
+            "analysis-results",
+            ""
+          ],
+          "query": [
+            {
+              "key": "code_file_id",
+              "value": "6afca9e0fea0f5429af8553e"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "json_web_token_0zjy",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_0crz",
+      "secret": true
+    }
+  ]
+}

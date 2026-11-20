@@ -119,6 +119,28 @@ DOCUMENTATION_FILES_COLLECTION = 'documentation_files'
 GENERATED_FILES_COLLECTION = 'generated_files'
 PROJECT_ANALYSIS_RESULTS_COLLECTION = 'project_analysis_results'
 
+# ── Feature 1: Generate Trusted Tests (core_ai/services/test_generation) ─────────────────────────
+TEST_JOBS_COLLECTION = 'test_jobs'
+# Test routes check the user's token with the key UPM signs it with.
+# Empty key → every test route answers 401.
+TESTGEN_JWT_SIGNING_KEY = os.environ.get('UPM_JWT_SIGNING_KEY', '')
+# Before a job starts, UPM is asked (with the caller's token) whether the project is theirs.
+UPM_INTERNAL_URL = os.environ.get('UPM_INTERNAL_URL', 'http://web:8000')
+# Analysis gate: how often a waiting job checks again, and when it gives up.
+TESTGEN_GATE_POLL_SECONDS = 5
+TESTGEN_GATE_MAX_WAIT_SECONDS = 600
+# A job still "queued" after this long was never picked up by the worker → reported as failed.
+TESTGEN_QUEUE_TIMEOUT_SECONDS = 120
+# S2 — generation
+TEST_RECORDS_COLLECTION = 'test_records'
+TEST_ATTEMPTS_COLLECTION = 'test_attempts'
+# One job may not spend more model requests than this (reused answers do not count).
+TESTGEN_MAX_REQUESTS_PER_JOB = 20
+# Free models spend part of this on their own reasoning; 2000 cut real answers off mid-file.
+TESTGEN_LLM_MAX_TOKENS = 4000
+# None = the client's own model order.
+TESTGEN_LLM_MODEL = None
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

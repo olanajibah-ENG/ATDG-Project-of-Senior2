@@ -3,3 +3,8 @@ baseline (after step 3),legacy,2026-10-28T17:45:42,a8649b221ee7,offline,142,0.5,
 baseline (after step 3),current,2026-10-28T17:45:43,0133978c6c66,offline,142,0.5,0.014,0.027,0.986,1,1,70,70,0,0,0,0,0,0.014,,0.0
 "after step 6 (cohere, day 2)",current,2026-11-06T07:08:39,a3badbe40bd7,cohere/north-mini-code:free,142,0.55,0.155,0.242,0.873,11,9,60,62,0,319,49,76,0,0.141,0.0,0.818
 "after step 6 (cohere, day 3)",current,2026-11-08T06:37:44,6abf8267ebba,cohere/north-mini-code:free,142,0.639,0.324,0.43,0.817,23,13,48,58,0,253,93,38,0,0.254,0.0,0.783
+"after step 6 (cohere, day 4)",current,2026-11-12T03:57:14,6abf8267ebba,cohere/north-mini-code:free,142,0.653,0.451,0.533,0.761,32,17,39,54,0,198,140,5,0,0.345,0.0,0.75
+fix 2: lenient JSON (replay only),current,2026-11-12T07:12:17,5e79bc6f6a8c,cohere/north-mini-code:free,142,0.647,0.465,0.541,0.746,33,18,38,53,0,180,137,5,0,0.359,0.0,0.758
+fix 1+2: lenient JSON + real retries,current,2026-11-12T07:24:21,5e79bc6f6a8c,cohere/north-mini-code:free,142,0.579,0.465,0.516,0.662,33,24,38,47,0,166,137,3,0,0.401,0.0,0.606
+fix 1+2: lenient JSON + real retries (complete),current,2026-11-13T09:18:43,22069f9b4d0b,cohere/north-mini-code:free,142,0.586,0.479,0.527,0.662,34,24,37,47,0,166,151,2,0,0.408,0.0,0.618
+evidence fix (replay only),current,2026-11-19T20:33:07,869001935edb,cohere/north-mini-code:free,142,0.586,0.479,0.527,0.662,34,24,37,47,0,166,154,2,0,0.408,0.0,0.618

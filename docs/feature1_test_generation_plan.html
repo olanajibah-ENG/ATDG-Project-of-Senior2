@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>خطة تنفيذ الميزة 1 — توليد اختبارات موثوقة</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 10.6pt; line-height: 1.65; color: #1c2430; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 4px; color: #12305a; }
+  .sub { color: #56637a; font-size: 10.5pt; margin-bottom: 14px; }
+  h2 { font-size: 14pt; color: #fff; background: #1f5f4a; padding: 6px 12px; border-radius: 5px; margin: 22px 0 10px; break-after: avoid; }
+  h3 { font-size: 11.8pt; color: #12305a; margin: 16px 0 6px; border-right: 4px solid #2f7de1; padding-right: 8px; break-after: avoid; }
+  h4 { font-size: 10.8pt; color: #1f5f4a; margin: 12px 0 4px; break-after: avoid; }
+  p { margin: 5px 0; }
+  ul, ol { margin: 4px 0 8px; padding-right: 20px; }
+  li { margin: 2px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 9.7pt; break-inside: auto; }
+  tr { break-inside: avoid; }
+  th { background: #e8eef7; color: #12305a; text-align: right; padding: 6px 8px; border: 1px solid #c3cede; }
+  td { padding: 5px 8px; border: 1px solid #d3dbe7; vertical-align: top; }
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 9.2pt; direction: ltr; unicode-bidi: embed; background: #eef2f7; padding: 0 3px; border-radius: 3px; }
+  pre { direction: ltr; text-align: left; font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; line-height: 1.45; background: #f4f6fa; border: 1px solid #d3dbe7; border-radius: 5px; padding: 9px 11px; margin: 8px 0 12px; white-space: pre-wrap; break-inside: avoid; }
+  .box { border: 1px solid #c3cede; border-radius: 6px; padding: 8px 12px; margin: 8px 0 12px; break-inside: avoid; }
+  .note { background: #fff8e6; border-color: #e6c46a; }
+  .key { background: #eaf6f0; border-color: #8cc5a8; }
+  .warn { background: #fdeeee; border-color: #e0a0a0; }
+  .flow { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 12px; }
+  .step { display: flex; gap: 8px; align-items: stretch; break-inside: avoid; }
+  .step .n { flex: 0 0 26px; background: #12305a; color: #fff; border-radius: 4px; text-align: center; font-weight: 600; padding-top: 3px; }
+  .step .t { flex: 1; border: 1px solid #c3cede; border-radius: 4px; padding: 3px 9px; background: #f7f9fc; }
+  .step .t b { color: #12305a; }
+  .step.llm .t { background: #f2ecfb; border-color: #c5b3e6; }
+  .step.sb .t { background: #fff3e2; border-color: #e8c692; }
+  .step.ok .t { background: #eaf6f0; border-color: #8cc5a8; }
+  .kinds { display: flex; gap: 8px; margin: 8px 0 12px; }
+  .kind { flex: 1; border-radius: 6px; padding: 7px 10px; border: 1px solid; break-inside: avoid; }
+  .kind h4 { margin: 0 0 4px; }
+  .k-unit { background: #eaf2fd; border-color: #9dbdea; }
+  .k-edge { background: #fff1e3; border-color: #ebb986; }
+  .k-int { background: #eaf6ec; border-color: #96c9a0; }
+  .tag { display: inline-block; font-size: 8.6pt; padding: 0 6px; border-radius: 9px; border: 1px solid; white-space: nowrap; }
+  .t-new { background: #eaf6f0; border-color: #8cc5a8; color: #1f5f4a; }
+  .t-mod { background: #fff8e6; border-color: #e6c46a; color: #7a5a00; }
+  .t-have { background: #e8eef7; border-color: #b6c4da; color: #12305a; }
+  .pb { break-before: page; }
+  .small { font-size: 9.4pt; color: #56637a; }
+</style>
+</head>
+<body>
+
+<h1>خطة تنفيذ الميزة 1 — توليد اختبارات موثوقة</h1>
+<div class="sub">مشروع AutoTest &amp; DocGen Manager · داخل خدمة الذكاء الاصطناعي · البداية بلغة Python مع pytest · التاريخ 12/11/2026</div>
+
+<div class="box key">
+<b>الخلاصة:</b> نبني تطبيق Django جديد اسمه <code>core_testing</code> داخل خدمة الذكاء الاصطناعي. يأخذ مشروعاً أو ملفات، يقسمها إلى وحدات (دوال وميثودات)، ويولّد لكل وحدة ثلاثة أنواع اختبارات (Unit و Edge و Integration)، ثم يشغّلها في بيئة معزولة ولا يسلّم للمستخدم إلا الاختبار الذي نجح فعلاً على نفس نسخة الكود.
+<br>نبدأ بالشريحة S1 (التخطيط بدون نموذج لغوي)، وأول مسار كامل يعمل هو S1 ثم S2 ثم S3. الأنواع الثلاثة تختلف في ثلاثة أشياء فقط: <b>الخطة</b> و<b>السياق</b> و<b>التوجيه (prompt)</b>. كل ما بعد ذلك مشترك.
+</div>
+
+<h2>1. مسار العمل الكامل</h2>
+<div class="flow">
+  <div class="step"><div class="n">1</div><div class="t"><b>النطاق (Scope)</b> — نسخة المشروع، الملفات المطلوبة، الأنواع المطلوبة (الافتراضي: الثلاثة).</div></div>
+  <div class="step"><div class="n">2</div><div class="t"><b>بوابة التحليل (Analysis gate)</b> — نعيد استخدام التحليل الموجود. إن لم يكتمل: الحالة <code>waiting_analysis</code> ونعيد جدولة المهمة، بدون انتظار داخل المهمة.</div></div>
+  <div class="step"><div class="n">3</div><div class="t"><b>Graphify</b> — graph واحد للمشروع: عُقد + <code>imports</code> / <code>inherits</code> / <code>calls</code>.</div></div>
+  <div class="step"><div class="n">4</div><div class="t"><b>الخطة (Plan)</b> — جرد الوحدات، قائمة التجاوز مع السبب، وعناصر العمل لكل نوع.</div></div>
+  <div class="step sb"><div class="n">5</div><div class="t"><b>التثبيت المسبق (Preflight)</b> — تثبيت اعتماديات المشروع مرة واحدة (الشبكة مفعّلة، بلا أسرار). الفشل = <code>environment_error</code> ونتوقف.</div></div>
+  <div class="step llm"><div class="n">6</div><div class="t"><b>التوليد + التحقق</b> — استراتيجية النوع ← سياق (DTO) ← النموذج ← فحص ساكن (syntax، imports، أمان).</div></div>
+  <div class="step"><div class="n">7</div><div class="t"><b>التجميع</b> — ملف لكل وحدة ونوع: <code>tests/generated/test_*__kind.py</code>.</div></div>
+  <div class="step sb"><div class="n">8</div><div class="t"><b>التشغيل المعزول</b> — بلا شبكة، حدود CPU وذاكرة ووقت، مع قياس التغطية.</div></div>
+  <div class="step"><div class="n">9</div><div class="t"><b>التصنيف</b> — نجاح أو فشل لكل اختبار. الفاشل يرجع للإصلاح (3 مرات كحد أقصى) ثم يعود للخطوة 6.</div></div>
+  <div class="step"><div class="n">10</div><div class="t"><b>القبول</b> — حذف الفاشل، إعادة تشغيل الباقي 3 مرات في بيئة جديدة، والتغطية من آخر تشغيل ناجح بالكامل.</div></div>
+  <div class="step ok"><div class="n">11</div><div class="t"><b>النتائج</b> — ملف ZIP + التغطية، أو الأسباب. كل اختبار جاهز مربوط بنسخة الكود التي نجح عليها.</div></div>
+</div>
+
+<h2>2. الوضع الحالي: ما الموجود وما الناقص</h2>
+<p>هذه النتائج من فحص الكود الحالي على الفرع <code>temp/merge-backend-graphify</code> (بعد دمج Graphify) ومن تجربة ملف <code>game</code> عبر Postman.</p>
+<table>
+<tr><th style="width:27%">الجزء</th><th style="width:11%">الحالة</th><th>التفاصيل</th></tr>
+<tr><td>الرفع، النسخ، الملفات، GridFS</td><td><span class="tag t-have">موجود</span></td><td><code>project_versions</code> و <code>code_files</code> والمصدر الأصلي في GridFS. يُعاد استخدامها كما هي.</td></tr>
+<tr><td>تفاصيل كل دالة</td><td><span class="tag t-have">موجود</span></td><td><code>class_diagram_data</code> فيه لكل ميثود: <code>signature</code>، <code>parameters</code>، <code>return_type</code>، <code>decorators</code>، <code>docstring</code>، <code>body</code>، <code>body_hash</code>، <code>line_start/line_end</code>. والدوال الحرة في <code>module_functions</code>.</td></tr>
+<tr><td>Graph الملف (Graphify)</td><td><span class="tag t-mod">يحتاج تعديل</span></td><td>الشكل الموحد موجود (<code>nodes/edges/meta</code>)، لكن ربط الاستدعاءات ناقص (القسم 4).</td></tr>
+<tr><td>Graph المشروع</td><td><span class="tag t-mod">ناقص</span></td><td>الموجود graph لكل ملف لوحده، و <code>DependencyGraphBuilder</code> يعطي علاقات الملفات فقط. لا يوجد graph واحد على مستوى الوحدات لكل المشروع.</td></tr>
+<tr><td>استعلام الجيران</td><td><span class="tag t-new">غير موجود</span></td><td>لا توجد دالة تجلب جيران وحدة بعمق وحجم محدودين. لا أحد يقرأ الـ graph غير <code>orchestrator</code>.</td></tr>
+<tr><td>عميل النماذج</td><td><span class="tag t-mod">يحتاج تعديل</span></td><td><code>LLMClient.call_model()</code> يعيد النص فقط، فلا يمكن تسجيل النموذج وعدد الرموز لكل محاولة.</td></tr>
+<tr><td>ملفات الاعتماديات</td><td><span class="tag t-mod">يحتاج تعديل</span></td><td><code>folder_upload.py</code> يتجاهل <code>.txt</code> و <code>.md</code> والملفات التي تبدأ بنقطة، فيضيع <code>requirements.txt</code>.</td></tr>
+<tr><td>المصادقة</td><td><span class="tag t-mod">يحتاج تعديل</span></td><td>مسارات الخدمة الحالية <code>AllowAny</code>. مسارات الاختبار يجب أن تكون JWT.</td></tr>
+<tr><td>تحليل المشروع</td><td><span class="tag t-mod">خطر</span></td><td><code>analyze_project_task</code> ينتظر مهام فرعية داخل المهمة (<code>task.get(timeout=600)</code>). مهمتنا لا تستدعيه ولا تنتظر بنفس الطريقة.</td></tr>
+<tr><td>البيئة المعزولة، العمّال، الطوابير</td><td><span class="tag t-new">غير موجود</span></td><td>عامل واحد حالياً (<code>ai_celery_worker</code>) وطابور واحد. لا توجد صورة Docker للتشغيل المعزول ولا <code>pytest</code> في الاعتماديات.</td></tr>
+</table>
+
+<h2>3. من أين نأخذ كل معلومة</h2>
+<table>
+<tr><th style="width:30%">المعلومة</th><th style="width:33%">المصدر</th><th>من يستخدمها</th></tr>
+<tr><td>نص الكود الأصلي</td><td>GridFS عبر <code>code_file.gridfs_id</code></td><td>بناء مساحة العمل، واستخراج تلميحات Edge</td></tr>
+<tr><td>قائمة الوحدات</td><td><code>class_diagram_data.classes[].methods</code> + <code>module_functions</code></td><td>المخطِّط (Planner)</td></tr>
+<tr><td>التوقيع، البراميترات، الجسم</td><td>نفس الحقول أعلاه</td><td>سياق الأنواع الثلاثة</td></tr>
+<tr><td>من يستدعي من</td><td><code>dependency_graph.edges</code> حيث <code>relation = calls</code></td><td>جيران Unit، ومجموعات Integration</td></tr>
+<tr><td>الوراثة</td><td><code>dependency_graph.edges</code> حيث <code>relation = inherits</code></td><td>سياق الكلاس (الأب وباني الأب)</td></tr>
+<tr><td>الخارجيات</td><td>العُقد حيث <code>type = external</code> + وسم <code>io_kind</code></td><td>قرار المحاكاة أو التجاوز</td></tr>
+<tr><td>الفروع، الحدود، الاستثناءات</td><td>شجرة AST للوحدة نفسها (<code>If</code>، <code>Compare</code>، <code>Raise</code>، <code>Try</code>)</td><td>نوع Edge فقط</td></tr>
+<tr><td>علاقات الملفات وترتيبها</td><td><code>DependencyGraphBuilder</code></td><td>دمج الـ graph على مستوى المشروع</td></tr>
+<tr><td>ربط الاختبار بالنسخة</td><td><code>version_number</code> + <code>body_hash</code></td><td>بوابة القبول والتخزين</td></tr>
+</table>
+<div class="box note"><b>قاعدة:</b> الفروع والاستثناءات لا تدخل في الـ graph. تُستخرج من AST عند بناء سياق الوحدة. الـ graph يبقى للعلاقات فقط، وهو نفسه الذي يستخدمه الشرح المنطقي.</div>
+
+<h2>4. التعديلات المطلوبة على الـ Graph</h2>
+<p>الأمثلة من خرج ملف <code>game</code> الفعلي.</p>
+<table>
+<tr><th style="width:4%">#</th><th style="width:25%">التعديل</th><th style="width:36%">المشكلة الآن</th><th>المطلوب</th></tr>
+<tr><td>1</td><td>ربط الاستدعاء بالكلاس الصحيح</td><td><code>course.add_student(self)</code> تظهر <code>ext.course.add_student</code> مع أن <code>Course.add_student</code> في نفس الملف.</td><td>استخدام نوع البراميتر (<code>course: Course</code>) ونوع الحقل لربطها بـ <code>Course.add_student</code>. وربط <code>super().__init__</code> بباني الأب، و <code>self.x()</code> الموروثة بكلاس الأب.</td></tr>
+<tr><td>2</td><td>فصل الـ builtins</td><td><code>print</code> و <code>len</code> تظهر <code>external</code> مثل <code>typing</code>، والعلاقات مكررة.</td><td>نوع جديد <code>builtin</code> يُستبعد من الجيران ومن المحاكاة، وحذف التكرار.</td></tr>
+<tr><td>3</td><td>مستوى ثقة ثالث</td><td>كل ما لم يُحل يظهر <code>INFERRED</code>.</td><td>إضافة <code>UNRESOLVED</code>. مجموعات Integration تستخدم <code>EXTRACTED</code> فقط.</td></tr>
+<tr><td>4</td><td>وسم <code>io_kind</code> للخارجيات</td><td>لا نعرف هل الخارجي شبكة أم قاعدة بيانات.</td><td><code>network</code> / <code>db</code> / <code>fs</code> / <code>process</code> / <code>none</code> من جدول ثابت (<code>requests</code>، <code>sqlite3</code>، <code>open</code>، <code>subprocess</code>...).</td></tr>
+<tr><td>5</td><td>معرّفات فريدة على مستوى المشروع</td><td>كل ملف فيه <code>__module__</code>، وكلاسان بنفس الاسم في ملفين يتصادمان.</td><td>المعرّف يحمل مسار الملف: <code>pkg/mod.py::Class.method</code>.</td></tr>
+<tr><td>6</td><td>دمج graph المشروع</td><td>استدعاء دالة من ملف آخر في المشروع يظهر <code>ext.*</code>.</td><td>خطوة دمج تربط الاستيراد المحلي بالعقدة الحقيقية في الملف الآخر.</td></tr>
+<tr><td>7</td><td>دالة استعلام الجيران</td><td>غير موجودة.</td><td><code>neighbors(unit_id, depth, max_size, confidence)</code> و <code>call_groups(...)</code>.</td></tr>
+<tr><td>8</td><td>تخزين مؤقت</td><td>الـ graph يُبنى مع كل تحليل.</td><td>تخزين لكل ملف بمفتاح <code>file_hash</code>.</td></tr>
+</table>
+<div class="box warn"><b>قرار مطلوب من الفريق:</b> ملف التفصيل يقول إن Graphify «كود جديد داخل <code>core_testing/graphify</code> وليس تعديلاً على الكود القديم»، لكن الزميلة نفّذته داخل الـ processors. الاقتراح: يبقى بناء الـ graph الأساسي في الـ processors (ليبقى graph واحداً مشتركاً مع الشرح)، وتكون <code>core_testing/graphify</code> طبقة فوقه للتعديلات 1 إلى 8. بهذا لا نكسر الشرح ولا نكرر البناء. التعديلان 1 و 2 يفيدان الشرح أيضاً، فيمكن نقلهما لاحقاً إلى الـ processors.</div>
+
+<h2 class="pb">5. الملفات الجديدة: تطبيق <code>core_testing</code></h2>
+<pre>Ai_project/core_testing/
+├── apps.py · urls.py · views.py · serializers.py     routes + request/response
+├── auth.py                    JWT (stateless, UPM signing key) + job ownership
+├── repo.py                    Mongo access for the 6 collections (own cached client)
+├── statuses.py                RecordStatus + JobStatus enums, allowed transitions
+├── pipeline.py                GenerationPipeline (Template Method): fixed stage order
+├── scope.py                   resolve version, files, kinds
+├── gate.py                    analysis gate: reuse, poll, re-enqueue (never wait in task)
+├── planner.py                 unit inventory, skip list, work items
+├── context.py                 ContextDTO dataclasses (what the LLM is allowed to see)
+├── llm_facade.py              LLMFacade.complete(): model + tokens recorded per attempt
+├── assembler.py               writes tests/generated/test_*__kind.py
+├── repair.py                  repair loop (max 3) + failure -> repair prompt
+├── acceptance.py              AcceptanceGate: the only way to reach "ready"
+├── tasks.py                   Celery tasks on queues test_llm / test_sandbox
+├── graphify/
+│   ├── loader.py              reads dependency_graph of each file from analysis_results
+│   ├── resolver.py            fixes 1-3: call resolution, builtins, confidence tiers
+│   ├── io_kinds.py            fix 4: external -> network / db / fs / process
+│   ├── merge.py               fixes 5-6: project graph, file-qualified ids
+│   ├── queries.py             fix 7: neighbors(), call_groups()
+│   └── cache.py               fix 8: per-file cache keyed by file_hash
+├── strategies/
+│   ├── base.py                TestKindStrategy (abstract)
+│   ├── unit.py                UnitStrategy
+│   ├── edge.py                EdgeStrategy (extends unit)
+│   └── integration.py         IntegrationStrategy
+├── languages/
+│   ├── base.py                LanguageAdapter (interface)
+│   ├── registry.py            file_type -> adapter (2nd language = one line)
+│   ├── python_adapter.py      units, validation, pytest argv, result parsing
+│   └── python_hints.py        branch / boundary / raise hints from the unit's AST
+├── validation/
+│   ├── validator.py           syntax, imports, naming, "calls the focal unit"
+│   └── safety_lint.py         no network, subprocess, eval, writes outside tmp_path
+├── sandbox/
+│   ├── executor.py            SandboxExecutor (interface): install(), run()
+│   ├── docker_executor.py     isolated containers + limits
+│   ├── workspace.py           rebuilds the project tree from GridFS originals
+│   ├── results.py             junit XML -> pass/fail per test
+│   ├── coverage.py            coverage JSON -> line %, branch %, missing lines
+│   └── image/Dockerfile       light image: python + pytest + pytest-cov
+├── prompts/                   unit.txt · edge.txt · integration.txt · repair.txt
+└── tests/                     tests of core_testing itself (one file per module)</pre>
+
+<h3>مجموعات Mongo الجديدة</h3>
+<table>
+<tr><th style="width:18%">المجموعة</th><th>ماذا تخزّن</th></tr>
+<tr><td><code>test_jobs</code></td><td>طلب المستخدم: <code>user_id</code>، <code>project_id</code>، <code>version_number</code>، الملفات، الأنواع، الحالة، التواريخ.</td></tr>
+<tr><td><code>test_units</code></td><td>جرد الوحدات لكل مهمة: المعرّف، الملف، <code>body_hash</code>، وهل هي متجاوزة مع السبب.</td></tr>
+<tr><td><code>test_records</code></td><td>سجل لكل (وحدة أو مجموعة، نوع): الحالة، كود الاختبار الحالي، اسم الملف، سبب الفشل.</td></tr>
+<tr><td><code>test_attempts</code></td><td>كل استدعاء للنموذج: النوع (توليد أو إصلاح)، النموذج، الرموز، نتيجة الفحص الساكن.</td></tr>
+<tr><td><code>test_runs</code></td><td>كل تشغيل في البيئة المعزولة: رمز الخروج، junit، المدة، هل هو تشغيل القبول.</td></tr>
+<tr><td><code>test_coverage</code></td><td>تغطية آخر تشغيل ناجح بالكامل: نسبة الأسطر، الفروع، لكل ملف، والأسطر غير المغطاة.</td></tr>
+</table>
+
+<h3>المسارات (كلها JWT، وكل مهمة تتبع المستخدم الذي طلبها)</h3>
+<table>
+<tr><th style="width:9%">Method</th><th style="width:44%">المسار</th><th>الوظيفة</th></tr>
+<tr><td>POST</td><td><code>/api/analysis/tests/jobs/</code></td><td>إنشاء مهمة: <code>project_id</code>، <code>version_number</code>، <code>file_ids</code> (اختياري)، <code>kinds</code> (اختياري).</td></tr>
+<tr><td>GET</td><td><code>/api/analysis/tests/jobs/&lt;id&gt;/</code></td><td>حالة المهمة وعدّاد كل حالة.</td></tr>
+<tr><td>GET</td><td><code>/api/analysis/tests/jobs/&lt;id&gt;/plan/</code></td><td>الوحدات، قائمة التجاوز مع الأسباب، وعناصر العمل.</td></tr>
+<tr><td>GET</td><td><code>/api/analysis/tests/jobs/&lt;id&gt;/records/</code></td><td>سجل كل اختبار مع حالته وسبب الفشل.</td></tr>
+<tr><td>GET</td><td><code>/api/analysis/tests/jobs/&lt;id&gt;/coverage/</code></td><td>التغطية.</td></tr>
+<tr><td>GET</td><td><code>/api/analysis/tests/jobs/&lt;id&gt;/download/</code></td><td>ZIP للاختبارات الجاهزة فقط.</td></tr>
+</table>
+
+<h2>6. التعديلات على الكود الموجود</h2>
+<table>
+<tr><th style="width:38%">التعديل</th><th style="width:28%">الملف</th><th style="width:9%">الشريحة</th><th>الأولوية</th></tr>
+<tr><td>إضافة التطبيق + JWT + ربط المسارات</td><td><code>settings.py</code>، <code>Ai_project/urls.py</code></td><td>S1</td><td>أساسي</td></tr>
+<tr><td><code>call_model_ex()</code>: يعيد النص والنموذج والرموز، ويقبل <code>max_tokens</code>. <code>call_model()</code> يبقى كما هو.</td><td><code>ai_engine/llm_client.py</code></td><td>S2</td><td>أساسي</td></tr>
+<tr><td>حفظ ملفات الاعتماديات كملفات دعم بدون تحليل: <code>requirements*.txt</code>، <code>pyproject.toml</code>، <code>setup.cfg</code>، <code>pytest.ini</code>، <code>conftest.py</code></td><td><code>views/folder_upload.py</code></td><td>S3</td><td>أساسي</td></tr>
+<tr><td>طابوران <code>test_llm</code> و <code>test_sandbox</code> وتوجيه المهام</td><td><code>settings.py</code></td><td>S3</td><td>أساسي</td></tr>
+<tr><td>عاملان جديدان + حجم مشترك <code>sandbox_work</code></td><td><code>docker-compose.yml</code></td><td>S3</td><td>أساسي</td></tr>
+<tr><td>إضافة <code>pytest</code> و <code>pytest-cov</code> (لصورة التشغيل المعزول فقط)</td><td><code>core_testing/sandbox/image</code></td><td>S3</td><td>أساسي</td></tr>
+<tr><td>التحقق من ملكية المشروع عبر نقطة داخلية في UPM</td><td>UPM + <code>core_testing/auth.py</code></td><td>قبل العرض المتعدد</td><td>يؤجَّل</td></tr>
+<tr><td>تجاوز غير Python في <code>analyze_task</code></td><td><code>celery_tasks/analyze_task.py</code></td><td>لاحقاً</td><td>يؤجَّل</td></tr>
+</table>
+<div class="box note"><b>ملاحظة عن موديل التقييم:</b> نسخة الزميلة من <code>llm_client.py</code> تحذف <code>poolside/laguna-s-2.1:free</code>. أبقينا نسختنا لأن تقييم كشف التناقض يعتمد عليه. <code>call_model_ex</code> يُضاف فوق نسختنا.</div>
+
+<h2 class="pb">7. الأنواع الثلاثة: ماذا نعمل لكل نوع</h2>
+<div class="kinds">
+  <div class="kind k-unit"><h4>Unit</h4>دالة أو ميثود واحدة. السياق: التوقيع + الجسم + توقيعات الدوال التي تستدعيها مباشرة.</div>
+  <div class="kind k-edge"><h4>Edge</h4>نفس سياق Unit + تلميحات الفروع والحدود والاستثناءات من AST الوحدة.</div>
+  <div class="kind k-int"><h4>Integration</h4>مجموعة من رسم الاستدعاء: عمق حتى 2، حجم حتى 4، داخل العملية. الخارجيات تُحاكى أو تُتجاوز.</div>
+</div>
+<p>كل نوع هو كلاس يرث <code>TestKindStrategy</code> وينفّذ ثلاث دوال فقط: <code>plan_items()</code> و <code>build_context()</code> و <code>prompt_sections()</code>. الباقي (بناء التوجيه، توجيه الإصلاح، فرض التسمية) موروث.</p>
+
+<h3>7.1 اختبار الوحدة (Unit) — <code>strategies/unit.py</code></h3>
+<table>
+<tr><th style="width:17%">الجزء</th><th>ماذا نعمل</th></tr>
+<tr><td>الخطة</td><td>عنصر عمل واحد لكل وحدة غير متجاوزة.</td></tr>
+<tr><td>السياق</td><td>الوحدة: المعرّف، مسار الاستيراد، التوقيع، البراميترات مع الأنواع، نوع الإرجاع، الـ decorators، الـ docstring، الجسم.<br>الكلاس (إن وُجد): الاسم، توقيع الباني، الحقول، الكلاس الأب.<br>الجيران: الدوال المستدعاة بعمق 1، <b>التوقيعات فقط</b> بدون أجسام.<br>الخارجيات مع <code>io_kind</code>.</td></tr>
+<tr><td>التوجيه</td><td>اختبر المسار الطبيعي للوحدة: قيمة الإرجاع وتغيّر الحالة. من 2 إلى 4 اختبارات. استورد من المسار المعطى فقط. لا شبكة ولا ملفات.</td></tr>
+<tr><td>من الـ graph</td><td><code>neighbors(unit, depth=1)</code></td></tr>
+<tr><td>مثال (<code>game</code>)</td><td><code>Course.add_student</code>: إضافة طالب تجعله في <code>students</code>، وإضافته مرتين لا تكرره.</td></tr>
+</table>
+
+<h3>7.2 الحالات الحدّية (Edge) — <code>strategies/edge.py</code> + <code>languages/python_hints.py</code></h3>
+<table>
+<tr><th style="width:17%">الجزء</th><th>ماذا نعمل</th></tr>
+<tr><td>الخطة</td><td>عنصر عمل لكل وحدة فيها تلميح واحد على الأقل. الوحدة بلا فروع ولا استثناءات تُتجاوز لهذا النوع بسبب <code>no_edge_hints</code>.</td></tr>
+<tr><td>السياق</td><td>سياق Unit كاملاً + قائمة تلميحات.</td></tr>
+<tr><td>التلميحات</td><td>تُستخرج بـ <code>ast.NodeVisitor</code> على جسم الوحدة:
+<ul>
+<li><b>حدود:</b> كل مقارنة مع ثابت. <code>len(x) &gt;= 5</code> تعطي القيم 4 و 5 و 6.</li>
+<li><b>استثناءات:</b> كل <code>raise</code> مع نوع الاستثناء وشرطه.</li>
+<li><b>فروع:</b> كل <code>if/elif/else</code> مع شرطه، ومسارات الإرجاع المبكر.</li>
+<li><b>عضوية:</b> <code>in</code> و <code>not in</code> (موجود، غير موجود).</li>
+<li><b>مجموعات:</b> حلقة على قائمة (فارغة، عنصر واحد).</li>
+<li><b>قيم خاصة:</b> براميتر <code>Optional</code> أو له قيمة افتراضية (<code>None</code>، الافتراضي).</li>
+</ul></td></tr>
+<tr><td>التوجيه</td><td>اختبار واحد لكل تلميح. للاستثناءات استخدم <code>pytest.raises</code>. اذكر التلميح في اسم الاختبار أو تعليقه.</td></tr>
+<tr><td>مثال (<code>game</code>)</td><td><code>Student.enroll</code>: مع 4 مواد ينجح، مع 5 يرجع <code>False</code>، وتسجيل نفس المادة مرتين يرجع <code>False</code>.</td></tr>
+</table>
+
+<h3>7.3 اختبار التكامل (Integration) — <code>strategies/integration.py</code></h3>
+<table>
+<tr><th style="width:17%">الجزء</th><th>ماذا نعمل</th></tr>
+<tr><td>الخطة</td><td>عنصر عمل واحد لكل <b>مجموعة</b>، وليس لكل وحدة.</td></tr>
+<tr><td>بناء المجموعات</td><td><ol>
+<li>نبدأ من كل وحدة لها استدعاء خارج إلى وحدة محلية.</li>
+<li>نمشي على حواف <code>calls</code> ذات الثقة <code>EXTRACTED</code> فقط، بعمق حتى 2.</li>
+<li>نتوقف عند 4 وحدات.</li>
+<li>نحذف المجموعات المكررة (نفس الوحدات) والمجموعة التي هي جزء من مجموعة أكبر.</li>
+<li>المجموعة من وحدة واحدة تُحذف (يغطيها Unit).</li>
+</ol></td></tr>
+<tr><td>الخارجيات</td><td><code>io_kind = none</code>: تُستخدم كما هي. <code>network / db / fs / process</code>: تُحاكى بـ <code>monkeypatch</code> أو <code>unittest.mock</code>. إن كانت المحاكاة غير ممكنة: تُتجاوز المجموعة بسبب <code>external_unmockable</code>.</td></tr>
+<tr><td>السياق</td><td>أجسام وحدات المجموعة كلها + حواف الاستدعاء بينها بالترتيب + قائمة ما يجب محاكاته.</td></tr>
+<tr><td>التوجيه</td><td>اختبر التفاعل: استدعِ وحدة الدخول وتحقق من الأثر على الوحدات الأخرى. لا تعِد اختبار كل وحدة لوحدها. من 1 إلى 3 اختبارات.</td></tr>
+<tr><td>مثال (<code>game</code>)</td><td>المجموعة <code>Student.enroll</code> ← <code>Course.add_student</code>: بعد <code>enroll</code> تكون المادة عند الطالب والطالب عند المادة. <b>هذا المثال لا يعمل قبل التعديل 1 على الـ graph.</b></td></tr>
+</table>
+
+<h3>7.4 مقارنة سريعة</h3>
+<table>
+<tr><th style="width:19%"></th><th>Unit</th><th>Edge</th><th>Integration</th></tr>
+<tr><td>عنصر العمل</td><td>وحدة</td><td>وحدة لها تلميحات</td><td>مجموعة (2 إلى 4)</td></tr>
+<tr><td>من الـ graph</td><td>جيران بعمق 1</td><td>جيران بعمق 1</td><td>مجموعة بعمق 2</td></tr>
+<tr><td>من الـ AST</td><td>لا شيء إضافي</td><td>فروع، حدود، استثناءات</td><td>لا شيء إضافي</td></tr>
+<tr><td>أجسام الجيران</td><td>لا (توقيعات)</td><td>لا (توقيعات)</td><td>نعم</td></tr>
+<tr><td>الخارجيات</td><td>تُحاكى</td><td>تُحاكى</td><td>تُحاكى أو تُتجاوز المجموعة</td></tr>
+<tr><td>اسم الملف</td><td><code>test_&lt;unit&gt;__unit.py</code></td><td><code>test_&lt;unit&gt;__edge.py</code></td><td><code>test_&lt;group&gt;__integration.py</code></td></tr>
+<tr><td>الشريحة</td><td>S2</td><td>S5</td><td>S6</td></tr>
+</table>
+
+<h3>7.5 مثال على السياق المرسل للنموذج</h3>
+<pre>{
+  "kind": "edge",
+  "unit": {
+    "id": "game.py::Student.enroll",
+    "import_path": "from game import Student, Course",
+    "signature": "enroll(self, course: Course) -> bool",
+    "body": "if len(self.courses) >= 5: ...",
+    "body_hash": "19ba70dded897445"
+  },
+  "class": {"name": "Student", "init": "__init__(self, name: str, id_number: int, major: str)",
+            "bases": ["Person"]},
+  "callees": [{"id": "game.py::Course.add_student",
+               "signature": "add_student(self, student: Student)"}],
+  "externals": [],
+  "hints": [
+    {"type": "boundary", "expr": "len(self.courses) >= 5", "values": [4, 5, 6]},
+    {"type": "membership", "expr": "course in self.courses"},
+    {"type": "early_return", "value": "False", "count": 2}
+  ],
+  "rules": {"naming": "test_Student_enroll__edge_&lt;n&gt;", "framework": "pytest"}
+}</pre>
+<div class="box note"><b>قاعدة:</b> النموذج يرى هذا الملخص فقط، وليس المستودع كاملاً.</div>
+
+<h2 class="pb">8. الأجزاء المشتركة بين الأنواع</h2>
+
+<h3>8.1 المخطِّط وقائمة التجاوز — <code>planner.py</code></h3>
+<p>يبني جرد الوحدات، ثم يسأل كل استراتيجية عن عناصر عملها. الوحدة المتجاوزة تُسجَّل مع سببها والدفعة تستمر.</p>
+<table>
+<tr><th style="width:30%">سبب التجاوز</th><th>متى</th></tr>
+<tr><td><code>unsupported_language</code></td><td>الملف ليس Python.</td></tr>
+<tr><td><code>analysis_failed</code></td><td>تحليل الملف فشل أو فيه خطأ syntax.</td></tr>
+<tr><td><code>no_units</code></td><td>الملف بلا دوال ولا ميثودات.</td></tr>
+<tr><td><code>empty_or_abstract</code></td><td>الجسم <code>pass</code> أو <code>...</code> أو ميثود مجردة.</td></tr>
+<tr><td><code>body_truncated</code></td><td>جسم الدالة مقطوع في التحليل (<code>body_truncated = true</code>).</td></tr>
+<tr><td><code>no_edge_hints</code></td><td>لنوع Edge فقط.</td></tr>
+<tr><td><code>external_unmockable</code></td><td>لنوع Integration فقط.</td></tr>
+</table>
+
+<h3>8.2 الفحص الساكن — <code>validation/</code></h3>
+<ul>
+<li><b>Syntax:</b> <code>ast.parse</code> على الكود المولَّد.</li>
+<li><b>Imports:</b> المسموح: المكتبة القياسية، <code>pytest</code>، وحدات المشروع، والاعتماديات المثبتة. أي شيء آخر مرفوض.</li>
+<li><b>الأمان:</b> ممنوع الشبكة، <code>subprocess</code>، <code>os.system</code>، <code>eval</code>، <code>exec</code>، <code>time.sleep</code>، والكتابة خارج <code>tmp_path</code>.</li>
+<li><b>التسمية:</b> <code>test_&lt;unit&gt;__&lt;kind&gt;_&lt;n&gt;</code>. تُفرض آلياً حتى يرتبط كل فشل بمصدره.</li>
+<li><b>المعنى:</b> كل اختبار فيه <code>assert</code> واحد على الأقل أو <code>pytest.raises</code>، ويستدعي الوحدة المستهدفة.</li>
+</ul>
+<p>الفشل هنا يذهب إلى الإصلاح مباشرة بدون تشغيل.</p>
+
+<h3>8.3 البيئة المعزولة — <code>sandbox/</code></h3>
+<table>
+<tr><th style="width:17%">المرحلة</th><th>الإعدادات</th></tr>
+<tr><td>مساحة العمل</td><td>تُبنى من الملفات الأصلية في GridFS بمساراتها الحقيقية، على الحجم المشترك <code>sandbox_work</code>. يجب التحقق من وجود <code>__init__.py</code> (الملفات المتطابقة تُخزَّن مرة واحدة).</td></tr>
+<tr><td>التثبيت</td><td>الشبكة مفعّلة، بلا أي أسرار أو متغيرات بيئة من الخدمة. النتيجة تُخزَّن مؤقتاً بمفتاح hash ملفات الاعتماديات.</td></tr>
+<tr><td>التشغيل</td><td>الشبكة مقطوعة (<code>--network none</code>)، النظام للقراءة فقط، حدود على CPU والذاكرة والوقت وعدد العمليات، ومستخدم غير root.</td></tr>
+<tr><td>النتائج</td><td><code>junit XML</code>: نجاح أو فشل لكل اختبار. <code>coverage JSON</code>: الأسطر والفروع. <code>.coveragerc</code> يستثني الاختبارات المولَّدة.</td></tr>
+</table>
+<div class="box warn"><b>تنبيه:</b> مسارات <code>docker -v</code> تُحل على جهة الـ daemon وليس داخل الحاوية، لذلك نستخدم حجماً مسمّى وليس مساراً من داخل العامل. وعامل <code>test_sandbox</code> وحده يحصل على صلاحية تشغيل الحاويات.</div>
+
+<h3>8.4 الإصلاح والتصنيف — <code>repair.py</code> و <code>acceptance.py</code></h3>
+<p>الاختبار الفاشل يرجع للنموذج مع كود الاختبار ورسالة الخطأ، حتى 3 مرات. بعدها يُصنَّف:</p>
+<table>
+<tr><th style="width:24%">الحالة</th><th>المعنى</th></tr>
+<tr><td><code>ready</code></td><td>نجح نظيفاً ومعزولاً على هذه النسخة، وثبت في 3 إعادات تشغيل. قابل للتنزيل.</td></tr>
+<tr><td><code>skipped</code></td><td>غير قابل للتحليل. يظهر السبب والدفعة تستمر.</td></tr>
+<tr><td><code>generation_failed</code></td><td>غير صالح بعد 3 إصلاحات، أو خطأ في الجمع أو الاستيراد أو الاسم أو الـ fixture.</td></tr>
+<tr><td><code>environment_error</code></td><td>تثبيت أو مهلة أو موارد. ليست نتيجة منطقية.</td></tr>
+<tr><td><code>test_failed</code></td><td>التأكيدات تفشل بعد الإصلاح: خطأ محتمل في الكود أو توقع خاطئ.</td></tr>
+<tr><td><code>flaky</code></td><td>نجح ثم فشل في إعادة التشغيل. لا يُسلَّم.</td></tr>
+</table>
+<div class="box key"><b>قاعدة:</b> لا يصل أي اختبار إلى <code>ready</code> إلا عبر <code>AcceptanceGate.mark_ready()</code> ومعه الدليل (رقم التشغيل، النسخة، <code>body_hash</code>). «موثوق» تعني: قابل للتنفيذ، معزول، وثابت على النسخة المحلَّلة. ليست إثباتاً لصحة المنطق.</div>
+
+<h2>9. ترتيب التنفيذ: الشرائح</h2>
+<p>شريحة واحدة في كل مرة، ولا ننتقل للتالية قبل نجاح فحص القبول. لكل شريحة اختباراتها وتقرير <code>.md</code> بالعربية كما في خطوات كشف التناقض.</p>
+
+<h3>S1 — الخطة (بدون نموذج لغوي) · نبدأ من هنا</h3>
+<table>
+<tr><th style="width:17%">الملفات</th><td><code>apps</code>، <code>urls</code>، <code>views</code>، <code>auth</code>، <code>repo</code>، <code>statuses</code>، <code>scope</code>، <code>gate</code>، <code>planner</code>، <code>graphify/*</code>، <code>strategies/base</code> (الخطة فقط)، <code>languages/base + registry + python_adapter</code> (الوحدات فقط)</td></tr>
+<tr><th>المهام</th><td>1) إنشاء التطبيق و JWT والمسارات. 2) المجموعات الثلاث <code>test_jobs / test_units / test_records</code>. 3) النطاق والبوابة. 4) تعديلات الـ graph من 1 إلى 8. 5) جرد الوحدات وقائمة التجاوز. 6) عناصر العمل للأنواع الثلاثة.</td></tr>
+<tr><th>فحص القبول</th><td>طلب على ملف <code>game</code> يرجع: 14 وحدة، قائمة التجاوز مع الأسباب، والمجموعة <code>Student.enroll</code> ← <code>Course.add_student</code>. وبدون JWT يرجع 401.</td></tr>
+<tr><th>خارج النطاق</th><td>أي استدعاء للنموذج، وأي تشغيل.</td></tr>
+</table>
+
+<h3>S2 — توليد اختبار الوحدة</h3>
+<table>
+<tr><th style="width:17%">الملفات</th><td><code>context</code>، <code>llm_facade</code>، <code>strategies/unit</code>، <code>validation/*</code>، <code>assembler</code>، <code>prompts/unit.txt</code>، <code>tasks</code> (طابور <code>test_llm</code>)، وتعديل <code>llm_client.py</code></td></tr>
+<tr><th>المهام</th><td>1) <code>call_model_ex</code>. 2) بناء الـ DTO. 3) توجيه Unit. 4) الفحص الساكن. 5) كتابة ملف الاختبار. 6) تسجيل كل محاولة في <code>test_attempts</code>.</td></tr>
+<tr><th>فحص القبول</th><td>لكل وحدة في <code>game</code> ملف اختبار يمر من الفحص الساكن، ومحاولة مسجَّلة فيها النموذج والرموز. اختبارات <code>core_testing</code> نفسها تعمل بنموذج وهمي (بدون استدعاء حقيقي).</td></tr>
+<tr><th>خارج النطاق</th><td>التشغيل والإصلاح.</td></tr>
+</table>
+
+<h3>S3 — التشغيل المعزول وحالة <code>ready</code> · نهاية أول مسار كامل</h3>
+<table>
+<tr><th style="width:17%">الملفات</th><td><code>sandbox/*</code>، <code>acceptance</code>، مسارا <code>coverage</code> و <code>download</code>، وتعديل <code>folder_upload.py</code> و <code>docker-compose.yml</code> و <code>settings.py</code></td></tr>
+<tr><th>المهام</th><td>1) حفظ ملفات الاعتماديات عند الرفع. 2) صورة التشغيل والعاملان والحجم المشترك. 3) بناء مساحة العمل من GridFS. 4) التثبيت ثم التشغيل. 5) قراءة junit والتغطية. 6) بوابة القبول و 3 إعادات. 7) ZIP.</td></tr>
+<tr><th>فحص القبول</th><td>اختبارات <code>game</code> الناجحة تصل إلى <code>ready</code> وتُنزَّل، والتغطية تظهر. اختبار يحاول فتح اتصال شبكة يفشل داخل البيئة.</td></tr>
+<tr><th>خارج النطاق</th><td>الإصلاح.</td></tr>
+</table>
+
+<h3>S4 — الإصلاح وتصنيف الإخفاقات</h3>
+<table>
+<tr><th style="width:17%">الملفات</th><td><code>repair</code>، <code>prompts/repair.txt</code>، توسيع <code>acceptance</code> و <code>statuses</code></td></tr>
+<tr><th>المهام</th><td>1) ربط كل فشل باختباره من الاسم. 2) توجيه الإصلاح. 3) حد 3 محاولات. 4) التصنيف النهائي للحالات الست.</td></tr>
+<tr><th>فحص القبول</th><td>اختبار معطوب عمداً يُصلَح ويصل <code>ready</code>. اختبار بتوقع خاطئ ينتهي <code>test_failed</code> بعد 3 محاولات بالضبط.</td></tr>
+</table>
+
+<h3>S5 — الحالات الحدّية</h3>
+<table>
+<tr><th style="width:17%">الملفات</th><td><code>strategies/edge</code>، <code>languages/python_hints</code>، <code>prompts/edge.txt</code></td></tr>
+<tr><th>فحص القبول</th><td><code>Student.enroll</code> يعطي تلميح الحد 5 وتلميح العضوية، والاختبارات المولَّدة تغطي الفرعين.</td></tr>
+</table>
+
+<h3>S6 — التكامل</h3>
+<table>
+<tr><th style="width:17%">الملفات</th><td><code>strategies/integration</code>، <code>prompts/integration.txt</code>، توسيع <code>graphify/queries</code> و <code>io_kinds</code></td></tr>
+<tr><th>فحص القبول</th><td>مجموعة <code>enroll</code> ← <code>add_student</code> تولّد اختباراً يتحقق من الطرفين. وحدة تستدعي <code>requests</code> تُحاكى أو تُتجاوز مع السبب.</td></tr>
+</table>
+
+<h2>10. ميزانية الطلبات والتقييم</h2>
+<h3>ميزانية الطلبات (الحد المجاني: 50 طلباً في اليوم)</h3>
+<ul>
+<li>كل وحدة تكلّف طلب توليد واحد + حتى 3 طلبات إصلاح. في أسوأ حالة 4 طلبات للوحدة، أي حوالي 12 وحدة في اليوم.</li>
+<li>للتوفير: توليد Unit و Edge و Integration لنفس الوحدة في طلب واحد عندما يمكن، وتخزين الطلبات المتطابقة، والقياس على عيّنة ثابتة أولاً.</li>
+<li>درجة الحرارة 0 وتسجيل كل الاستدعاءات، كما في قياساتنا الأخرى.</li>
+</ul>
+<h3>التقييم (على بيانات منشورة، مثل الميزتين الأخريين)</h3>
+<ul>
+<li><b>البيانات:</b> حزمة إعادة التجربة لورقة CoverUp (FSE 2025، رخصة Apache-2.0) مع مجموعتي CM و PY من CodaMosa ومجموعة MT من MuTAP.</li>
+<li><b>المقاييس:</b> نسبة الاختبارات التي تصل <code>ready</code>، تغطية الأسطر والفروع للاختبارات الجاهزة، نسبة <code>flaky</code> و <code>test_failed</code>، ودرجة الطفرات (mutation score) على عيّنة.</li>
+<li><b>المقارنة:</b> مع الأرقام المنشورة، مع ذكر أن نتائجهم بنموذج GPT-4o ونحن نستخدم نموذجاً مجانياً.</li>
+</ul>
+
+<h2>11. قرارات مفتوحة</h2>
+<table>
+<tr><th style="width:4%">#</th><th style="width:38%">القرار</th><th>الاقتراح</th></tr>
+<tr><td>1</td><td>أين تُنفَّذ تعديلات الـ graph؟</td><td>طبقة <code>core_testing/graphify</code> فوق graph الـ processors (القسم 4).</td></tr>
+<tr><td>2</td><td>طلب واحد لكل نوع أم طلب واحد للأنواع الثلاثة؟</td><td>التصميم يفصل الأنواع، والميزانية تدفع للدمج. نبدأ بالفصل في S2، ونضيف الدمج كخيار بعد S6.</td></tr>
+<tr><td>3</td><td>هل نختبر الميثودات الخاصة (<code>_name</code>)؟</td><td>لا تُختبر مباشرة. تدخل كجار أو ضمن مجموعة تكامل.</td></tr>
+<tr><td>4</td><td>ملف مرفوع بلا امتداد (مثل <code>game</code>)</td><td>لا يمكن استيراده في الاختبار. مساحة العمل تحفظه باسم <code>game.py</code>.</td></tr>
+<tr><td>5</td><td>دمج فرع Graphify</td><td>يُثبَّت على <code>feature/evaluation-v1</code> قبل بدء S1، لأن S1 يعتمد عليه.</td></tr>
+</table>
+
+<p class="small">بُنيت هذه الخطة على ملف «Feature 1 — Generate Trusted Tests»، مخطط «Final Testing Pipeline»، خطة Graphify، وفحص الكود الحالي. النقاط 5 و 6 في القسم 4 استنتاج من بنية المعرّفات ولم تُجرَّب على مشروع متعدد الملفات.</p>
+
+</body>
+</html>

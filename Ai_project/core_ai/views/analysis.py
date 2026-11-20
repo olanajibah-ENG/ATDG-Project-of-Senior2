@@ -217,7 +217,22 @@ class AnalysisResultViewSet(viewsets.ViewSet):
             if code_file_id:
                 query['code_file_id'] = ObjectId(code_file_id)
 
-            results_data = list(collection.find(query))
+            # Newest first: a file that is analysed again has more than one result.
+            results_data = list(collection.find(query).sort([("analysis_completed_at", -1), ("_id", -1)]))
+
+            # By default only the latest result of each file; ?history=true returns them all.
+            # The older results stay in the database.
+            history = str(request.query_params.get('history', '')).lower() in ('1', 'true', 'yes')
+            if not history:
+                seen, latest = set(), []
+                for data in results_data:
+                    file_key = data.get('code_file_id')
+                    if file_key is not None:
+                        if file_key in seen:
+                            continue
+                        seen.add(file_key)
+                    latest.append(data)
+                results_data = latest
             
             # Process each result to handle class_diagram_data format
             processed_results = []

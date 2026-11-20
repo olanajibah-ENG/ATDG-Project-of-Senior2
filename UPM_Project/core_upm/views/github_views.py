@@ -205,14 +205,16 @@ class GitHubSyncView(APIView):
             return Response({"message": "Already up to date.", "commit_sha": new_sha})
 
         try:
+            removed_paths = []
             changed_files = github.get_changed_files(
                 repo.repo_url, repo.branch,
                 repo.last_commit_sha, new_sha,
+                removed_out=removed_paths,
             )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not changed_files:
+        if not changed_files and not removed_paths:
             repo.last_commit_sha = new_sha
             repo.save()
             return Response({"message": "No supported files changed.", "commit_sha": new_sha})
@@ -226,6 +228,7 @@ class GitHubSyncView(APIView):
             files_data   = files_data,
             repo_id      = str(repo.repo_id),
             new_sha      = new_sha,
+            deleted_paths = removed_paths,
         )
 
         logger.info(f"[GITHUB-SYNC] Queued — task:{task.id}, files:{len(files_data)}")
@@ -280,15 +283,17 @@ class GitHubWebhookView(APIView):
 
         github = GitHubService()
         try:
+            removed_paths = []
             changed_files = github.get_changed_files(
                 repo.repo_url, repo.branch,
                 repo.last_commit_sha, new_sha,
+                removed_out=removed_paths,
             )
         except Exception as e:
             logger.error(f"[WEBHOOK] get_changed_files error: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        if not changed_files:
+        if not changed_files and not removed_paths:
             repo.last_commit_sha = new_sha
             repo.save()
             return Response({"message": "No supported files changed."})
@@ -307,6 +312,7 @@ class GitHubWebhookView(APIView):
             files_data   = files_data,
             repo_id      = str(repo.repo_id),
             new_sha      = new_sha,
+            deleted_paths = removed_paths,
         )
 
         logger.info(f"[WEBHOOK] Queued — task:{task.id}, files:{len(files_data)}")

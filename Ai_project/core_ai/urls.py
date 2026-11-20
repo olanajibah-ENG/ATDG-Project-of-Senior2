@@ -41,6 +41,14 @@ from core_ai.views.conflict_views import (
     ConflictHistoryView,
 )
 
+# ── Test Generation Views (Feature 1) ────────────────────────────────
+from core_ai.views.testgen_views import (
+    JobListView,
+    JobDetailView,
+    JobPlanView,
+    JobRecordsView,
+    JobRecordDetailView,
+)
 print("CORE_AI URLS.PY LOADED!")
 
 router = DefaultRouter()
@@ -98,4 +106,11 @@ urlpatterns = [
 
     # ── File Docs (للاستخدام في كشف التناقض code-doc) ───────────────────────
     path('file-docs/<str:file_id>/',                  FileDocsView.as_view(),                name='file-docs'),
+
+    # ── Test Generation (Feature 1) — JWT من UPM، وكل مهمة لصاحبها ─────────────
+    path('tests/jobs/',                                         JobListView.as_view(),         name='test-jobs'),
+    path('tests/jobs/<str:job_id>/',                            JobDetailView.as_view(),       name='test-job-detail'),
+    path('tests/jobs/<str:job_id>/plan/',                       JobPlanView.as_view(),         name='test-job-plan'),
+    path('tests/jobs/<str:job_id>/records/',                    JobRecordsView.as_view(),      name='test-job-records'),
+    path('tests/jobs/<str:job_id>/records/<str:record_id>/',    JobRecordDetailView.as_view(), name='test-job-record-detail'),
 ]

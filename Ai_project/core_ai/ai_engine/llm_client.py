@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
+class LLMUnavailable(Exception):
+    """No model could answer: all busy / rate-limited, no API key, or the network is down."""
+
+
 class LLMClient:
     CACHE_TTL = 3600 * 48          # cache identical responses for 48 h
     ROUNDS = 2                     # how many times to sweep over all models
@@ -43,18 +47,20 @@ class LLMClient:
             # the model our evaluation (CASCADE / NPM) was measured with — kept first on purpose
             {"model": "poolside/laguna-s-2.1:free", "name": "Poolside Laguna S 2.1",
              "description": "Coding agent (evaluation model)", "context": "262K tokens"},
+            # (18/11/2026: no longer listed on OpenRouter; kept for the record. It returns 404 and
+            #  rests for an hour, so it costs one failed request per hour.)
+            # the models below were checked against openrouter.ai/api/v1/models on 18/11/2026
+            {"model": "cohere/north-mini-code:free", "name": "Cohere North Mini Code",
+             "description": "Coding (the one that answered in our runs)", "context": "256K tokens"},
             {"model": "google/gemma-4-31b-it:free", "name": "Gemma 4 31B",
              "description": "Dense, strong at coding & reasoning", "context": "262K tokens"},
             {"model": "google/gemma-4-26b-a4b-it:free", "name": "Gemma 4 26B A4B",
              "description": "Fast MoE", "context": "262K tokens"},
-            {"model": "nvidia/nemotron-3-nano-omni:free", "name": "Nemotron 3 Nano Omni",
-             "description": "General purpose", "context": "256K tokens"},
-            {"model": "z-ai/glm-5.2:free", "name": "GLM 5.2",
-             "description": "Coding and tool use", "context": "256K tokens"},
-            {"model": "cohere/north-mini-code:free", "name": "Cohere North Mini Code",
-             "description": "Coding", "context": "256K tokens"},
-            {"model": "poolside/laguna-xs-2.1:free", "name": "Poolside Laguna XS 2.1",
-             "description": "Software engineering", "context": "262K tokens"},
+            # not tried yet: fallbacks only
+            {"model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "name": "Nemotron 3 Nano Omni 30B",
+             "description": "General purpose (new name of nemotron-3-nano-omni)", "context": "256K tokens"},
+            {"model": "nvidia/nemotron-3-ultra-550b-a55b:free", "name": "Nemotron 3 Ultra 550B",
+             "description": "General purpose, large", "context": "1M tokens"},
         ]
 
     @staticmethod
@@ -146,9 +152,54 @@ class LLMClient:
                 logger.info("[LLM Cache] HIT")
                 return cached
 
+        content, _model, _usage = LLMClient._sweep(
+            system_prompt, user_prompt,
+            force_request=force_request, model=model, temperature=temperature, max_tokens=4000,
+        )
+        if use_cache:
+            LLMClient._set_cached(cache_key, content)
+        return content
+
+    @staticmethod
+    def call_model_ex(
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        model: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 4000,
+        force_request: bool = False,
+    ) -> dict:
+        """Like call_model, but also says which model answered and what it cost.
+
+        Returns {"text", "model", "prompt_tokens", "completion_tokens"}. It does not use the
+        48-hour answer cache: callers that need reuse keep their own record of answers.
+        """
+        content, used_model, usage = LLMClient._sweep(
+            system_prompt, user_prompt,
+            force_request=force_request, model=model, temperature=temperature, max_tokens=max_tokens,
+        )
+        return {
+            "text": content,
+            "model": used_model,
+            "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+            "completion_tokens": int(usage.get("completion_tokens") or 0),
+        }
+
+    @staticmethod
+    def _sweep(
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        force_request: bool = False,
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+    ) -> tuple:
+        """One request, swept over the model list. → (text, model, usage dict)."""
         api_key = getattr(settings, "OPENROUTER_API_KEY", None)
         if not api_key:
-            raise Exception("OPENROUTER_API_KEY missing in settings.")
+            raise LLMUnavailable("OPENROUTER_API_KEY missing in settings.")
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -175,7 +226,7 @@ class LLMClient:
                 payload = {
                     "model": current_model,
                     "messages": messages,
-                    "max_tokens": 4000,
+                    "max_tokens": max_tokens,
                     "temperature": temperature,
                 }
                 logger.info(f"[LLM] round={round_no + 1} model={current_model}")
@@ -203,9 +254,14 @@ class LLMClient:
                     continue            # -> next model
 
                 if resp.status_code == 400:
-                    # 400 is usually caused by the request itself (e.g. prompt too long),
-                    # not by the model, so don't rest the model — just try the next one.
                     last_error = f"400 on {current_model}: {resp.text[:300]}"
+                    if "not a valid model id" in resp.text.lower():
+                        # the model was removed or renamed: skip it like a 404
+                        LLMClient._block_model(current_model, LLMClient.MISSING_BLOCK)
+                        logger.warning(f"[LLM] {last_error}")
+                        continue        # -> next model
+                    # any other 400 is usually caused by the request itself (e.g. prompt too long),
+                    # not by the model, so don't rest the model — just try the next one.
                     logger.warning(f"[LLM] {last_error}")
                     continue            # -> next model
 
@@ -218,18 +274,17 @@ class LLMClient:
                 try:
                     data = resp.json()
                     content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+                    usage = data.get("usage") or {}
                 except ValueError:
-                    content = None
+                    content, usage = None, {}
 
                 if not content or not content.strip():
                     last_error = f"Empty answer from {current_model}"
                     logger.warning(f"[LLM] {last_error}")
                     continue
 
-                if use_cache:
-                    LLMClient._set_cached(cache_key, content)
                 logger.info(f"[LLM] Success with {current_model}")
-                return content
+                return content, current_model, usage if isinstance(usage, dict) else {}
 
             # finished a sweep over all models
             if round_no < LLMClient.ROUNDS - 1:
@@ -238,7 +293,7 @@ class LLMClient:
                             f"{'' if tried_any else ' (all were resting)'}")
                 time.sleep(pause)
 
-        raise Exception(
+        raise LLMUnavailable(
             f"All free models are busy or rate-limited. Try again in a few minutes. "
             f"Last error: {last_error}"
         )

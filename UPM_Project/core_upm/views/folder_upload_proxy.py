@@ -17,6 +17,7 @@ folder_upload_proxy.py  ← معدّل بالكامل لـ Message Broker
     - رجوع task_id فوراً للفرونت
 """
 
+import json
 import os
 import logging
 from django.shortcuts import get_object_or_404
@@ -84,9 +85,20 @@ class FolderUploadProxyView(APIView):
 
         logger.info(f"[FOLDER-UPLOAD] Received files keys: {list(request.FILES.keys())}, count: {len(all_files)}")
 
+        # paths: optional, one per file in 'files', in the same order (a browser sends names only;
+        # a client that knows the folders, e.g. webkitRelativePath, sends them here)
+        paths = self._read_paths(request)
+        loose = request.FILES.getlist('files')
+        if paths and len(paths) != len(loose):
+            return Response({"error": "paths must have one entry per file in 'files'"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        path_of = {id(f): p for f, p in zip(loose, paths)} if paths else {}
+
         for f in all_files:
             file_info = self._read_file(f)
             if file_info:
+                if id(f) in path_of and not file_info.get('is_zip'):
+                    file_info['path'] = path_of[id(f)]
                 files_data.append(file_info)
             else:
                 logger.info(f"[FOLDER-UPLOAD] Skipped: {f.name} (unsupported extension)")
@@ -99,11 +111,14 @@ class FolderUploadProxyView(APIView):
 
         # 3. بعث الرسالة لـ Redis — هاد السطر هو جوهر Message Broker
         # .delay() = ضع الرسالة في Redis وارجع فوراً بدون انتظار
+        # confirm_deletions=true: the user knows this upload deletes half the project or more
+        confirm = str(request.data.get('confirm_deletions', '')).strip().lower() in ('1', 'true', 'yes', 'on')
         task = process_upload_task.delay(
             project_id   = str(project_id),
             project_name = project.project_name,
             user_email   = request.user.email,
             files_data   = files_data,
+            confirm_deletions = confirm,
         )
 
         logger.info(f"[FOLDER-UPLOAD] Queued — task_id:{task.id}, files:{len(files_data)}")
@@ -116,6 +131,24 @@ class FolderUploadProxyView(APIView):
             "project_id":   str(project_id),
             "check_status": f"/api/upm/tasks/{task.id}/",
         }, status=status.HTTP_202_ACCEPTED)
+
+    @staticmethod
+    def _read_paths(request):
+        """A list sent as repeated 'paths' fields, or as one JSON string."""
+        values = request.data.getlist('paths') if hasattr(request.data, 'getlist') else request.data.get('paths') or []
+        if isinstance(values, str):
+            values = [values]
+        out = []
+        for value in values:
+            if isinstance(value, str) and value.strip().startswith('['):
+                try:
+                    out.extend(json.loads(value))
+                    continue
+                except ValueError:
+                    return []
+            if value:
+                out.append(value)
+        return [str(v).replace('\\', '/').lstrip('/') for v in out]
 
     def _read_file(self, uploaded_file):
         """

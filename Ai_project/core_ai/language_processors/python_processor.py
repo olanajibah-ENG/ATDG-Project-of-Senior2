@@ -71,7 +71,7 @@ class PythonProcessor(ILanguageProcessorStrategy):
             normalized_code = re.sub(super_pattern, 'super().__init__(', normalized_code)
             fixes_applied.append("Fixed 'super().init()' → 'super().__init__()'")
         
-        weird_underscores = ['\u2013\u2013', '\u2014\u2014', '––', '__']
+        weird_underscores = ['\u2013\u2013', '\u2014\u2014', '––']
         for weird in weird_underscores:
             if weird in normalized_code:
                 normalized_code = normalized_code.replace(weird, '__')
@@ -913,18 +913,280 @@ class PythonProcessor(ILanguageProcessorStrategy):
         return self.generate_uml_diagram(ast_data)
 
     def generate_dependency_graph_data(self, ast_data: Dict[str, Any], features: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        🔥 Graphify Unified Schema Implementation for Python
+        توليد بيانات dependency_graph بالشكل الموحد
+        
+        الهدف: استخراج علاقات calls من جسم الدوال/الميثودات بناءً على Python AST
+        
+        ✅ nodes: class/function/method/external مع id ثابت
+        ✅ edges: calls من جسم الدالة + imports + inherits
+        ✅ confidence: EXTRACTED (واضح) / INFERRED (مخمن)
+        
+        مسار البيانات:
+        Python Code → ast.parse → dependency_graph → MongoDB → 
+        → graph_to_prompt_summary → detailed_analysis → LowLevelAgent
+        
+        قواعد ID:
+        - Class: "ClassName"
+        - Method: "ClassName.methodName"
+        - Function: "functionName"
+        - External: "ext.ModuleName"
+        
+        Returns:
+            dict: {nodes: [...], edges: [...], meta: {source: "python-ast", ...}}
+        """
         code = ast_data.get("code_content", "")
         try:
             tree = ast.parse(code)
         except SyntaxError:
-            return {"nodes": [], "edges": []}
+            return {"nodes": [], "edges": [], "meta": {"total_nodes": 0, "total_edges": 0, "source": "python-ast"}}
         
-        dependencies = self.extract_dependencies(ast_data)
-        nodes = [{"id": "main", "label": "Main Module", "type": "module"}]
+        nodes = []
         edges = []
+        node_ids = set()
         
-        for i, dep in enumerate(dependencies):
-            nodes.append({"id": f"dep_{i}", "label": dep, "type": "dependency"})
-            edges.append({"from": "main", "to": f"dep_{i}", "label": "imports", "arrow": "→"})
-
-        return {"nodes": nodes, "edges": edges}
+        # Step 1: جمع الكلاسات والدوال  nodes
+        classes_map = {}  # {class_name: {methods: [], inherits: []}}
+        functions_list = []  # module-level functions
+        
+        for node in ast.walk(tree):
+            # جمع Classes
+            if isinstance(node, ast.ClassDef):
+                class_name = node.name
+                if class_name not in node_ids:
+                    node_ids.add(class_name)
+                    nodes.append({
+                        "id": class_name,
+                        "label": class_name,
+                        "type": "class",
+                        "local": True
+                    })
+                    
+                    # استخراج الوراثة
+                    inherits = []
+                    for base in node.bases:
+                        if isinstance(base, ast.Name):
+                            inherits.append(base.id)
+                        elif isinstance(base, ast.Attribute):
+                            inherits.append(f"{base.value.id}.{base.attr}" if isinstance(base.value, ast.Name) else base.attr)
+                    
+                    classes_map[class_name] = {"methods": [], "inherits": inherits, "node": node}
+            
+            # جمع module-level functions
+            elif isinstance(node, ast.FunctionDef) and not any(isinstance(p, ast.ClassDef) for p in ast.walk(tree) if hasattr(p, 'body') and node in getattr(p, 'body', [])):
+                func_name = node.name
+                if func_name not in node_ids:
+                    node_ids.add(func_name)
+                    nodes.append({
+                        "id": func_name,
+                        "label": f"{func_name}()",
+                        "type": "function",
+                        "local": True
+                    })
+                    functions_list.append({"id": func_name, "node": node})
+        
+        # Step 2: جمع الميثودات لكل كلاس
+        for class_name, class_info in classes_map.items():
+            class_node = class_info["node"]
+            for item in class_node.body:
+                if isinstance(item, ast.FunctionDef):
+                    method_name = item.name
+                    method_id = f"{class_name}.{method_name}"
+                    if method_id not in node_ids:
+                        node_ids.add(method_id)
+                        nodes.append({
+                            "id": method_id,
+                            "label": f"{method_name}()",
+                            "type": "method",
+                            "parent": class_name,
+                            "local": True
+                        })
+                        class_info["methods"].append({"id": method_id, "node": item})
+        
+        # Step 3: جمع imports  external nodes + edges
+        dependencies = self.extract_dependencies(ast_data)
+        for dep in dependencies:
+            dep_id = f"ext.{dep}"
+            if dep_id not in node_ids:
+                node_ids.add(dep_id)
+                nodes.append({
+                    "id": dep_id,
+                    "label": dep,
+                    "type": "external",
+                    "local": False
+                })
+            
+            # إضافة edge للـ import (من module level)
+            edges.append({
+                "from": "__module__",
+                "to": dep_id,
+                "relation": "imports",
+                "confidence": "EXTRACTED"
+            })
+        
+        # إضافة module node إذا كان في imports
+        if dependencies and "__module__" not in node_ids:
+            node_ids.add("__module__")
+            nodes.insert(0, {
+                "id": "__module__",
+                "label": "Module",
+                "type": "module",
+                "local": True
+            })
+        
+        # Step 4: إنشاء edges للـ inherits
+        for class_name, class_info in classes_map.items():
+            for base_class in class_info["inherits"]:
+                # تحقق إذا كان base_class محلي
+                target_id = base_class if base_class in node_ids else f"ext.{base_class}"
+                if target_id not in node_ids and not target_id.startswith("ext."):
+                    # إضافة كـ external
+                    node_ids.add(target_id)
+                    nodes.append({
+                        "id": target_id,
+                        "label": base_class,
+                        "type": "external",
+                        "local": False
+                    })
+                
+                edges.append({
+                    "from": class_name,
+                    "to": target_id,
+                    "relation": "inherits",
+                    "confidence": "EXTRACTED"
+                })
+        
+        # Step 5: 🔥 استخراج calls من جسم كل method
+        for class_name, class_info in classes_map.items():
+            for method_info in class_info["methods"]:
+                method_id = method_info["id"]
+                method_node = method_info["node"]
+                
+                # البحث عن Call داخل جسم الميثود
+                for node in ast.walk(method_node):
+                    if isinstance(node, ast.Call):
+                        callee = None
+                        confidence = "EXTRACTED"
+                        target_id = None
+                        
+                        # حالة 1: self.method()
+                        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == 'self':
+                            callee = node.func.attr
+                            target_id = f"{class_name}.{callee}"
+                            confidence = "EXTRACTED"
+                        
+                        # حالة 2: ClassName.static_method()
+                        elif isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+                            obj_name = node.func.value.id
+                            method_name = node.func.attr
+                            if obj_name in classes_map:
+                                target_id = f"{obj_name}.{method_name}"
+                                confidence = "EXTRACTED"
+                            else:
+                                # obj.method() → INFERRED
+                                target_id = f"ext.{obj_name}.{method_name}"
+                                confidence = "INFERRED"
+                                if target_id not in node_ids:
+                                    node_ids.add(target_id)
+                                    nodes.append({
+                                        "id": target_id,
+                                        "label": f"{obj_name}.{method_name}",
+                                        "type": "external",
+                                        "local": False
+                                    })
+                        
+                        # حالة 3: function_name() مباشرة
+                        elif isinstance(node.func, ast.Name):
+                            callee = node.func.id
+                            if callee in node_ids:
+                                target_id = callee
+                                confidence = "EXTRACTED"
+                            else:
+                                # دالة خارجية أو built-in
+                                target_id = f"ext.{callee}"
+                                confidence = "INFERRED"
+                                if target_id not in node_ids:
+                                    node_ids.add(target_id)
+                                    nodes.append({
+                                        "id": target_id,
+                                        "label": callee,
+                                        "type": "external",
+                                        "local": False
+                                    })
+                        
+                        # إضافة الـ edge
+                        if target_id and target_id != method_id:
+                            edges.append({
+                                "from": method_id,
+                                "to": target_id,
+                                "relation": "calls",
+                                "confidence": confidence
+                            })
+        
+        # Step 6: استخراج calls من module-level functions
+        for func_info in functions_list:
+            func_id = func_info["id"]
+            func_node = func_info["node"]
+            
+            for node in ast.walk(func_node):
+                if isinstance(node, ast.Call):
+                    callee = None
+                    confidence = "EXTRACTED"
+                    target_id = None
+                    
+                    # function_name()
+                    if isinstance(node.func, ast.Name):
+                        callee = node.func.id
+                        if callee in node_ids:
+                            target_id = callee
+                            confidence = "EXTRACTED"
+                        else:
+                            target_id = f"ext.{callee}"
+                            confidence = "INFERRED"
+                            if target_id not in node_ids:
+                                node_ids.add(target_id)
+                                nodes.append({
+                                    "id": target_id,
+                                    "label": callee,
+                                    "type": "external",
+                                    "local": False
+                                })
+                    
+                    # obj.method()
+                    elif isinstance(node.func, ast.Attribute):
+                        obj_name = node.func.value.id if isinstance(node.func.value, ast.Name) else "unknown"
+                        method_name = node.func.attr
+                        if obj_name in classes_map:
+                            target_id = f"{obj_name}.{method_name}"
+                            confidence = "EXTRACTED"
+                        else:
+                            target_id = f"ext.{obj_name}.{method_name}"
+                            confidence = "INFERRED"
+                            if target_id not in node_ids:
+                                node_ids.add(target_id)
+                                nodes.append({
+                                    "id": target_id,
+                                    "label": f"{obj_name}.{method_name}",
+                                    "type": "external",
+                                    "local": False
+                                })
+                    
+                    if target_id and target_id != func_id:
+                        edges.append({
+                            "from": func_id,
+                            "to": target_id,
+                            "relation": "calls",
+                            "confidence": confidence
+                        })
+        
+        # إرجاع الشكل الموحد
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "meta": {
+                "total_nodes": len(nodes),
+                "total_edges": len(edges),
+                "source": "python-ast"
+            }
+        }

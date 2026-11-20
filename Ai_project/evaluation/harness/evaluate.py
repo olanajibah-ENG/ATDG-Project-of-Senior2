@@ -42,7 +42,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from evaluation.harness import snapshot
-from evaluation.harness.llm_recorder import LLMClient as Recorder
+from evaluation.harness.llm_recorder import LLMCallError, LLMClient as Recorder
 from evaluation.harness.run_baseline import doc_from_python_docstrings, run_sample as run_legacy_sample
 
 ROOT = Path(__file__).resolve().parent.parent          # evaluation/
@@ -66,15 +66,32 @@ def _route_production_llm_through_recorder() -> None:
     prod.LLMClient.call_model = Recorder.call_model
 
 
-def _enable_replay_cache() -> None:
-    """نفس (موديل، seed، system، user) → الرد المسجّل. بيلفّ Recorder.call_model للنسختين."""
+def _enable_replay_cache(replay_only: bool = False) -> None:
+    """
+    نفس (موديل، seed، system، user) → الرد المسجّل. بيلفّ Recorder.call_model للنسختين.
+
+    إعادة المحاولة (use_cache=False، متل DocSemanticAnalyzer لما الجواب ما بينقرا): كل محاولة إلها
+    مكان حفظ خاص (<key>_retry1، <key>_retry2...) لكل عينة. قبل، المحاولة التانية كانت ترجّع نفس الجواب
+    المحفوظ المكسور، فالمحاولات الـ 3 كانوا وحدة. هلق المحاولة التانية بتطلب جواب جديد مرة وحدة،
+    وبعدها بترجع من الحفظ، فالقياس بيضل قابل للتكرار.
+    replay_only: إذا الجواب مش محفوظ → فشل فوري بدون طلب (قياس ببلاش على الأجوبة المحفوظة بس).
+    """
     original = Recorder.call_model
     LLM_CACHE.mkdir(exist_ok=True)
+    retries: Dict[tuple, int] = defaultdict(int)
 
     def call_model(system_prompt: str, user_prompt: str, **kwargs):
         key = hashlib.sha256(json.dumps([Recorder.model, Recorder.seed, system_prompt, user_prompt],
                                         ensure_ascii=False).encode()).hexdigest()
+        if kwargs.get("use_cache", True) is False:
+            retries[(Recorder._current_sample, key)] += 1
+            key = f"{key}_retry{retries[(Recorder._current_sample, key)]}"
         path = LLM_CACHE / f"{key}.json"
+        if replay_only and not path.exists():
+            Recorder._calls.append({"sample_id": Recorder._current_sample, "requested_model": Recorder.model,
+                                    "ok": False, "replayed": False, "error": "replay-only: not cached",
+                                    "cache_key": key})
+            raise LLMCallError("replay-only: not cached")
         if path.exists() and not Recorder.offline:
             cached = json.loads(path.read_text(encoding="utf-8"))
             Recorder._calls.append({"sample_id": Recorder._current_sample, "requested_model": Recorder.model,
@@ -299,6 +316,8 @@ def main() -> None:
     ap.add_argument("--stage", default="", help="اسم المرحلة لجدول التقدّم، مثلاً 'after step 3'")
     ap.add_argument("--rerun-legacy", action="store_true")
     ap.add_argument("--no-replay", action="store_true", help="ما تستعمل ردود LLM مسجّلة")
+    ap.add_argument("--replay-only", action="store_true",
+                    help="بس الأجوبة المحفوظة، وما في ولا طلب جديد (المحفوظ ناقص = فشل)")
     args = ap.parse_args()
 
     if args.set:
@@ -320,7 +339,7 @@ def main() -> None:
     else:
         Recorder.configure(model=None, offline=True)
     if not args.no_replay:
-        _enable_replay_cache()
+        _enable_replay_cache(replay_only=args.replay_only)
     _route_production_llm_through_recorder()
 
     samples_hash = hashlib.sha256(json.dumps(samples, sort_keys=True, ensure_ascii=False).encode()).hexdigest()

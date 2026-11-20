@@ -100,6 +100,8 @@ services:
       - DEBUG=${AI_DJANGO_DEBUG}
       - ALLOWED_HOSTS=${AI_DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,ai_django_app,ai_web,upm_django_app,upm_api_gateway,nginx}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      # Feature 1 (test generation): test routes verify the user token with UPM's signing key
+      - UPM_JWT_SIGNING_KEY=${UPM_DJANGO_SECRET_KEY}
       # 👈 ✅ تم جعل القيم صريحة (Hardcoded) لتجنب أي تعارض مع ملف .env
       - CELERY_BROKER_URL=redis://ai_redis:6379/0
       - CELERY_RESULT_BACKEND=redis://ai_redis:6379/0

@@ -132,7 +132,10 @@ class GitHubService:
         branch: str,
         old_sha: str,
         new_sha: str,
+        removed_out: list = None,
     ) -> List[Tuple[str, str, str]]:
+        """Changed files with their content. When `removed_out` is a list, the paths GitHub reports
+        as removed — and the old path of a renamed file — are appended to it."""
         owner, repo = self._parse_repo_url(repo_url)
 
         if not old_sha:
@@ -156,7 +159,11 @@ class GitHubService:
             filepath    = f.get('filename', '')
             file_status = f.get('status', '')
             if file_status == 'removed':
+                if removed_out is not None and filepath:
+                    removed_out.append(filepath)
                 continue
+            if file_status == 'renamed' and removed_out is not None and f.get('previous_filename'):
+                removed_out.append(f['previous_filename'])
             if not self._should_include_file(filepath):
                 continue
             if f.get('size', 0) > MAX_FILE_SIZE:
