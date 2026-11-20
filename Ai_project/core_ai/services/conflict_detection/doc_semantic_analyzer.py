@@ -69,8 +69,13 @@ def quote_found(quote: str, source: str) -> bool:
 
 
 def _strip_line_numbers(snippet: str) -> str:
-    """أحياناً الموديل بينسخ 'NN | code' متل ما انعرض"""
-    return "\n".join(re.sub(r"^\s*\d+\s*\|\s?", "", l) for l in (snippet or "").splitlines())
+    """
+    أحياناً الموديل بينسخ 'NN | code' متل ما انعرض. وأحياناً بيكتب نهاية السطر كنص "\\n" (رمزين)
+    بدل نهاية سطر حقيقية، فكان السطر يبقى ملزوق بأرقام الأسطر ويفشل الفحص مع إنه منسوخ صح
+    (8 من 20 تعديل ضايع بقياس الخطوة 11).
+    """
+    snippet = (snippet or "").replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", " ")
+    return "\n".join(re.sub(r"^\s*\d+\s*\|\s?", "", l) for l in snippet.splitlines())
 
 
 def code_quote_ok(snippet: Optional[str], lines: Optional[list], item: CodeDocItem) -> bool:
