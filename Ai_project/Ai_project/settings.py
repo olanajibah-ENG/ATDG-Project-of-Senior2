@@ -140,6 +140,14 @@ TESTGEN_MAX_REQUESTS_PER_JOB = 20
 TESTGEN_LLM_MAX_TOKENS = 4000
 # None = the client's own model order.
 TESTGEN_LLM_MODEL = None
+# S3 — isolated run. Only the testgen_sandbox_worker (queue test_sandbox) starts containers.
+TEST_RUNS_COLLECTION = 'test_runs'
+TESTGEN_SANDBOX_IMAGE = os.environ.get('TESTGEN_SANDBOX_IMAGE', 'autotest-sandbox:py3.10-s3')
+TESTGEN_SANDBOX_TIMEOUT_SECONDS = 60          # one record's run
+TESTGEN_SANDBOX_FINAL_MAX_SECONDS = 300       # the final run: 60 + 15 x ready tests, capped here
+TESTGEN_SANDBOX_MEMORY = '512m'
+TESTGEN_SANDBOX_PIDS = 128
+TESTGEN_SANDBOX_OUTPUT_LIMIT = 20000          # characters of printed output kept per run
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -242,6 +250,8 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_ENABLE_UTC = True
+# Test runs go to their own queue, consumed only by testgen_sandbox_worker (the only one with Docker).
+CELERY_TASK_ROUTES = {'core_ai.testgen.sandbox_pass': {'queue': 'test_sandbox'}}
 
 
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

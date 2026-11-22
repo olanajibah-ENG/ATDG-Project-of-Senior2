@@ -72,6 +72,28 @@ def upm_access():
     project_access.set_project_access(None)
 
 
+@pytest.fixture(autouse=True)
+def sandbox():
+    """No test may start a real container: every test gets a scripted sandbox (S3)."""
+    from core_ai.services.test_generation.sandbox import executor as executor_module
+    from core_ai.tests.test_generation.fake_sandbox import FakeSandboxExecutor
+
+    fake = FakeSandboxExecutor()
+    executor_module.set_executor(fake)
+    yield fake
+    executor_module.set_executor(None)
+
+
+@pytest.fixture
+def runs():
+    from core_ai.services.test_generation import runs as runs_module
+
+    instance = runs_module.InMemoryRunRepo()
+    runs_module.set_run_repo(instance)
+    yield instance
+    runs_module.set_run_repo(None)
+
+
 @pytest.fixture
 def repo():
     instance = InMemoryJobRepo()

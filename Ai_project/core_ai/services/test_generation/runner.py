@@ -15,6 +15,7 @@ from core_ai.services.test_generation.statuses import RECORD_STATUSES, FileStatu
 @dataclass
 class PassResult:
     done: bool
+    handover: bool = False       # S3: generation finished and the run stage must start
 
 
 def _progress(plan):

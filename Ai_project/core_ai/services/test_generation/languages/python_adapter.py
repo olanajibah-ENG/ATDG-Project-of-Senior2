@@ -158,3 +158,40 @@ def import_statement(path, name):
 def project_import_roots(project_paths):
     """Top-level names a test may import from the project itself."""
     return {module_name(p).split(".")[0] for p in project_paths if module_name(p)}
+
+
+# ── S3: running the tests ───────────────────────────────────────────────────
+
+SRC_ROOT = "/workspace/src"
+
+
+def run_argv(test_paths, timeout_s, with_coverage=True):
+    """The command run inside the sandbox. `timeout` kills the whole run after timeout_s seconds."""
+    argv = ["timeout", "--signal=KILL", str(int(timeout_s)), "python", "-m", "pytest", *test_paths,
+            "-q", "-p", "no:cacheprovider", "--junitxml=/out/junit.xml"]
+    if with_coverage:
+        argv += [f"--cov={SRC_ROOT}", "--cov-branch", "--cov-report=json:/out/cov.json"]
+    return argv
+
+
+def top_level_names(project_paths):
+    """First import segment of every Python file of the version: demo/course.py → demo, game.py → game."""
+    names = set()
+    for path in project_paths:
+        if not str(path).endswith(".py"):
+            continue
+        first = str(path).replace("\\", "/").split("/")[0]
+        names.add(first[:-3] if first.endswith(".py") else first)
+    return names
+
+
+def expected_test_names(test_code):
+    """Names of the top-level `test_*` functions of a generated test file."""
+    import ast
+
+    try:
+        tree = ast.parse(test_code or "")
+    except SyntaxError:
+        return []
+    return [n.name for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name.startswith("test")]

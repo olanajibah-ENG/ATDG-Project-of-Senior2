@@ -204,3 +204,23 @@ def test_cut_off_exactly_between_two_tests_is_still_usable():
               "def test_a():\n    assert Student('a', 1, 'c').enroll(Course('m', 'M')) is True\n")
     result = check(answer)
     assert result.ok and "def test_Student_enroll__unit_1():" in result.code
+
+
+# ── S3: a test must not end the run early or write where results are kept (research R6) ──
+
+@pytest.mark.parametrize("code", [
+    "import os\ndef test_x():\n    os._exit(0)\n",
+    "import sys\ndef test_x():\n    sys.exit(0)\n",
+    "import os\ndef test_x():\n    os.kill(1, 9)\n",
+    "from os import _exit\ndef test_x():\n    _exit(0)\n",
+    "import signal\ndef test_x():\n    assert True\n",
+    "def test_x():\n    open('/out/junit.xml', 'w').write('<testsuites/>')\n",
+    "from pathlib import Path\ndef test_x():\n    Path('/out/junit.xml').write_text('x')\n",
+])
+def test_ending_the_run_or_writing_results_is_unsafe(code):
+    assert find_unsafe(ast.parse(code)) is not None
+
+
+def test_writing_under_tmp_path_is_still_allowed():
+    code = "def test_x(tmp_path):\n    (tmp_path / 'a.txt').write_text('x')\n    assert True\n"
+    assert find_unsafe(ast.parse(code)) is None

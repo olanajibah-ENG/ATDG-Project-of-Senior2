@@ -1,0 +1,30 @@
+{
+  "available": true,
+  "final_run_id": "sbx_job_147272fad542_final_1",
+  "branch": true,
+  "scope": "ready records only (3)",
+  "files": [
+    {
+      "file": "demo/course.py",
+      "statements": 12,
+      "covered": 12,
+      "line_pct": 100.0,
+      "branches": 4,
+      "branches_covered": 4,
+      "branch_pct": 100.0,
+      "missing_lines": [],
+      "missing_annotations": {}
+    }
+  ],
+  "totals": {
+    "statements": 12,
+    "covered": 12,
+    "branches": 4,
+    "branches_covered": 4,
+    "line_pct": 100.0,
+    "branch_pct": 100.0,
+    "combined_pct": 100.0
+  },
+  "not_measured": [],
+  "excluded_records": []
+}

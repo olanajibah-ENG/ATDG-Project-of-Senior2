@@ -1,0 +1,32 @@
+{
+  "units": [
+    {
+      "id": "demo/course.py::Course.__init__",
+      "file": "demo/course.py",
+      "kind": "method",
+      "body_hash": "d828b89195fb2bcc",
+      "callees": [],
+      "externals": []
+    },
+    {
+      "id": "demo/course.py::Course.is_full",
+      "file": "demo/course.py",
+      "kind": "method",
+      "body_hash": "1ba32c99a9b543d6",
+      "callees": [],
+      "externals": []
+    },
+    {
+      "id": "demo/course.py::Course.add_student",
+      "file": "demo/course.py",
+      "kind": "method",
+      "body_hash": "8db979fc1f075283",
+      "callees": [
+        "demo/course.py::Course.is_full"
+      ],
+      "externals": []
+    }
+  ],
+  "skipped": [],
+  "work_items_count": 3
+}

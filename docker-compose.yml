@@ -168,6 +168,40 @@ services:
     networks:
       - upm_network
 
+  # ── Feature 1, S3: image of the isolated test runs (build only; the command exits at once) ──
+  testgen_sandbox_image:
+    build: ./Ai_project/core_ai/services/test_generation/sandbox/image
+    image: autotest-sandbox:py3.10-s3
+    command: ["true"]
+    restart: "no"
+
+  # ── Feature 1, S3: the ONLY component that starts containers (Docker socket). No .env, no keys. ──
+  testgen_sandbox_worker:
+    build: ./Ai_project
+    container_name: ai_testgen_sandbox_worker
+    restart: unless-stopped
+    command: /bin/sh -c "celery -A Ai_project.celery_app worker -Q test_sandbox --concurrency 2 -n sandbox@%h -l INFO"
+    volumes:
+      - ./Ai_project:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DJANGO_SETTINGS_MODULE=Ai_project.settings
+      - DEBUG=True
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB_NAME=ai_mongodb_db
+      - REDIS_HOST=ai_redis
+      - CELERY_BROKER_URL=redis://ai_redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://ai_redis:6379/0
+      - TESTGEN_SANDBOX_IMAGE=autotest-sandbox:py3.10-s3
+    depends_on:
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - upm_network
+
   notification_redis:
     image: redis:7
     container_name: notification_redis

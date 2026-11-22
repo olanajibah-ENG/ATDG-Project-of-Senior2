@@ -48,6 +48,8 @@ from core_ai.views.testgen_views import (
     JobPlanView,
     JobRecordsView,
     JobRecordDetailView,
+    JobCoverageView,
+    JobBundleView,
 )
 print("CORE_AI URLS.PY LOADED!")
 
@@ -113,4 +115,6 @@ urlpatterns = [
     path('tests/jobs/<str:job_id>/plan/',                       JobPlanView.as_view(),         name='test-job-plan'),
     path('tests/jobs/<str:job_id>/records/',                    JobRecordsView.as_view(),      name='test-job-records'),
     path('tests/jobs/<str:job_id>/records/<str:record_id>/',    JobRecordDetailView.as_view(), name='test-job-record-detail'),
+    path('tests/jobs/<str:job_id>/coverage/',                   JobCoverageView.as_view(),     name='test-job-coverage'),
+    path('tests/jobs/<str:job_id>/bundle/',                     JobBundleView.as_view(),       name='test-job-bundle'),
 ]

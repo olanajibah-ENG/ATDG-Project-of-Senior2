@@ -46,7 +46,7 @@ def _generate(job_id, repo, reader, records, attempts, model=None, max_requests=
     run_pass(job_id, repo, reader, lambda f: None, NOW, then_generate=True, record_repo=records)
     facade = LLMFacade(model or FakeModel(), attempts)
     for _ in range(100):
-        if repo.get(job_id)["status"] != "running":
+        if repo.get(job_id)["status"] != "running" or repo.get(job_id)["stage"] == "sandbox_run":
             break
         run_generation_pass(job_id, repo, records, attempts, reader, facade, NOW, max_requests=max_requests)
 
@@ -67,7 +67,7 @@ def test_list_shape_and_total(job):
     assert response.status_code == 200
     assert response.data["total"] == len(response.data["items"]) == (14 + 6) * 3
     for item in response.data["items"]:
-        assert set(item) == {"id", "file", "unit_id", "level", "status", "reason_code", "test_path"}
+        assert set(item) == {"id", "file", "unit_id", "level", "status", "reason_code", "test_path", "executed"}
     assert "test_code" not in json.dumps(response.data)
 
 
@@ -143,7 +143,7 @@ def test_record_routes_need_a_token_and_the_owner(job):
 
 def test_job_status_after_generation(job):
     data = _get(views.JobDetailView, job).data
-    assert (data["status"], data["stage"], data["error"]) == ("completed_with_issues", "generated", None)
+    assert (data["status"], data["stage"], data["error"]) == ("running", "sandbox_run", None)   # handed to S3
     assert data["progress"]["total"] == 60 and data["progress"]["done"] == 20
     by_status = data["progress"]["by_status"]
     assert (by_status["generated"], by_status["generation_failed"], by_status["pending"], by_status["ready"]) == (19, 1, 40, 0)
@@ -158,7 +158,7 @@ def test_job_status_when_generation_stopped_early(repo, reader, records, attempt
     job_id = _start({"project_id": PROJECT_ID, "levels": ["unit"]})
     _generate(job_id, repo, reader, records, attempts, FakeModel(fail_from=3))
     data = _get(views.JobDetailView, job_id).data
-    assert data["status"] == "completed_with_issues" and data["error"]["code"] == "model_unavailable"
+    assert data["status"] == "running" and data["error"]["code"] == "model_unavailable"   # S3 runs what exists
     assert data["progress"]["by_status"]["generated"] == 2 and data["progress"]["by_status"]["pending"] == 12
     assert data["files"][0]["status"] == "partial"
 
@@ -168,3 +168,49 @@ def test_record_routes_are_mounted():
 
     assert resolve("/api/analysis/tests/jobs/job_a/records/").func.view_class is views.JobRecordsView
     assert resolve("/api/analysis/tests/jobs/job_a/records/t_1/").func.view_class is views.JobRecordDetailView
+
+
+# ── S3: a record after its run ───────────────────────────────────────────────
+
+def _detail(job_id, record_id):
+    return _get(views.JobRecordDetailView, job_id, record_id)
+
+
+def _run_stage(job_id, repo, reader, records, runs, sandbox):
+    from datetime import datetime
+
+    from core_ai.services.test_generation.run_stage import run_sandbox_pass
+
+    for _ in range(100):
+        if run_sandbox_pass(job_id, repo, records, runs, reader, sandbox, datetime.utcnow()).done:
+            return
+
+
+def test_detail_of_a_ready_record_shows_the_run_and_the_evidence(job, repo, reader, records, runs, sandbox):
+    _run_stage(job, repo, reader, records, runs, sandbox)
+    ready = records.list(job, status="ready")
+    assert ready, "the fake sandbox passes every generated test"
+    data = _detail(job, ready[0]["record_id"]).data
+    assert data["status"] == "ready" and data["executed"] is True
+    assert data["evidence"]["run_id"] == data["run"]["run_id"] and data["evidence"]["passed"] >= 1
+    assert "passed" in data["notice"] and data["test_code"]
+
+
+def test_detail_of_a_failed_record_has_messages_and_no_evidence(job, repo, reader, records, runs, sandbox):
+    from core_ai.tests.test_generation.fake_sandbox import junit_fail
+
+    target = records.list(job, status="generated")[0]
+    names = [l.split("(")[0][4:] for l in target["test_code"].splitlines() if l.startswith("def test_")]
+    sandbox.script[target["test_path"]] = {"exit_code": 1, "junit": junit_fail(names, names[0], "assert 1 == 2")}
+    _run_stage(job, repo, reader, records, runs, sandbox)
+    data = _detail(job, target["record_id"]).data
+    assert (data["status"], data["reason_code"], data["evidence"]) == ("test_failed", "assertion", None)
+    assert data["run"]["tests"][0]["message"] == "assert 1 == 2"
+    assert "did not pass" in data["notice"] and data["test_code"]
+
+
+def test_detail_of_a_generated_record_is_unchanged_before_the_run(job, records):
+    target = records.list(job, status="generated")[0]
+    data = _detail(job, target["record_id"]).data
+    assert data["executed"] is False and data["run"] is None and data["evidence"] is None
+    assert data["notice"] == "This test was generated and checked for form only. It has not been run."

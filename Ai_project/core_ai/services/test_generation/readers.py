@@ -28,13 +28,14 @@ class InMemoryAnalysisReader:
         self.versions.setdefault(project_id, {})[version_number] = list(file_ids)
 
     def add_file(self, file_id, path, file_type="python", analysis_status="COMPLETED", analysis=None,
-                 last_attempt_started_at=None):
+                 last_attempt_started_at=None, content=None):
         self.files[file_id] = {
             "path": path,
             "file_type": file_type,
             "analysis_status": analysis_status,
             "analysis": analysis,
             "last_attempt_started_at": last_attempt_started_at,
+            "content": content,
         }
 
     # ── interface ────────────────────────────────────────────────────────────
@@ -62,6 +63,16 @@ class InMemoryAnalysisReader:
     def analysis_of(self, file_id):
         f = self.files.get(file_id)
         return copy.deepcopy(f["analysis"]) if f and f["analysis"] is not None else None
+
+    def content_of(self, file_id):
+        """The file's stored text (S3 copies it into the run), or None."""
+        f = self.files.get(file_id)
+        if f is None:
+            return None
+        if f.get("content") is not None:
+            return f["content"]
+        analysis = f.get("analysis") or {}
+        return (analysis.get("ast_structure") or {}).get("original_code")
 
 
 class MongoAnalysisReader:
@@ -162,6 +173,21 @@ class MongoAnalysisReader:
         if result:
             result.pop("_id", None)
         return result
+
+    def content_of(self, file_id):
+        """The file's stored text from GridFS (S3 copies it into the run), or None."""
+        oid = self._oid(file_id)
+        if not oid:
+            return None
+        doc = self._col("CODE_FILES_COLLECTION", "code_files").find_one({"_id": oid}, {"gridfs_id": 1})
+        if not doc or not doc.get("gridfs_id"):
+            return None
+        from core_ai.mongo_utils import read_from_gridfs
+
+        try:
+            return read_from_gridfs(str(doc["gridfs_id"]))
+        except Exception:
+            return None
 
     def _find_result(self, file_oid, analysis_id, projection=None):
         results = self._col("ANALYSIS_RESULTS_COLLECTION", "analysis_results")

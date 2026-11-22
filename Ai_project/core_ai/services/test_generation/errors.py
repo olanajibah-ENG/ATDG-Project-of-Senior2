@@ -37,6 +37,14 @@ def no_python_files(message="The selection contains no Python file."):
     return ApiError(422, "no_python_files", message)
 
 
+def coverage_not_ready(message="The coverage is not ready yet: the job has not finished. Poll the job and try again."):
+    return ApiError(409, "coverage_not_ready", message)
+
+
+def bundle_not_ready(message="The package is not ready yet: the job has not finished. Poll the job and try again."):
+    return ApiError(409, "bundle_not_ready", message)
+
+
 def service_unavailable(message="A service this route needs did not answer. Try again shortly."):
     return ApiError(503, "service_unavailable", message)
 

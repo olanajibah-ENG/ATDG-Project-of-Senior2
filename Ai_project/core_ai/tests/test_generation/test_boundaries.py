@@ -106,3 +106,24 @@ def test_planning_runs_with_the_language_model_blocked(repo, reader, make_projec
     assert result.done is True
     assert repo.get(job["job_id"])["status"] == "completed"
     assert _no_real_llm == []        # the blocked client was never reached
+
+
+# ── S3: who may write `ready`, and who may talk to the container engine ──────
+
+def _calls_of(path, attr):
+    with open(path, encoding="utf-8") as handle:
+        tree = ast.parse(handle.read(), filename=path)
+    return [n for n in ast.walk(tree)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == attr]
+
+
+def test_only_the_acceptance_gate_calls_accept_ready():
+    callers = {_rel(p) for p in _python_files(CORE_AI_DIR)
+               if "/tests/" not in _rel(p) and _calls_of(p, "accept_ready")}
+    assert callers == {"core_ai/services/test_generation/acceptance.py"}
+
+
+def test_only_the_docker_executor_imports_the_docker_sdk():
+    importers = {_rel(p) for p in _python_files(CORE_AI_DIR)
+                 if "/tests/" not in _rel(p) and any(i == "docker" or i.startswith("docker.") for i in _imports(p))}
+    assert importers <= {"core_ai/services/test_generation/sandbox/docker_executor.py"}

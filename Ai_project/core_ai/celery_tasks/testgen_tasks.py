@@ -14,7 +14,9 @@ from core_ai.services.test_generation.llm_facade import LLMFacade, default_clien
 from core_ai.services.test_generation.readers import get_reader
 from core_ai.services.test_generation.records import get_attempt_repo, get_record_repo
 from core_ai.services.test_generation.repo import get_job_repo
+from core_ai.services.test_generation.run_stage import RunLimits, run_sandbox_pass
 from core_ai.services.test_generation.runner import run_pass
+from core_ai.services.test_generation.runs import get_run_repo
 from core_ai.services.test_generation.statuses import JobStage
 
 
@@ -54,6 +56,24 @@ def advance_job(job_id):
 
     if not result.done:
         advance_job.apply_async((job_id,), countdown=delay)
+    elif getattr(result, "handover", False):
+        sandbox_pass.delay(job_id)                    # S3: run what was generated (queue test_sandbox)
+    return {"job_id": job_id, "done": result.done, "handover": getattr(result, "handover", False)}
+
+
+@shared_task(name="core_ai.testgen.sandbox_pass")
+def sandbox_pass(job_id):
+    """S3: one isolated run per pass. Routed to the queue `test_sandbox` (settings.CELERY_TASK_ROUTES),
+    which only the sandbox worker consumes."""
+    from core_ai.services.test_generation.sandbox.executor import get_executor
+
+    limits = RunLimits(timeout_s=settings.TESTGEN_SANDBOX_TIMEOUT_SECONDS,
+                       final_max_s=settings.TESTGEN_SANDBOX_FINAL_MAX_SECONDS,
+                       output_limit=settings.TESTGEN_SANDBOX_OUTPUT_LIMIT)
+    result = run_sandbox_pass(job_id, get_job_repo(), get_record_repo(), get_run_repo(), get_reader(),
+                              get_executor(), datetime.utcnow(), limits)
+    if not result.done:
+        sandbox_pass.delay(job_id)
     return {"job_id": job_id, "done": result.done}
 
 

@@ -32,3 +32,5 @@ langchain>=0.1.0
 langchain-openai>=0.1.0
 langchain-core>=0.1.0
 langgraph>=0.1.0
+# ── Feature 1, S3: the sandbox worker starts run containers ──
+docker==7.1.0

@@ -59,6 +59,14 @@ def _analyses_for(unit, job, reader):
 
 def _finish(job, repo, record_repo, *, stop_reason=None):
     counts = record_repo.counts(job["job_id"])
+    if counts.get(RecordStatus.GENERATED, 0):
+        # S3: generated tests are run next. A stop reason is kept on the job and shown at the end.
+        repo.update(job["job_id"], {
+            "progress": progress_from_records(counts, job["plan"]),
+            "stage": JobStage.SANDBOX_RUN, "status": JobStatus.RUNNING,
+            "error": {"code": stop_reason, "message": STOP_MESSAGES[stop_reason]} if stop_reason else None,
+        })
+        return PassResult(done=True, handover=True)
     fields = {"progress": progress_from_records(counts, job["plan"]), "stage": JobStage.GENERATED}
     if stop_reason:
         fields.update(status=JobStatus.COMPLETED_WITH_ISSUES,

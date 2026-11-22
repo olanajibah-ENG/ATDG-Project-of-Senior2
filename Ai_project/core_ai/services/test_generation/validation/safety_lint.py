@@ -7,14 +7,19 @@ import ast
 FORBIDDEN_IMPORT_ROOTS = frozenset({
     "socket", "urllib", "http", "requests", "ftplib", "smtplib", "telnetlib",
     "subprocess", "multiprocessing",
+    "signal",                         # S3: a test must not stop or signal the run
 })
 FORBIDDEN_NAME_CALLS = frozenset({"eval", "exec", "compile", "__import__"})
 FORBIDDEN_ATTR_CALLS = frozenset({
     "os.system", "os.popen", "os.remove", "os.unlink", "os.rmdir", "os.removedirs",
     "shutil.rmtree", "time.sleep",
+    # S3: ending the process early could leave a forged result file behind (research R6)
+    "os._exit", "sys.exit", "os.kill", "os.killpg", "os.abort",
 })
 FORBIDDEN_FROM_IMPORTS = frozenset({("time", "sleep"), ("os", "system"), ("os", "popen"),
-                                    ("os", "remove"), ("shutil", "rmtree")})
+                                    ("os", "remove"), ("shutil", "rmtree"),
+                                    ("os", "_exit"), ("sys", "exit"), ("os", "kill"), ("os", "abort")})
+_PATH_WRITES = ("write_text", "write_bytes")
 _TMP_MARKERS = ("tmp_path", "tmpdir", "tmp_path_factory")
 
 
@@ -67,4 +72,8 @@ def find_unsafe(tree):
                 dotted = _dotted(func)
                 if dotted in FORBIDDEN_ATTR_CALLS:
                     return f"calls {dotted}()"
+                if isinstance(func, ast.Attribute) and func.attr in _PATH_WRITES:
+                    target = ast.unparse(func.value)
+                    if not any(marker in target for marker in _TMP_MARKERS):
+                        return f"writes a file outside tmp_path: {target}.{func.attr}(...)"
     return None

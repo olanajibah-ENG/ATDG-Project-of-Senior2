@@ -88,8 +88,19 @@ def status_response(job, records=None):
         "stage": job["stage"],
         "progress": progress,
         "files": files,
+        "coverage": _coverage_totals(job),
         "error": job.get("error"),
     }
+
+
+def _coverage_totals(job):
+    from core_ai.services.test_generation.coverage import totals_only
+
+    return totals_only(job.get("coverage"))
+
+
+def coverage_response(job):
+    return job.get("coverage") or {"available": False, "reason": "no_ready_tests"}
 
 
 def plan_response(job):
@@ -104,6 +115,18 @@ def plan_response(job):
 # ── records ─────────────────────────────────────────────────────────────────
 
 NOT_RUN_NOTICE = "This test was generated and checked for form only. It has not been run."
+_SHOW_CODE = ("generated", "ready", "test_failed", "environment_error")
+
+
+def _notice(record, version_number):
+    status = record["status"]
+    if status == "ready":
+        return (f"This test was run in an isolated environment on version {version_number} and passed. "
+                "It shows the test runs on this version; it does not prove the code's logic is correct.")
+    if status in ("test_failed", "environment_error") and record.get("executed") is not None:
+        return (f"This test was run in an isolated environment on version {version_number} and did not "
+                f"pass: {record.get('reason_code')}.")
+    return NOT_RUN_NOTICE
 
 
 def validate_record_filters(query):
@@ -134,6 +157,7 @@ def _record_item(record):
         "status": record["status"],
         "reason_code": record.get("reason_code"),
         "test_path": record.get("test_path"),
+        "executed": bool(record.get("executed")),
     }
 
 
@@ -141,13 +165,18 @@ def records_response(records):
     return {"items": [_record_item(r) for r in records], "total": len(records)}
 
 
-def record_detail_response(record):
+def record_detail_response(record, version_number=None):
     item = _record_item(record)
+    run = record.get("run_result") or None
     item.update({
         "reason_detail": record.get("reason_detail"),
-        "test_code": record.get("test_code") if record["status"] == "generated" else None,
-        "executed": False,
-        "notice": NOT_RUN_NOTICE,
+        "test_code": record.get("test_code") if record["status"] in _SHOW_CODE else None,
+        "notice": _notice(record, version_number),
+        "run": ({"run_id": record.get("run_id"), "exit_code": run.get("exit_code"),
+                 "duration_s": run.get("duration_s"), "tests": run.get("tests") or [],
+                 "output": run.get("output")} if run else None),
+        "evidence": record.get("evidence") if record["status"] == "ready" else None,
+        "coverage_contribution": record.get("coverage_contribution") if record["status"] == "ready" else None,
         "model": record.get("model"),
         "prompt_version": record.get("prompt_version"),
     })

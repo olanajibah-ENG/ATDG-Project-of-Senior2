@@ -30,6 +30,15 @@ class LanguageAdapter(ABC):
     @abstractmethod
     def prompt_rules(self): ...
 
+    @abstractmethod
+    def run_argv(self, test_paths, timeout_s, with_coverage=True): ...
+
+    @abstractmethod
+    def top_level_names(self, project_paths): ...
+
+    @abstractmethod
+    def expected_test_names(self, test_code): ...
+
 
 class PythonAdapter(LanguageAdapter):
     name = "python"
@@ -60,6 +69,16 @@ class PythonAdapter(LanguageAdapter):
             "Every test function must call the unit under test and contain at least one assert "
             "(or pytest.raises).",
         ]
+
+
+    def run_argv(self, test_paths, timeout_s, with_coverage=True):
+        return python_adapter.run_argv(test_paths, timeout_s, with_coverage)
+
+    def top_level_names(self, project_paths):
+        return python_adapter.top_level_names(project_paths)
+
+    def expected_test_names(self, test_code):
+        return python_adapter.expected_test_names(test_code)
 
 
 _REGISTRY = [PythonAdapter()]

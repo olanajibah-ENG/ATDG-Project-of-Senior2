@@ -10,6 +10,7 @@ import logging
 from datetime import datetime
 
 from django.conf import settings
+from django.http import HttpResponse
 from rest_framework import exceptions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,6 +21,7 @@ from core_ai.services.test_generation import errors, project_access, staleness
 from core_ai.services.test_generation import repo as repo_module
 from core_ai.services.test_generation import readers as readers_module
 from core_ai.services.test_generation import records as records_module
+from core_ai.services.test_generation import runs as runs_module
 from core_ai.services.test_generation import scope as scope_module
 from core_ai.services.test_generation.auth import UpmJWTAuthentication, require_owner
 from core_ai.services.test_generation.statuses import FileStatus, JobStatus
@@ -123,8 +125,35 @@ class JobRecordsView(JobApiView):
 
 class JobRecordDetailView(JobApiView):
     def get(self, request, job_id, record_id):
-        self._owned_job(request, job_id)
+        job = self._owned_job(request, job_id)
         record = records_module.get_record_repo().get(record_id)
         if record is None or record["job_id"] != job_id:
             raise errors.not_found("No record with that id in this job.")
-        return Response(serializers.record_detail_response(record))
+        return Response(serializers.record_detail_response(record, job.get("version_number")))
+
+
+class JobCoverageView(JobApiView):
+    """GET jobs/{job_id}/coverage/ — the report of the final all-pass run (S3)."""
+
+    def get(self, request, job_id):
+        job = self._owned_job(request, job_id)
+        if job["status"] not in JobStatus.FINAL:
+            raise errors.coverage_not_ready()
+        return Response(serializers.coverage_response(job))
+
+
+class JobBundleView(JobApiView):
+    """GET jobs/{job_id}/bundle/ — the ready tests as one ZIP, built in memory (S3)."""
+
+    def get(self, request, job_id):
+        from core_ai.services.test_generation.bundle import build_bundle
+
+        job = self._owned_job(request, job_id)
+        if job["status"] not in JobStatus.FINAL:
+            raise errors.bundle_not_ready()
+        records = records_module.get_record_repo().list(job_id)
+        final_run = runs_module.get_run_repo().get(job["final_run_id"]) if job.get("final_run_id") else None
+        name, data = build_bundle(job, records, final_run)
+        response = HttpResponse(data, content_type="application/zip")
+        response["Content-Disposition"] = f'attachment; filename="{name}"'
+        return response

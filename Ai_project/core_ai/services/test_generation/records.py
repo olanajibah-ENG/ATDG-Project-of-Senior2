@@ -18,6 +18,15 @@ def empty_counts():
     return {name: 0 for name in RECORD_STATUSES}
 
 
+class ReadyNotAllowed(ValueError):
+    """`ready` is written only through accept_ready(), which only the acceptance gate calls."""
+
+
+def _refuse_ready(fields):
+    if fields.get("status") == RecordStatus.READY:
+        raise ReadyNotAllowed("a record becomes ready only through the acceptance gate")
+
+
 # ── records ─────────────────────────────────────────────────────────────────
 
 class InMemoryRecordRepo:
@@ -46,7 +55,22 @@ class InMemoryRecordRepo:
                 return copy.deepcopy(item)
         return None
 
+    def next_generated(self, job_id):
+        """The next record of level `unit` waiting to be run (S3), in plan order."""
+        for item in self._items:
+            if item["job_id"] == job_id and item["level"] == "unit" and item["status"] == RecordStatus.GENERATED:
+                return copy.deepcopy(item)
+        return None
+
     def update(self, record_id, fields):
+        _refuse_ready(fields)
+        self._write(record_id, fields)
+
+    def accept_ready(self, record_id, fields):
+        """Only the acceptance gate calls this."""
+        self._write(record_id, dict(fields, status=RecordStatus.READY))
+
+    def _write(self, record_id, fields):
         for item in self._items:
             if item["record_id"] == record_id:
                 item.update(copy.deepcopy(fields))
@@ -107,7 +131,19 @@ class MongoRecordRepo:
         return self._clean(self._col().find_one(
             {"job_id": job_id, "level": level, "status": RecordStatus.PENDING}, sort=[("_id", 1)]))
 
+    def next_generated(self, job_id):
+        return self._clean(self._col().find_one(
+            {"job_id": job_id, "level": "unit", "status": RecordStatus.GENERATED}, sort=[("_id", 1)]))
+
     def update(self, record_id, fields):
+        _refuse_ready(fields)
+        self._write(record_id, fields)
+
+    def accept_ready(self, record_id, fields):
+        """Only the acceptance gate calls this."""
+        self._write(record_id, dict(fields, status=RecordStatus.READY))
+
+    def _write(self, record_id, fields):
         fields = dict(fields)
         fields["updated_at"] = datetime.utcnow()
         self._col().update_one({"record_id": record_id}, {"$set": fields})

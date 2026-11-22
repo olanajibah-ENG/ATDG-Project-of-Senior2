@@ -367,3 +367,19 @@ def test_first_upload_of_loose_files_keeps_the_project_folder(db):
     r1 = upload(data_files=[("course.py", COURSE_V1)], project_name="demo3")
     assert r1.status_code == 201 and r1.data["matched_paths"] == {}
     assert set(by_path(tree(1)["flat_files"])) == {"demo3/course.py"}
+
+
+def test_test_generation_never_reads_a_deleted_or_older_file(db):
+    """S3 copies exactly these files into the run (review point 2)."""
+    from core_ai.services.test_generation.readers import MongoAnalysisReader
+
+    upload(zip_files=V1)
+    r2 = upload(zip_files=V2)                                   # course.py modified
+    r3 = upload(zip_files={k: v for k, v in V2.items() if k != "demo/main.py"})   # main.py deleted
+    assert r3.status_code == 201
+    files = MongoAnalysisReader(db=db).files_of_version(PROJECT, 3)
+    assert [f["path"] for f in files] == ["demo/course.py", "demo/student.py"]          # no main.py
+    course = next(f for f in files if f["path"] == "demo/course.py")
+    assert course["file_id"] == next(f["file_id"] for f in r2.data["files"] if f["filepath"] == "demo/course.py")
+    old = MongoAnalysisReader(db=db).files_of_version(PROJECT, 1)                       # v1 untouched
+    assert len(old) == 3 and course["file_id"] not in {f["file_id"] for f in old}

@@ -1,0 +1,32 @@
+[
+  {
+    "record_id": "t_18b068addf",
+    "unit_id": "demo/course.py::Course.__init__",
+    "level": "unit",
+    "status": "ready",
+    "reason_code": null,
+    "reason_detail": null,
+    "test_path": "tests/generated/unit/test_demo_course_Course___init____unit.py",
+    "run_id": "sbx_job_147272fad542_t_18b068addf_1"
+  },
+  {
+    "record_id": "t_a49b581b03",
+    "unit_id": "demo/course.py::Course.is_full",
+    "level": "unit",
+    "status": "ready",
+    "reason_code": null,
+    "reason_detail": null,
+    "test_path": "tests/generated/unit/test_demo_course_Course_is_full__unit.py",
+    "run_id": "sbx_job_147272fad542_t_a49b581b03_2"
+  },
+  {
+    "record_id": "t_e927762a02",
+    "unit_id": "demo/course.py::Course.add_student",
+    "level": "unit",
+    "status": "ready",
+    "reason_code": null,
+    "reason_detail": null,
+    "test_path": "tests/generated/unit/test_demo_course_Course_add_student__unit.py",
+    "run_id": "sbx_job_147272fad542_t_e927762a02_3"
+  }
+]

@@ -1,0 +1,461 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>اختبارات S3</title>
+<style>
+  @page { size: A4; margin: 14mm 12mm; }
+  body { margin:0; color:#1b2330; font-family:"Segoe UI",Tahoma,Arial,sans-serif; font-size:12.3px; line-height:1.7; background:#fff; }
+  main { max-width:900px; margin:0 auto; padding:0 4px; }
+  h1 { font-size:22px; color:#2f5fb3; margin:8px 0 2px; }
+  h2 { font-size:16.5px; color:#2f5fb3; border-bottom:2px solid #2f5fb3; padding-bottom:3px; margin:22px 0 8px; break-after:avoid; }
+  h3 { font-size:13px; margin:4px 0; break-after:avoid; }
+  .sub { color:#5b6578; }
+  section { border:1px solid #d6dce6; border-radius:8px; padding:8px 10px; margin:8px 0; }
+  .req { direction:ltr; text-align:left; }
+  .lbl { color:#5b6578; font-size:11.5px; margin-top:4px; }
+  .st { background:#e9eef7; border-radius:4px; padding:0 5px; color:#1b2330; }
+  code, pre { font-family:Consolas,"Courier New",monospace; direction:ltr; unicode-bidi:embed; }
+  code { background:#f4f6fa; padding:0 3px; border-radius:3px; font-size:11.3px; }
+  pre { background:#f4f6fa; border:1px solid #d6dce6; border-radius:6px; padding:6px 9px; font-size:10.2px; line-height:1.4;
+         text-align:left; white-space:pre-wrap; word-break:break-word; margin:3px 0; }
+  pre.ps { background:#012456; color:#eef3ff; border-color:#012456; }
+  table { width:100%; border-collapse:collapse; margin:6px 0; font-size:11.5px; }
+  th, td { border:1px solid #d6dce6; padding:4px 7px; text-align:right; vertical-align:top; }
+  th { background:#e9eef7; }
+  .ok { color:#1d7a4f; font-weight:600; }
+  .box { background:#f4f6fa; border:1px solid #d6dce6; border-radius:8px; padding:8px 12px; margin:8px 0; }
+  .pb { break-before:page; }
+</style></head><body><main>
+<h1>اختبارات الشريحة S3: التشغيل المعزول و ready</h1>
+<div class="sub">كل الروابط مع خرجها الحقيقي، وكل يلي انعمل بـ PowerShell، والـ unit tests. 20/11/2026 · مشروع demo3 =
+<code>c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77</code> · النسخة 10.</div>
+
+<h2>الخلاصة</h2>
+<table>
+<tr><th>الفحص</th><th>النتيجة</th></tr>
+<tr><td>job حقيقي: كل اختبار مولّد بينشغّل بـ container معزول، والناجح بيصير <code>ready</code> مع دليل</td><td class="ok">✓ 3 من 3 (مرتين: job_7ba739d02910 و job_147272fad542)</td></tr>
+<tr><td>التشغيلة الأخيرة لكل اختبارات <code>ready</code> مع بعض، والتغطية منها</td><td class="ok">✓ أسطر 100% · فروع 100%</td></tr>
+<tr><td>حزمة ZIP، وبتشتغل لحالها بأمر واحد</td><td class="ok">✓ 9 passed</td></tr>
+<tr><td>409 قبل ما يخلص الـ job، و 401 بدون توكن</td><td class="ok">✓</td></tr>
+<tr><td>الشبكة مقطوعة (بالاسم وبالـ IP)</td><td class="ok">✓</td></tr>
+<tr><td>كود المشروع للقراءة بس</td><td class="ok">✓</td></tr>
+<tr><td>مستخدم مش root (10001)، وما في أسرار</td><td class="ok">✓</td></tr>
+<tr><td>حلقة ما بتخلص بتنقتل بالوقت المحدد</td><td class="ok">✓ exit 137</td></tr>
+<tr><td>ما بيضل ولا container ولا volume بعد التشغيل</td><td class="ok">✓</td></tr>
+<tr><td>كل الـ unit tests</td><td class="ok">✓ 662 من 662</td></tr>
+</table>
+
+<h2>1. يلي انعمل بـ PowerShell</h2>
+<h3>بناء صورة الـ sandbox</h3>
+<pre class="ps">docker compose build testgen_sandbox_image</pre>
+<pre class="">[2/3] RUN pip install --no-cache-dir pytest==8.3.3 pytest-cov==5.0.0 &amp;&amp; groupadd -g 10001 sbx &amp;&amp; useradd -u 10001 ...  18.8s
+=&gt; naming to docker.io/library/autotest-sandbox:py3.10-s3
+[+] Building 1/1  ✔ autotest-sandbox:py3.10-s3  Built          (22.3s)</pre>
+<h3>بناء العامل الجديد</h3>
+<pre class="ps">docker compose build testgen_sandbox_worker</pre>
+<pre class="">=&gt; [internal] load build context   transferring context: 728.95MB   350.8s
+=&gt; [ 7/10] RUN pip install --no-cache-dir -r requirements.txt   285.6s
+✔ senior-project1atdg-testgen_sandbox_worker  Built          (900.7s)</pre>
+<div class="box">أخد 15 دقيقة، منها 6 دقايق بس لنقل 729MB من مجلد <code>Ai_project</code> (فيه cache التقييم). ممكن يتحسّن بـ <code>.dockerignore</code>، وهاد برّا S3.</div>
+<h3>الصورة، والتشغيل، وإعادة التشغيل</h3>
+<pre class="ps">docker image ls autotest-sandbox</pre>
+<pre class="">autotest-sandbox:py3.10-s3   e6a91c6a0dc0   202MB   49.2MB</pre>
+<pre class="ps">docker compose up -d testgen_sandbox_worker
+docker compose restart ai_web celery_worker
+docker restart upm_api_gateway</pre>
+<h3>الـ log تبع العامل الجديد</h3>
+<pre class="ps">docker compose logs --tail 30 testgen_sandbox_worker</pre>
+<pre class=""> -------------- [queues]
+                .&gt; test_sandbox     exchange=test_sandbox(direct) key=test_sandbox
+[tasks]
+  . core_ai.testgen.advance_job
+  . core_ai.testgen.sandbox_pass
+[...] sandbox@10fc4be46b64 ready.</pre>
+<div class="box">العامل بيسمع على طابور <code>test_sandbox</code> بس. وتحذير <code>SecurityWarning: superuser</code> عن العامل نفسه جوّا container تبعه، متل العامل القديم. الاختبارات بتنشغّل بـ container تاني بالمستخدم 10001. و <code>missed heartbeat from celery@cb950677fcb1</code> عن العامل القديم وقت إعادة تشغيله.</div>
+
+<h3>فحوص العزل بإيدك: الملف <code>docs/sandbox_check/test_checks.py</code></h3>
+<pre class="">import socket, os
+
+def test_network_is_off():
+    socket.create_connection((&quot;example.com&quot;, 80), timeout=3)
+
+def test_source_is_read_only():
+    with open(&quot;/workspace/src/hack.py&quot;, &quot;w&quot;) as f:
+        f.write(&quot;x = 1&quot;)
+
+def test_who_am_i():
+    assert os.getuid() == 10001
+
+def test_no_secret_in_env():
+    ours = (&quot;OPENROUTER&quot;, &quot;SECRET_KEY&quot;, &quot;JWT&quot;, &quot;MONGO&quot;, &quot;REDIS&quot;, &quot;DJANGO&quot;, &quot;CELERY&quot;, &quot;PASSWORD&quot;, &quot;TOKEN&quot;)
+    leaked = [k for k in os.environ if any(word in k for word in ours)]
+    assert leaked == [], leaked
+
+def test_network_is_off_even_by_ip():
+    socket.create_connection((&quot;1.1.1.1&quot;, 80), timeout=3)
+
+def test_forever():          # added for the time-limit check
+    while True:
+        pass
+</pre>
+<pre class="ps">docker run --rm --network none --read-only --tmpfs /tmp:rw,size=64m --cpus 1 --memory 512m --memory-swap 512m --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges --user 10001:10001 -v &quot;${PWD}:/workspace/tests:ro&quot; autotest-sandbox:py3.10-s3 timeout --signal=KILL 60 python -m pytest tests/test_checks.py -q -p no:cacheprovider</pre>
+<pre class="">FF..F                                                                    [100%]
+test_network_is_off:            socket.gaierror: [Errno -3] Temporary failure in name resolution
+test_source_is_read_only:       OSError: [Errno 30] Read-only file system: &#x27;/workspace/src/hack.py&#x27;
+test_network_is_off_even_by_ip: OSError: [Errno 101] Network is unreachable
+3 failed, 2 passed in 0.13s</pre>
+<table>
+<tr><th>الاختبار</th><th>النتيجة</th><th>المعنى</th></tr>
+<tr><td><code>test_network_is_off</code></td><td>فشل ✓</td><td>ما في DNS ولا شبكة</td></tr>
+<tr><td><code>test_network_is_off_even_by_ip</code></td><td>فشل ✓</td><td>حتى الـ IP المباشر: Network is unreachable</td></tr>
+<tr><td><code>test_source_is_read_only</code></td><td>فشل ✓</td><td>الاختبار ما بيقدر يغيّر الكود</td></tr>
+<tr><td><code>test_who_am_i</code></td><td>نجح ✓</td><td>المستخدم 10001 مش root</td></tr>
+<tr><td><code>test_no_secret_in_env</code></td><td>نجح ✓</td><td>ولا متغيّر من عنا</td></tr>
+</table>
+<div class="box">بأول نسخة من الفحص (بتدوّر على كلمة <code>KEY</code> بأي اسم) طلع <code>GPG_KEY=A035C8C1…</code>. هاد من صورة <code>python:3.10-slim</code> الأصلية: بصمة المفتاح العام لفريق بايثون، منشورة ومش سر. فحصنا كل متغيّرات الصورة: <code>GPG_KEY, HOME, LANG, PATH, PYTHONDONTWRITEBYTECODE, PYTHONPATH, PYTHON_SHA256, PYTHON_VERSION</code>.</div>
+<h3>الحلقة الما بتخلص (<code>timeout --signal=KILL 10</code>)</h3>
+<pre class="ps">docker run --rm --network none --read-only --tmpfs /tmp:rw,size=64m --cpus 1 --memory 512m --memory-swap 512m --pids-limit 128 --cap-drop ALL --security-opt no-new-privileges --user 10001:10001 -v &quot;${PWD}:/workspace/tests:ro&quot; autotest-sandbox:py3.10-s3 timeout --signal=KILL 10 python -m pytest tests/test_checks.py -q -p no:cacheprovider
+$LASTEXITCODE</pre>
+<pre class="">FF..F
+137</pre>
+<div class="box">pytest علق بـ <code>test_forever</code>، وبعد 10 ثواني انقتل قبل ما يطبع النتيجة. كود الخروج 137 = 128 + 9 (KILL). بالنظام هالرقم بيعطي <code>test_failed / timeout</code>.</div>
+
+<h2 class="pb">2. روابط Postman: تجربتك (<code>job_7ba739d02910</code>)</h2>
+<section><h3>حالة الـ job بعد ما خلص: 3 من 3 ready</h3>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_7ba739d02910/</code></div>
+<div class="lbl">الخرج <span class="st">HTTP 200</span></div><pre class="">{
+  &quot;job_id&quot;: &quot;job_7ba739d02910&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 10,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;stage&quot;: &quot;sandbox_run&quot;,
+  &quot;progress&quot;: {
+    &quot;total&quot;: 3,
+    &quot;done&quot;: 3,
+    &quot;by_status&quot;: {
+      &quot;pending&quot;: 0,
+      &quot;generated&quot;: 0,
+      &quot;ready&quot;: 3,
+      &quot;skipped&quot;: 0,
+      &quot;generation_failed&quot;: 0,
+      &quot;test_failed&quot;: 0,
+      &quot;environment_error&quot;: 0
+    }
+  },
+  &quot;files&quot;: [
+    {
+      &quot;path&quot;: &quot;demo/course.py&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;levels&quot;: {
+        &quot;unit&quot;: &quot;ready&quot;
+      }
+    }
+  ],
+  &quot;error&quot;: null
+}</pre></section>
+<section><h3>record واحد: التشغيل الحقيقي والدليل والتغطية تبعه</h3>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_7ba739d02910/records/t_54e06af739/</code></div>
+<div class="lbl">الخرج <span class="st">HTTP 200</span> (test_code مختصر هون)</div><pre class="">{
+  &quot;id&quot;: &quot;t_54e06af739&quot;,
+  &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+  &quot;level&quot;: &quot;unit&quot;,
+  &quot;status&quot;: &quot;ready&quot;,
+  &quot;executed&quot;: true,
+  &quot;notice&quot;: &quot;This test was run in an isolated environment on version 10 and passed. It shows the test runs on this version; it does not prove the code&#x27;s logic is correct.&quot;,
+  &quot;run&quot;: {
+    &quot;run_id&quot;: &quot;sbx_job_7ba739d02910_t_54e06af739_1&quot;,
+    &quot;exit_code&quot;: 0,
+    &quot;duration_s&quot;: 4.146,
+    &quot;tests&quot;: [
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_1&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;
+      },
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_2&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;
+      },
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_3&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;
+      }
+    ],
+    &quot;output&quot;: &quot;...  [100%]\n--- generated xml file: /out/junit.xml ---\n--- coverage: platform linux, python 3.10.20 ---\nCoverage JSON written to file /out/cov.json\n\n3 passed in 0.13s&quot;
+  },
+  &quot;evidence&quot;: {
+    &quot;run_id&quot;: &quot;sbx_job_7ba739d02910_t_54e06af739_1&quot;,
+    &quot;version_number&quot;: 10,
+    &quot;body_hash&quot;: &quot;d828b89195fb2bcc&quot;,
+    &quot;test_sha256&quot;: &quot;c5f2ce1b89b80afd7e600684016b0b6cde394c652b80d8d0525e0088026e8e97&quot;,
+    &quot;tests&quot;: 3,
+    &quot;passed&quot;: 3,
+    &quot;duration_s&quot;: 4.146,
+    &quot;accepted_at&quot;: &quot;2026-11-20T18:29:42.814000&quot;
+  },
+  &quot;coverage_contribution&quot;: {
+    &quot;label&quot;: &quot;this record&#x27;s own run&quot;,
+    &quot;files&quot;: [
+      {
+        &quot;file&quot;: &quot;src/demo/course.py&quot;,
+        &quot;covered_lines&quot;: [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          10
+        ],
+        &quot;covered_branches&quot;: 0
+      }
+    ]
+  },
+  &quot;model&quot;: &quot;cohere/north-mini-code:free&quot;,
+  &quot;prompt_version&quot;: &quot;unit-v2&quot;
+}</pre></section>
+<div class="box">هالتجربة كانت قبل ما تنبنى التشغيلة الأخيرة والتغطية والحزمة، فمرحلتها الأخيرة <code>sandbox_run</code>. ومنها لقينا غلطتين وصلحناهم (القسم 4).</div>
+
+<h2>3. روابط Postman: تجربة كاملة بعد US4 و US5 (<code>job_147272fad542</code>)</h2>
+<div class="sub">نفس الروابط، عبر الـ gateway على <code>http://localhost</code>، بتوكن <code>user3</code>. المراحل يلي شفناها: completed/final_run ← running/final_run ← running/sandbox_run ← pending/queued.</div>
+<section><h3>بدء job على demo/course.py مستوى unit</h3><div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code></div><div class="lbl">Body:</div><pre class="">{
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;paths&quot;: [
+    &quot;demo/course.py&quot;
+  ],
+  &quot;levels&quot;: [
+    &quot;unit&quot;
+  ]
+}</pre><div class="lbl">الخرج <span class="st">HTTP 202</span></div><pre class="">{
+  &quot;job_id&quot;: &quot;job_147272fad542&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 10
+}</pre></section>
+<section><h3>التغطية قبل ما يخلص: 409 بشكل الأخطاء الموحّد</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/coverage/</code></div><div class="lbl">الخرج <span class="st">HTTP 409</span></div><pre class="">{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;coverage_not_ready&quot;,
+    &quot;message&quot;: &quot;The coverage is not ready yet: the job has not finished. Poll the job and try again.&quot;,
+    &quot;details&quot;: {}
+  }
+}</pre></section>
+<section><h3>الحزمة قبل ما يخلص: 409</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/bundle/</code></div><div class="lbl">الخرج <span class="st">HTTP 409</span></div><pre class="">{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;bundle_not_ready&quot;,
+    &quot;message&quot;: &quot;The package is not ready yet: the job has not finished. Poll the job and try again.&quot;,
+    &quot;details&quot;: {}
+  }
+}</pre></section>
+<section><h3>حالة الـ job بالآخر: completed، والمرحلة final_run، والتغطية بالإجمالي</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/</code></div><div class="lbl">الخرج <span class="st">HTTP 200</span></div><pre class="">{
+  &quot;job_id&quot;: &quot;job_147272fad542&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 10,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;stage&quot;: &quot;final_run&quot;,
+  &quot;progress&quot;: {
+    &quot;total&quot;: 3,
+    &quot;done&quot;: 3,
+    &quot;by_status&quot;: {
+      &quot;pending&quot;: 0,
+      &quot;generated&quot;: 0,
+      &quot;ready&quot;: 3,
+      &quot;skipped&quot;: 0,
+      &quot;generation_failed&quot;: 0,
+      &quot;test_failed&quot;: 0,
+      &quot;environment_error&quot;: 0
+    }
+  },
+  &quot;files&quot;: [
+    {
+      &quot;path&quot;: &quot;demo/course.py&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;levels&quot;: {
+        &quot;unit&quot;: &quot;ready&quot;
+      }
+    }
+  ],
+  &quot;coverage&quot;: {
+    &quot;line_pct&quot;: 100.0,
+    &quot;branch_pct&quot;: 100.0,
+    &quot;combined_pct&quot;: 100.0
+  },
+  &quot;error&quot;: null
+}</pre></section>
+<section><h3>الـ records: الثلاثة ready</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/records/</code></div><div class="lbl">الخرج <span class="st">HTTP 200</span></div><pre class="">{
+  &quot;items&quot;: [
+    {
+      &quot;id&quot;: &quot;t_18b068addf&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course___init____unit.py&quot;,
+      &quot;executed&quot;: true
+    },
+    {
+      &quot;id&quot;: &quot;t_a49b581b03&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.is_full&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_is_full__unit.py&quot;,
+      &quot;executed&quot;: true
+    },
+    {
+      &quot;id&quot;: &quot;t_e927762a02&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.add_student&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_add_student__unit.py&quot;,
+      &quot;executed&quot;: true
+    }
+  ],
+  &quot;total&quot;: 3
+}</pre></section>
+<section><h3>record واحد بعد التصليح: التغطية بمسار المشروع (demo/course.py) والرسالة null للناجح</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/records/t_18b068addf/</code></div><div class="lbl">الخرج <span class="st">HTTP 200</span></div><pre class="">{
+  &quot;id&quot;: &quot;t_18b068addf&quot;,
+  &quot;file&quot;: &quot;demo/course.py&quot;,
+  &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+  &quot;level&quot;: &quot;unit&quot;,
+  &quot;status&quot;: &quot;ready&quot;,
+  &quot;reason_code&quot;: null,
+  &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course___init____unit.py&quot;,
+  &quot;executed&quot;: true,
+  &quot;reason_detail&quot;: null,
+  &quot;test_code&quot;: &quot;# Generated by AutoTest &amp; DocGen Manager — Feature 1 (Generate Trusted Tests)\n# unit:      demo/course.py::Course.__init__\n# level:     unit\n# body hash: d828b89195fb2bcc\n# job:       job_147272fad542\n# status:    generated and checked for form only — NOT RUN YET\n\nimport pytest\nfrom demo.course import Course\n\ndef test_Course___init____unit_1():\n    # Test with default capacity\n    course = Course(\&quot;Python Basics\&quot;)\n    …&quot;,
+  &quot;notice&quot;: &quot;This test was run in an isolated environment on version 10 and passed. It shows the test runs on this version; it does not prove the code&#x27;s logic is correct.&quot;,
+  &quot;run&quot;: {
+    &quot;run_id&quot;: &quot;sbx_job_147272fad542_t_18b068addf_1&quot;,
+    &quot;exit_code&quot;: 0,
+    &quot;duration_s&quot;: 2.342,
+    &quot;tests&quot;: [
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_1&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;,
+        &quot;message&quot;: null
+      },
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_2&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;,
+        &quot;message&quot;: null
+      },
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_3&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;,
+        &quot;message&quot;: null
+      }
+    ],
+    &quot;output&quot;: &quot;...                                                                      [100%]\n---------------------- generated xml file: /out/junit.xml ----------------------\n\n---------- coverage: platform linux, python 3.10.20-final-0 ----------\nCoverage JSON written to fi …&quot;
+  },
+  &quot;evidence&quot;: {
+    &quot;run_id&quot;: &quot;sbx_job_147272fad542_t_18b068addf_1&quot;,
+    &quot;version_number&quot;: 10,
+    &quot;body_hash&quot;: &quot;d828b89195fb2bcc&quot;,
+    &quot;test_sha256&quot;: &quot;6a24553a8be4b838f3dc99d3c927b9ca7b140b01fcf5aa714ebfffbe9c859e45&quot;,
+    &quot;tests&quot;: 3,
+    &quot;passed&quot;: 3,
+    &quot;duration_s&quot;: 2.342,
+    &quot;accepted_at&quot;: &quot;2026-11-20T19:10:57.106000&quot;
+  },
+  &quot;coverage_contribution&quot;: {
+    &quot;label&quot;: &quot;this record&#x27;s own run&quot;,
+    &quot;files&quot;: [
+      {
+        &quot;file&quot;: &quot;demo/course.py&quot;,
+        &quot;covered_lines&quot;: [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          10
+        ],
+        &quot;covered_branches&quot;: 0
+      }
+    ]
+  },
+  &quot;model&quot;: &quot;cohere/north-mini-code:free&quot;,
+  &quot;prompt_version&quot;: &quot;unit-v2&quot;
+}</pre></section>
+<section><h3>تقرير التغطية من التشغيلة الأخيرة</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/coverage/</code></div><div class="lbl">الخرج <span class="st">HTTP 200</span></div><pre class="">{
+  &quot;available&quot;: true,
+  &quot;final_run_id&quot;: &quot;sbx_job_147272fad542_final_1&quot;,
+  &quot;branch&quot;: true,
+  &quot;scope&quot;: &quot;ready records only (3)&quot;,
+  &quot;files&quot;: [
+    {
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;statements&quot;: 12,
+      &quot;covered&quot;: 12,
+      &quot;line_pct&quot;: 100.0,
+      &quot;branches&quot;: 4,
+      &quot;branches_covered&quot;: 4,
+      &quot;branch_pct&quot;: 100.0,
+      &quot;missing_lines&quot;: [],
+      &quot;missing_annotations&quot;: {}
+    }
+  ],
+  &quot;totals&quot;: {
+    &quot;statements&quot;: 12,
+    &quot;covered&quot;: 12,
+    &quot;branches&quot;: 4,
+    &quot;branches_covered&quot;: 4,
+    &quot;line_pct&quot;: 100.0,
+    &quot;branch_pct&quot;: 100.0,
+    &quot;combined_pct&quot;: 100.0
+  },
+  &quot;not_measured&quot;: [],
+  &quot;excluded_records&quot;: []
+}</pre></section>
+<section><h3>الحزمة: ملف ZIP</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/bundle/</code></div><div class="lbl">الخرج <span class="st">HTTP 200</span></div><pre class="">{
+  &quot;headers&quot;: {
+    &quot;Content-Type&quot;: &quot;application/zip&quot;,
+    &quot;Content-Disposition&quot;: &quot;attachment; filename=\&quot;job_147272fad542_c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77_v10.zip\&quot;&quot;
+  },
+  &quot;size_bytes&quot;: 4368
+}</pre></section>
+<section><h3>بدون توكن: 401</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/coverage/</code></div><div class="lbl">الخرج <span class="st">HTTP 401</span></div><pre class="">{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;unauthorized&quot;,
+    &quot;message&quot;: &quot;Authentication credentials were not provided.&quot;,
+    &quot;details&quot;: {}
+  }
+}</pre></section>
+<section><h3>الـ log وقت هالـ job</h3><pre class="">[SANDBOX] run sbx_job_147272fad542_t_18b068addf_1 exit=0 timed_out=False 2.34s
+[SANDBOX] run sbx_job_147272fad542_t_a49b581b03_2 exit=0 timed_out=False 2.57s
+[SANDBOX] run sbx_job_147272fad542_t_e927762a02_3 exit=0 timed_out=False 2.13s
+[SANDBOX] run sbx_job_147272fad542_final_1 exit=0 timed_out=False 3.54s</pre></section>
+<section><h3>الحزمة بتشتغل لحالها (SC-006)</h3>
+<pre class="">MANIFEST.json, coverage_report.json, junit_results.xml, plan.json, pytest.ini, records_summary.json,
+tests/generated/unit/test_demo_course_Course___init____unit.py
+tests/generated/unit/test_demo_course_Course_add_student__unit.py
+tests/generated/unit/test_demo_course_Course_is_full__unit.py</pre>
+<div class="lbl">فكّينا الـ ZIP، وحطينا كود النسخة 10 جنبه كـ <code>src/</code>، وشغّلنا <code>pytest</code> مرة وحدة بلا شبكة:</div>
+<pre class="">9 passed in 0.56s</pre></section>
+
+<h2>4. شو لقينا بالتجارب الحقيقية وصلّحناه</h2>
+<table>
+<tr><th>الشي</th><th>التصليح</th></tr>
+<tr><td>pytest-cov بيكتب ملف بياناته بالمجلد الحالي، وهو للقراءة بس</td><td>متغيّر <code>COVERAGE_FILE=/tmp/.coverage</code> للتشغيل</td></tr>
+<tr><td>مسار التغطية طلع <code>src/demo/course.py</code> بدل <code>demo/course.py</code></td><td>قراءة المسارين (نسبي ومطلق)، وصار مسار المشروع</td></tr>
+<tr><td><code>"message": ""</code> للاختبار الناجح</td><td>صار <code>null</code></td></tr>
+<tr><td>رأس ملف الاختبار بيقول "NOT RUN YET" حتى بعد ما صار ready</td><td>بالحزمة: "ready — passed in isolated run … on version …"</td></tr>
+</table>
+
+<h2>5. الـ unit tests</h2>
+<pre class="ps">docker compose run --rm --no-deps -T --entrypoint sh ai_web -c &quot;pip install -q pytest; python -m pytest core_ai/tests test_graphify_implementation.py -q&quot;
+→ 662 passed</pre>
+<table>
+<tr><th>ملف</th><th>العدد</th><th>شو بيفحص</th></tr>
+<tr><td><code>test_results.py</code></td><td>39</td><td>قراءة junit والتغطية، وكل صف بجدول القرار، والملف التالف</td></tr>
+<tr><td><code>test_run_stage.py</code></td><td>30</td><td>record بكل مرة، البوابة، كل أسباب الفشل، التشغيلة الأخيرة و fails_with_others، التغطية من التشغيلة الأخيرة بس</td></tr>
+<tr><td><code>test_docker_executor.py</code></td><td>10</td><td>كل خيار عزل حرفياً، والبيئة، والتنظيف، والوقت</td></tr>
+<tr><td><code>test_api_sandbox.py</code></td><td>7</td><td>التغطية والحزمة: 200، 409 بالشكل الموحّد، 403، 401</td></tr>
+<tr><td><code>test_bundle.py</code></td><td>6</td><td>ready بس، الملخص، الـ MANIFEST، بلا كود ولا أسرار</td></tr>
+<tr><td><code>test_workspace.py</code></td><td>6</td><td>ملفات النسخة: الأحدث لكل مسار، بلا محذوف، ولا نسخة أحدث</td></tr>
+<tr><td><code>test_coverage.py</code></td><td>5</td><td>شكل التقرير، و missing_annotations، و not_measured</td></tr>
+<tr><td><code>test_validator.py</code> (+8)، <code>test_boundaries.py</code> (+2)، <code>test_api_records.py</code> (+3)، <code>test_folder_upload_versions.py</code> (+1)</td><td>14</td><td>قواعد الأمان الجديدة، ما حدا غير البوابة بيكتب ready وما حدا غير المنفّذ بيستورد docker، تفاصيل الـ record، القارئ</td></tr>
+</table>
+</main></body></html>

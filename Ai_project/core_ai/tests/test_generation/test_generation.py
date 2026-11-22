@@ -26,7 +26,9 @@ def run_to_end(job_id, repo, reader, records, attempts, model, max_requests=20, 
     run_pass(job_id, repo, reader, lambda file_id: None, NOW, then_generate=True, record_repo=records)
     facade = LLMFacade(model, attempts, max_tokens=2000)
     passes = 0
-    while repo.get(job_id)["status"] == "running" and passes < max_passes:
+    # S3: generation ends by handing over to the run stage (status running, stage sandbox_run)
+    while (repo.get(job_id)["status"] == "running" and repo.get(job_id)["stage"] != "sandbox_run"
+           and passes < max_passes):
         run_generation_pass(job_id, repo, records, attempts, reader, facade, NOW, max_requests=max_requests)
         passes += 1
     return passes
@@ -66,7 +68,7 @@ def test_one_unit_per_pass_until_all_are_generated(repo, reader, records, attemp
     job = repo.get(job_id)
     assert passes == 15                               # 14 units + the pass that finds none left
     assert len(model.calls) == 14                     # one request per unit, never more
-    assert (job["status"], job["stage"], job["error"]) == ("completed", "generated", None)
+    assert (job["status"], job["stage"], job["error"]) == ("running", "sandbox_run", None)   # handed to S3
     assert job["llm_requests"] == 14
 
     unit_records = records.list(job_id, level="unit")
@@ -114,7 +116,7 @@ def test_one_bad_answer_fails_only_its_unit(repo, reader, records, attempts, mak
     run_to_end(job_id, repo, reader, records, attempts, model)
 
     job = repo.get(job_id)
-    assert (job["status"], job["stage"], job["error"]) == ("completed_with_issues", "generated", None)
+    assert (job["status"], job["stage"], job["error"]) == ("running", "sandbox_run", None)   # handed to S3
     failed = records.list(job_id, status="generation_failed")
     assert [(r["unit_id"], r["reason_code"]) for r in failed] == [("game.py::Course.add_student", "no_code")]
     assert failed[0]["test_code"] is None and failed[0]["test_path"] is None
@@ -182,7 +184,7 @@ def test_model_unavailable_stops_the_job_and_fails_nothing(repo, reader, records
     run_to_end(job_id, repo, reader, records, attempts, model)
 
     job = repo.get(job_id)
-    assert (job["status"], job["stage"]) == ("completed_with_issues", "generated")
+    assert (job["status"], job["stage"]) == ("running", "sandbox_run")   # generated tests still run (S3)
     assert job["error"]["code"] == "model_unavailable" and "pending" in job["error"]["message"]
     assert len(model.calls) == 4                         # it did not go on to try the other units
     assert len(records.list(job_id, status="generated")) == 3
@@ -199,7 +201,7 @@ def test_request_limit_stops_the_job(repo, reader, records, attempts, make_proje
     run_to_end(job_id, repo, reader, records, attempts, model, max_requests=5)
 
     job = repo.get(job_id)
-    assert job["status"] == "completed_with_issues" and job["error"]["code"] == "request_limit_reached"
+    assert job["status"] == "running" and job["error"]["code"] == "request_limit_reached"   # S3 runs what exists
     assert len(model.calls) == 5 and job["llm_requests"] == 5
     assert len(records.list(job_id, status="generated")) == 5
     assert len(records.list(job_id, status="pending")) == 9
@@ -229,7 +231,7 @@ def test_second_job_on_the_same_code_spends_no_request(repo, reader, records, at
 
     assert len(model.calls) == 14                        # all from the first job
     job = repo.get(second)
-    assert job["status"] == "completed" and job["llm_requests"] == 0
+    assert (job["status"], job["stage"]) == ("running", "sandbox_run") and job["llm_requests"] == 0
     second_records = records.list(second, level="unit")
     assert {r["status"] for r in second_records} == {"generated"} and all(r["reused"] for r in second_records)
     second_attempts = attempts.list(second)
@@ -247,7 +249,7 @@ def test_a_later_job_finishes_what_a_stopped_job_left(repo, reader, records, att
     second = start(repo, reader, levels=["unit"])
     run_to_end(second, repo, reader, records, attempts, model)
     assert len(model.calls) == 9                         # only the 9 units the first job never reached
-    assert repo.get(second)["status"] == "completed" and repo.get(second)["llm_requests"] == 9
+    assert repo.get(second)["stage"] == "sandbox_run" and repo.get(second)["llm_requests"] == 9
 
 
 def test_changing_one_body_asks_again_for_that_unit_only(repo, reader, records, attempts, make_project):
@@ -294,5 +296,5 @@ def test_a_cut_off_answer_is_not_reused_but_asked_again(repo, reader, records, a
     run_to_end(second, repo, reader, records, attempts, model)
     assert len(model.calls) == 1                          # only the cut-off unit was asked again
     assert context_in(model.calls[0]["user"])["unit"]["id"] == "game.py::Course.add_student"
-    assert repo.get(second)["status"] == "completed"
+    assert repo.get(second)["stage"] == "sandbox_run"
     assert len(records.list(second, status="generated")) == 14

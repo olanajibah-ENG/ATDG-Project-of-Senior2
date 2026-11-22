@@ -1,0 +1,341 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>شرح خرج روابط الاختبارات</title>
+<style>
+  @page { size: A4; margin: 14mm 12mm; }
+  body { margin:0; color:#1b2330; font-family:"Segoe UI",Tahoma,Arial,sans-serif; font-size:12.4px; line-height:1.75; background:#fff; }
+  main { max-width:900px; margin:0 auto; padding:0 4px; }
+  h1 { font-size:22px; color:#2f5fb3; margin:8px 0 2px; }
+  h2 { font-size:16.5px; color:#2f5fb3; border-bottom:2px solid #2f5fb3; padding-bottom:3px; margin:22px 0 8px; break-after:avoid; }
+  h3 { font-size:13.5px; margin:10px 0 4px; break-after:avoid; }
+  .sub { color:#5b6578; }
+  .req { direction:ltr; text-align:left; margin:4px 0; }
+  code, pre { font-family:Consolas,"Courier New",monospace; direction:ltr; unicode-bidi:embed; }
+  code { background:#f4f6fa; padding:0 3px; border-radius:3px; font-size:11.3px; }
+  pre { background:#f4f6fa; border:1px solid #d6dce6; border-radius:6px; padding:6px 9px; font-size:10.3px; line-height:1.4;
+         text-align:left; white-space:pre-wrap; word-break:break-word; margin:4px 0; }
+  pre.ps { background:#012456; color:#eef3ff; border-color:#012456; }
+  table { width:100%; border-collapse:collapse; margin:6px 0 10px; font-size:11.6px; }
+  th, td { border:1px solid #d6dce6; padding:4px 7px; text-align:right; vertical-align:top; }
+  th { background:#e9eef7; }
+  td:first-child { white-space:nowrap; }
+  .box { background:#f4f6fa; border:1px solid #d6dce6; border-radius:8px; padding:8px 12px; margin:8px 0; }
+  .pb { break-before:page; }
+</style></head><body><main>
+<h1>شرح خرج روابط الاختبارات (Feature 1: S1، S2، S3)</h1>
+<div class="sub">كل رابط، وكل حقل بخرجه وشو معناه، بأمثلة حقيقية من <code>job_147272fad542</code> (demo3، النسخة 10، <code>demo/course.py</code>).
+وبالآخر: وين بتلاقي ملف الـ ZIP، وكيف منحسب التغطية. 20/11/2026.</div>
+
+<h2>0. وين ملف الـ ZIP؟</h2>
+<div class="box">
+<b>الملف ما بينحفظ على السيرفر.</b> كل ما تطلب <code>GET …/jobs/&lt;job_id&gt;/bundle/</code>، السيرفر بيبنيه بالذاكرة من الـ records والتغطية،
+وبيبعتلك ياه كملف للتنزيل، وما بيضل منه نسخة عنده. ولأنو ما بيتغيّر بعد ما يخلص الـ job، كل مرة بتطلبه بيطلع نفس المحتوى.
+</div>
+<h3>من Postman</h3>
+<ol>
+<li>بدل كبسة <b>Send</b>، اكبس السهم الصغير جنبها واختار <b>Send and Download</b>. Postman بيفتحلك شباك "حفظ"، فبتختار وين تحطه.</li>
+<li>أو: اكبس <b>Send</b> عادي، وبمنطقة الخرج تحت اكبس <b>⋯ / Save response → Save to a file</b>.</li>
+<li>إذا كبست Send بس، Postman بيعرض <i>محتوى</i> الملف كرموز غريبة بالخرج، وهاد طبيعي لأنو ملف مضغوط مش نص.</li>
+</ol>
+<p>اسم الملف بيجي من الـ header تبع الرد: <code>Content-Disposition: attachment; filename="job_147272fad542_c0e34dfa-…_v10.zip"</code>.</p>
+<h3>نسخة جاهزة بالمشروع</h3>
+<p>نزّلت نسخة حقيقية من هالـ job وحطيتها، ومعها نسخة مفكوكة لتشوف الملفات مباشرة:</p>
+<pre class="">docs/s3_bundle_example/job_147272fad542_c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77_v10.zip
+docs/s3_bundle_example/unzipped/</pre>
+<p>(ملفات <code>.zip</code> مستثناة من git بالـ <code>.gitignore</code> تبع المشروع، فالـ zip رح يضل عندك محلياً بس؛ النسخة المفكوكة بتنحفظ.)</p>
+
+<h2>1. بدء job</h2>
+<div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code></div>
+<pre class="">{
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;paths&quot;: [
+    &quot;demo/course.py&quot;
+  ],
+  &quot;levels&quot;: [
+    &quot;unit&quot;
+  ]
+}</pre>
+<pre class="">{
+  &quot;job_id&quot;: &quot;job_147272fad542&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 10
+}</pre>
+<table><tr><th>الحقل</th><th>شو معناه</th></tr><tr><td><code>job_id</code></td><td>رقم الـ job. بتستعمله بكل الروابط التانية.</td></tr><tr><td><code>status</code></td><td><code>pending</code>: انقبل الطلب والشغل بلّش بالخلفية. الرد بيرجع فوراً (202)، ما بيستنى.</td></tr><tr><td><code>project_id</code></td><td>المشروع.</td></tr><tr><td><code>version_number</code></td><td>النسخة يلي رح ينشغل عليها. إذا ما حددتها بالطلب، بياخد آخر نسخة. كل شي بعدين (الخطة، التشغيل) على هالنسخة بس.</td></tr></table>
+<div class="box">الـ body: <code>project_id</code> (لازم)، <code>version_number</code> (اختياري)، <code>paths</code> ملفات معينة (اختياري، وإلا كل المشروع)،
+<code>levels</code> من <code>unit / edge / integration</code> (اختياري؛ لهلق بس <code>unit</code> بينكتب وبينشغّل).</div>
+
+<h2>2. حالة الـ job</h2>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/</code></div>
+<pre class="">{
+  &quot;job_id&quot;: &quot;job_147272fad542&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 10,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;stage&quot;: &quot;final_run&quot;,
+  &quot;progress&quot;: {
+    &quot;total&quot;: 3,
+    &quot;done&quot;: 3,
+    &quot;by_status&quot;: {
+      &quot;pending&quot;: 0,
+      &quot;generated&quot;: 0,
+      &quot;ready&quot;: 3,
+      &quot;skipped&quot;: 0,
+      &quot;generation_failed&quot;: 0,
+      &quot;test_failed&quot;: 0,
+      &quot;environment_error&quot;: 0
+    }
+  },
+  &quot;files&quot;: [
+    {
+      &quot;path&quot;: &quot;demo/course.py&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;levels&quot;: {
+        &quot;unit&quot;: &quot;ready&quot;
+      }
+    }
+  ],
+  &quot;coverage&quot;: {
+    &quot;line_pct&quot;: 100.0,
+    &quot;branch_pct&quot;: 100.0,
+    &quot;combined_pct&quot;: 100.0
+  },
+  &quot;error&quot;: null
+}</pre>
+<table><tr><th>الحقل</th><th>شو معناه</th></tr><tr><td><code>status</code></td><td>الحالة العامة: <code>pending</code> (بالدور) ← <code>running</code> (عم يشتغل) ← بالآخر <code>completed</code> (كل شي تمام)، <code>completed_with_issues</code> (خلص بس في record ما نجح أو وقف لسبب)، <code>failed</code> (ما قدر يكمّل أبداً).</td></tr><tr><td><code>stage</code></td><td>وين وصل بالزبط: <code>queued</code> ← <code>waiting_analysis</code> (بيستنى تحليل ملفات) ← <code>planning</code> / <code>planned</code> ← <code>generating</code> (النموذج عم يكتب) ← <code>sandbox_run</code> (عم ينشغّل كل اختبار لحالو) ← <code>final_run</code> (التشغيلة الأخيرة لكل الجاهزين مع بعض).</td></tr><tr><td><code>progress.total</code></td><td>عدد عناصر الشغل (الـ records): وحدة × مستوى. هون 3 ميثودات × مستوى unit = 3.</td></tr><tr><td><code>progress.done</code></td><td>كم واحد ما عاد <code>pending</code>.</td></tr><tr><td><code>progress.by_status</code></td><td>عدد الـ records بكل حالة (شوف جدول الحالات بالقسم 4).</td></tr><tr><td><code>files[]</code></td><td>لكل ملف: <code>status</code> ملخّص حالة اختباراته، و <code>levels</code> ملخّص كل مستوى (<code>ready</code>، <code>generated</code>، <code>partial</code> يعني خليط، <code>failed</code>، <code>pending</code>).</td></tr><tr><td><code>coverage</code></td><td>بعد التشغيلة الأخيرة: النسب الإجمالية (أسطر، فروع، مدمجة). <code>null</code> إذا ما في اختبار جاهز. التفاصيل برابط coverage.</td></tr><tr><td><code>error</code></td><td>سبب إذا الـ job وقف بكير (مثلاً <code>model_unavailable</code>: النموذج ما رد أو خلص الحد اليومي)، وإلا <code>null</code>.</td></tr></table>
+
+<h2>3. الخطة</h2>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/plan/</code></div>
+<table><tr><th>الحقل</th><th>شو معناه</th></tr><tr><td><code>units[]</code></td><td>الوحدات يلي رح ينكتبلها اختبارات: <code>id</code> (<code>مسار::كلاس.ميثود</code>)، <code>file</code>، <code>kind</code> (<code>method</code> أو <code>function</code>).</td></tr><tr><td><code>skipped[]</code></td><td>يلي انترك وليش: <code>path</code>، وأحياناً <code>unit</code>، و <code>reason</code>: <code>private</code> (ميثود خاصة _x)، <code>empty_or_abstract</code>، <code>unsupported_language</code> (مش بايثون)، <code>analysis_failed</code>، <code>no_units</code>، <code>body_truncated</code>.</td></tr><tr><td><code>work_items_count</code></td><td>عدد عناصر الشغل = الوحدات × المستويات المطلوبة.</td></tr></table>
+
+<h2>4. لستة الـ records</h2>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/records/</code></div>
+<pre class="">{
+  &quot;items&quot;: [
+    {
+      &quot;id&quot;: &quot;t_18b068addf&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course___init____unit.py&quot;,
+      &quot;executed&quot;: true
+    },
+    {
+      &quot;id&quot;: &quot;t_a49b581b03&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.is_full&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_is_full__unit.py&quot;,
+      &quot;executed&quot;: true
+    },
+    {
+      &quot;id&quot;: &quot;t_e927762a02&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.add_student&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;ready&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_add_student__unit.py&quot;,
+      &quot;executed&quot;: true
+    }
+  ],
+  &quot;total&quot;: 3
+}</pre>
+<table><tr><th>الحقل</th><th>شو معناه</th></tr><tr><td><code>id</code></td><td>رقم الـ record (عنصر الشغل). بتستعمله برابط التفاصيل.</td></tr><tr><td><code>unit_id / file / level</code></td><td>أي ميثود، بأي ملف، وأي مستوى.</td></tr><tr><td><code>status</code></td><td>حالة الاختبار — الجدول تحت.</td></tr><tr><td><code>reason_code</code></td><td>إذا ما صار ready: ليش (الجدول تحت).</td></tr><tr><td><code>test_path</code></td><td>مسار ملف الاختبار المولّد.</td></tr><tr><td><code>executed</code></td><td><code>true</code> إذا انشغّل فعلاً بالـ sandbox.</td></tr><tr><td><code>total</code></td><td>العدد.</td></tr></table>
+<p>فلترة: <code>?status=ready</code>، <code>?level=unit</code>، <code>?path=demo/course.py</code>.</p>
+<table><tr><th>status</th><th>المعنى</th></tr>
+<tr><td><code>pending</code></td><td>لسا ما انعمل (أو مستوى edge/integration يلي لسا ما انبنى)</td></tr>
+<tr><td><code>generated</code></td><td>النموذج كتبه وانفحص شكله وأمانه، <b>بس لسا ما انشغّل</b></td></tr>
+<tr><td><code>ready</code></td><td>انشغّل بـ container معزول على نفس النسخة، وكل اختباراته نجحت، ومعه دليل. <b>هاد الوحيد الموثوق.</b></td></tr>
+<tr><td><code>generation_failed</code></td><td>النموذج ما عطى اختبار صالح: <code>no_code</code>، <code>syntax_error</code>، <code>forbidden_import</code>، <code>unsafe_code</code>، <code>weak_test</code></td></tr>
+<tr><td><code>test_failed</code></td><td>انشغّل وما نجح، والغلط من الاختبار: <code>assertion</code>، <code>collection_error</code>، <code>no_tests</code>، <code>skipped_test</code>، <code>timeout</code>، <code>fails_with_others</code></td></tr>
+<tr><td><code>environment_error</code></td><td>انشغّل (أو حاول) والمشكلة مش من الاختبار: <code>missing_dependency</code> (الكود بيحتاج مكتبة مش مثبّتة)، <code>sandbox_unavailable</code>، <code>no_result_file</code></td></tr>
+<tr><td><code>skipped</code></td><td>انترك بالخطة</td></tr>
+</table>
+
+<h2 class="pb">5. تفاصيل record واحد</h2>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/records/t_18b068addf/</code></div>
+<pre class="">{
+  &quot;id&quot;: &quot;t_18b068addf&quot;,
+  &quot;file&quot;: &quot;demo/course.py&quot;,
+  &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+  &quot;level&quot;: &quot;unit&quot;,
+  &quot;status&quot;: &quot;ready&quot;,
+  &quot;reason_code&quot;: null,
+  &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course___init____unit.py&quot;,
+  &quot;executed&quot;: true,
+  &quot;reason_detail&quot;: null,
+  &quot;test_code&quot;: &quot;# Generated by AutoTest &amp; DocGen Manager — Feature 1 (Generate Trusted Tests)\n# unit:      demo/course.py::Course.__init__\n# level:     unit\n# body hash: d828b89195fb2bcc\n# job:       job_147272fad542\n# status:    generated and checked for form only — NOT RUN YET\n\nimport pytest\nfrom demo.course impo …&quot;,
+  &quot;notice&quot;: &quot;This test was run in an isolated environment on version 10 and passed. It shows the test runs on this version; it does not prove the code&#x27;s logic is correct.&quot;,
+  &quot;run&quot;: {
+    &quot;run_id&quot;: &quot;sbx_job_147272fad542_t_18b068addf_1&quot;,
+    &quot;exit_code&quot;: 0,
+    &quot;duration_s&quot;: 2.342,
+    &quot;tests&quot;: [
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_1&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;,
+        &quot;message&quot;: null
+      },
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_2&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;,
+        &quot;message&quot;: null
+      },
+      {
+        &quot;name&quot;: &quot;test_Course___init____unit_3&quot;,
+        &quot;outcome&quot;: &quot;passed&quot;,
+        &quot;message&quot;: null
+      }
+    ],
+    &quot;output&quot;: &quot;...                                                                      [100%]\n---------------------- generated xml file: /out/junit.xml ----------------------\n\n---------- coverage: platform linux, p …&quot;
+  },
+  &quot;evidence&quot;: {
+    &quot;run_id&quot;: &quot;sbx_job_147272fad542_t_18b068addf_1&quot;,
+    &quot;version_number&quot;: 10,
+    &quot;body_hash&quot;: &quot;d828b89195fb2bcc&quot;,
+    &quot;test_sha256&quot;: &quot;6a24553a8be4b838f3dc99d3c927b9ca7b140b01fcf5aa714ebfffbe9c859e45&quot;,
+    &quot;tests&quot;: 3,
+    &quot;passed&quot;: 3,
+    &quot;duration_s&quot;: 2.342,
+    &quot;accepted_at&quot;: &quot;2026-11-20T19:10:57.106000&quot;
+  },
+  &quot;coverage_contribution&quot;: {
+    &quot;label&quot;: &quot;this record&#x27;s own run&quot;,
+    &quot;files&quot;: [
+      {
+        &quot;file&quot;: &quot;demo/course.py&quot;,
+        &quot;covered_lines&quot;: [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          10
+        ],
+        &quot;covered_branches&quot;: 0
+      }
+    ]
+  },
+  &quot;model&quot;: &quot;cohere/north-mini-code:free&quot;,
+  &quot;prompt_version&quot;: &quot;unit-v2&quot;
+}</pre>
+<table><tr><th>الحقل</th><th>شو معناه</th></tr><tr><td><code>test_code</code></td><td>الكود الكامل للاختبار (مختصر هون). الرأس فيه الوحدة والمستوى والـ body hash ورقم الـ job.</td></tr><tr><td><code>notice</code></td><td>جملة بتقلك شو حالة هالاختبار بالكلام: انكتب بس، أو انشغّل ونجح، أو انشغّل وما نجح وليش.</td></tr><tr><td><code>run.run_id</code></td><td>اسم التشغيلة = اسم الـ container يلي انشغّل فيه: <code>sbx_&lt;job&gt;_&lt;record&gt;_&lt;رقم&gt;</code>.</td></tr><tr><td><code>run.exit_code</code></td><td>كود خروج pytest: <code>0</code> كلو نجح، <code>1</code> في فشل، <code>2</code> ما قدر يجمع الاختبارات، <code>5</code> ما في اختبارات، <code>137</code> انقتل بالوقت.</td></tr><tr><td><code>run.duration_s</code></td><td>مدة التشغيلة بالثواني، ومعها تشغيل الـ container (أغلب الوقت).</td></tr><tr><td><code>run.tests[]</code></td><td>لكل دالة اختبار: <code>outcome</code> (<code>passed / failed / error / skipped</code>) و <code>message</code> رسالة الفشل (<code>null</code> للناجح). من ملف junit مش من النص.</td></tr><tr><td><code>run.output</code></td><td>خرج pytest كما طبعه جوّا الـ container (مقصوص إذا طويل).</td></tr><tr><td><code>evidence</code></td><td><b>الدليل</b>، بيطلع بس مع <code>ready</code>: <code>run_id</code> التشغيلة يلي أثبتت، <code>version_number</code> النسخة، <code>body_hash</code> بصمة جسم الميثود وقتها (إذا الميثود تغيّرت بنسخة تانية بيبيّن)، <code>test_sha256</code> بصمة ملف الاختبار، <code>tests / passed</code> كم اختبار وكم نجح، <code>accepted_at</code> إيمتى.</td></tr><tr><td><code>coverage_contribution</code></td><td>الأسطر يلي غطّاها <b>هالـ record لحالو</b> بتشغيلته. للمعلومة بس — مش تغطية الـ job (القسم 6).</td></tr><tr><td><code>model / prompt_version</code></td><td>النموذج يلي كتب الاختبار، ونسخة التعليمات (<code>unit-v2</code>).</td></tr></table>
+
+<h2>6. التغطية</h2>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/coverage/</code></div>
+<pre class="">{
+  &quot;available&quot;: true,
+  &quot;final_run_id&quot;: &quot;sbx_job_147272fad542_final_1&quot;,
+  &quot;branch&quot;: true,
+  &quot;scope&quot;: &quot;ready records only (3)&quot;,
+  &quot;files&quot;: [
+    {
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;statements&quot;: 12,
+      &quot;covered&quot;: 12,
+      &quot;line_pct&quot;: 100.0,
+      &quot;branches&quot;: 4,
+      &quot;branches_covered&quot;: 4,
+      &quot;branch_pct&quot;: 100.0,
+      &quot;missing_lines&quot;: [],
+      &quot;missing_annotations&quot;: {}
+    }
+  ],
+  &quot;totals&quot;: {
+    &quot;statements&quot;: 12,
+    &quot;covered&quot;: 12,
+    &quot;branches&quot;: 4,
+    &quot;branches_covered&quot;: 4,
+    &quot;line_pct&quot;: 100.0,
+    &quot;branch_pct&quot;: 100.0,
+    &quot;combined_pct&quot;: 100.0
+  },
+  &quot;not_measured&quot;: [],
+  &quot;excluded_records&quot;: []
+}</pre>
+<table><tr><th>الحقل</th><th>شو معناه</th></tr><tr><td><code>available</code></td><td><code>true</code> إذا في تغطية. <code>false</code> مع <code>reason</code>: <code>no_ready_tests</code> (ما في ولا اختبار جاهز) أو <code>final_run_unavailable</code>.</td></tr><tr><td><code>final_run_id</code></td><td>التشغيلة الأخيرة يلي انحسبت منها التغطية.</td></tr><tr><td><code>scope</code></td><td>التغطية من اختبارات ready بس، وكم واحد.</td></tr><tr><td><code>files[].statements / covered</code></td><td>عدد التعليمات بالملف، وكم واحدة انفّذت.</td></tr><tr><td><code>files[].branches / branches_covered</code></td><td>عدد الفروع (كل <code>if</code> إلو فرعين) وكم فرع انسلك.</td></tr><tr><td><code>line_pct / branch_pct</code></td><td>النسب المئوية.</td></tr><tr><td><code>missing_lines</code></td><td>أرقام الأسطر يلي ما انفّذت.</td></tr><tr><td><code>missing_annotations</code></td><td>تفسير سطر ناقص إذا الخطة تركت وحدته قصداً: <code>{{"81": "Order._audit_log — skipped: private"}}</code>.</td></tr><tr><td><code>totals.combined_pct</code></td><td>(تعليمات مغطاة + فروع مغطاة) ÷ (كل التعليمات + كل الفروع).</td></tr><tr><td><code>not_measured</code></td><td>ملفات بالنسخة ما بتنقاس (مش بايثون).</td></tr><tr><td><code>excluded_records</code></td><td>اختبارات نجحت لحالها بس فشلت مع الباقيين (<code>fails_with_others</code>)، فانشالت وانعادت التشغيلة بدونها.</td></tr></table>
+<p>قبل ما يخلص الـ job: <b>409</b> <code>coverage_not_ready</code>.</p>
+
+<h2>7. كيف منحسب التغطية</h2>
+<h3>الأداة</h3>
+<p>منستعمل <b>pytest-cov</b> (فوق مكتبة coverage.py) جوّا الـ sandbox، بالخيارات:</p>
+<pre class="">--cov=/workspace/src --cov-branch --cov-report=json:/out/cov.json</pre>
+<ul>
+<li><code>--cov=/workspace/src</code>: بيقيس كود المشروع بس (مش ملفات الاختبار نفسها). وكل ملف بايثون بالنسخة بينقاس، حتى يلي ما انستورد (بيطلع 0%).</li>
+<li><code>--cov-branch</code>: بيقيس الفروع كمان، مش بس الأسطر.</li>
+<li>الخرج ملف JSON بيقراه السيرفر وبيحوّله للتقرير يلي فوق.</li>
+</ul>
+<h3>من وين بتجي الأرقام الرسمية</h3>
+<ol>
+<li>كل record بينشغّل لحالو، ومنه منطلع <code>coverage_contribution</code> (للمعلومة بس).</li>
+<li>بعد ما يخلصوا كلهم، <b>منشغّل كل اختبارات <code>ready</code> مع بعض</b> بـ container نظيف، مرة وحدة. هاي "التشغيلة الأخيرة".</li>
+<li>إذا نجحت كلها، التغطية الرسمية = تغطية هالتشغيلة. إذا اختبار فشل فيها، بينشال (<code>fails_with_others</code>) ومنعيد التشغيلة بدونه.</li>
+<li>يعني التغطية دايماً من تشغيلة <b>كلها ناجحة</b>، وفيها <b>بس</b> الاختبارات الموثوقة. ما منجمع أرقام تشغيلات منفصلة.</li>
+</ol>
+<h3>مثال حقيقي: <code>demo/course.py</code> بالنسخة 10</h3>
+<pre class=""> 1 class Course:
+ 2     def __init__(self, title: str, capacity: int = 2):
+ 3         self.title = title
+ 4         self.capacity = capacity
+ 5         self.students = []
+ 6
+ 7     def is_full(self) -&gt; bool:
+ 8         return len(self.students) &gt;= self.capacity
+ 9
+10     def add_student(self, student):
+11         if self.is_full():
+12             raise ValueError(&quot;course is full&quot;)
+13         if student not in self.students:
+14             self.students.append(student)</pre>
+<p><b>التعليمات (statements) = 12:</b> كل سطر كود قابل للتنفيذ: <code>class</code> (1)، <code>def</code> (2، 7، 10)، والأسطر 3، 4، 5، 8، 11، 12، 13، 14.
+الأسطر الفاضية (6، 9) ما بتنحسب، ولا التعليقات ولا الـ docstrings.</p>
+<p><b>الفروع (branches) = 4:</b> كل <code>if</code> إلو طريقين: سطر 11 (صح ← 12، غلط ← 13) وسطر 13 (صح ← 14، غلط ← نهاية الدالة).</p>
+<table>
+<tr><th>الاختبار</th><th>الأسطر يلي غطّاها لحالو</th><th>فروع</th></tr>
+<tr><td><code>Course.__init__</code></td><td>1، 2، 3، 4، 5، 7، 10</td><td>0</td></tr>
+<tr><td><code>Course.is_full</code></td><td>1، 2، 3، 4، 5، 7، 8، 10</td><td>0</td></tr>
+<tr><td><code>Course.add_student</code></td><td>1، 2، 3، 4، 5، 7، 8، 10، 11، 12، 13، 14</td><td>4 من 4</td></tr>
+</table>
+<p>ملاحظة: الأسطر 1، 2، 7، 10 (<code>class</code> و <code>def</code>) بتنفّذ وقت استيراد الملف، فبتطلع مغطاة بأي اختبار. وجسم كل دالة بيتغطى بس إذا الاختبار ناداها.
+<code>add_student</code> جرّب كورس مليان (سطر 12) ومش مليان، وطالب جديد وطالب مكرر، فغطّى الفروع الأربعة.</p>
+<p><b>التشغيلة الأخيرة</b> (الثلاثة مع بعض): 12 من 12 تعليمة، و 4 من 4 فروع:</p>
+<pre class="">line_pct     = 12 / 12            = 100%
+branch_pct   = 4 / 4              = 100%
+combined_pct = (12 + 4) / (12 + 4) = 100%</pre>
+<div class="box"><b>شو بتعني التغطية وشو ما بتعني:</b> 100% يعني كل سطر وكل فرع انفّذ مرة على الأقل وقت الاختبارات. ما بتعني إنو الكود صح،
+ولا إنو كل الحالات انفحصت (مثلاً <code>capacity=0</code>). هيك متل ما كاتب بالـ notice تبع كل اختبار.</div>
+
+<h2>8. الحزمة (ZIP)</h2>
+<div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_147272fad542/bundle/</code></div>
+<pre class="">HTTP 200
+Content-Type: application/zip
+Content-Disposition: attachment; filename=&quot;job_147272fad542_c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77_v10.zip&quot;</pre>
+<table><tr><th>الحقل</th><th>شو معناه</th></tr><tr><td><code>MANIFEST.json</code></td><td>بيانات الـ job (المشروع، النسخة، الحالة، التشغيلة الأخيرة)، وطريقة التشغيل، و SHA-256 لكل ملف بالحزمة لتتأكد إنو ما تغيّر.</td></tr><tr><td><code>junit_results.xml</code></td><td>نتايج التشغيلة الأخيرة (اختبارات ready بس)، بصيغة بتقراها أي أداة CI.</td></tr><tr><td><code>coverage_report.json</code></td><td>تقرير التغطية نفسه تبع القسم 6.</td></tr><tr><td><code>plan.json</code></td><td>الخطة: الوحدات والمتروك وسببه.</td></tr><tr><td><code>records_summary.json</code></td><td>كل record بحالته وسببه. يلي مش ready بيطلع هون بس، مع <code>test_path: null</code>.</td></tr><tr><td><code>pytest.ini</code></td><td>إعداد صغير (<code>pythonpath = src</code>) لتشغّل الحزمة بأمر واحد.</td></tr><tr><td><code>tests/generated/unit/*.py</code></td><td>الاختبارات الجاهزة بس، والرأس فيها صار: <code>ready — passed in isolated run … on version 10</code>.</td></tr></table>
+<h3>كيف تشغّل الحزمة عندك</h3>
+<ol><li>فكّ الـ ZIP بمجلد.</li><li>حط كود نفس النسخة جنبه بمجلد اسمه <code>src</code> (يعني <code>src/demo/course.py</code>).</li><li>من المجلد: <code>pytest</code>.</li></ol>
+<pre class="ps">9 passed in 0.56s</pre>
+<p>قبل ما يخلص الـ job: <b>409</b> <code>bundle_not_ready</code>.</p>
+
+<h2>9. شكل الأخطاء</h2>
+<pre class="">{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;coverage_not_ready&quot;,
+    &quot;message&quot;: &quot;The coverage is not ready yet: the job has not finished. Poll the job and try again.&quot;,
+    &quot;details&quot;: {}
+  }
+}</pre>
+<table><tr><th>HTTP</th><th>code</th><th>إيمتى</th></tr>
+<tr><td>400</td><td><code>validation_error</code></td><td>طلب غلط: نسخة مش موجودة، مسار مش موجود، <code>snapshot</code></td></tr>
+<tr><td>401</td><td><code>unauthorized</code></td><td>بدون توكن أو توكن منتهي</td></tr>
+<tr><td>403</td><td><code>forbidden</code></td><td>job لمستخدم تاني</td></tr>
+<tr><td>404</td><td><code>not_found</code></td><td>job أو record مش موجود، أو مشروع مش إلك</td></tr>
+<tr><td>409</td><td><code>plan_not_ready</code>، <code>coverage_not_ready</code>، <code>bundle_not_ready</code></td><td>لسا بكير: الخطة أو الـ job ما خلص</td></tr>
+<tr><td>422</td><td><code>no_python_files</code></td><td>ما في ولا ملف بايثون بالاختيار</td></tr>
+<tr><td>503</td><td><code>service_unavailable</code></td><td>UPM ما رد وقت فحص ملكية المشروع</td></tr>
+</table>
+</main></body></html>

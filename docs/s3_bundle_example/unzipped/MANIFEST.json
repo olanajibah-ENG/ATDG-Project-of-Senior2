@@ -1,0 +1,42 @@
+{
+  "job_id": "job_147272fad542",
+  "project_id": "c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77",
+  "version_number": 10,
+  "status": "completed",
+  "final_run_id": "sbx_job_147272fad542_final_1",
+  "how_to_run": "copy the code of this version next to this folder as src/, then run: pytest",
+  "files": [
+    {
+      "path": "coverage_report.json",
+      "sha256": "f0e9cdc7f126493b601fa1ca9fbc0bc4182b6e49d88f41a86c5a464fb35e3551"
+    },
+    {
+      "path": "junit_results.xml",
+      "sha256": "f81b90d54c9c444320bf3fd87a317fa672f6ea8f2e3f025fbf110a9dfcf53a39"
+    },
+    {
+      "path": "plan.json",
+      "sha256": "8816c16a71ca108d05d1462c13da6423e7368b22d38f7d26f0038a965a9b5b6a"
+    },
+    {
+      "path": "pytest.ini",
+      "sha256": "528e4b9ecd6fb41efe907001b4384778fef4130cdd114e341323515754b7f2ea"
+    },
+    {
+      "path": "records_summary.json",
+      "sha256": "787123d47970d4fcad6266156da386ace5d9bfdfb7355be4823af4ee4e3a604d"
+    },
+    {
+      "path": "tests/generated/unit/test_demo_course_Course___init____unit.py",
+      "sha256": "836fc546cb3e5bd99eb7723d02c0c632008099e4e27498df6d3cb70e6762a22e"
+    },
+    {
+      "path": "tests/generated/unit/test_demo_course_Course_add_student__unit.py",
+      "sha256": "f7c5ca62c427afb0060b5a816c90ba158ea1b0c75ead52262490b9dc776bd95f"
+    },
+    {
+      "path": "tests/generated/unit/test_demo_course_Course_is_full__unit.py",
+      "sha256": "d5944ad4fb3e92bdf2dbdc069debc4f30037d4e8235f3416ce842c127824f85c"
+    }
+  ]
+}

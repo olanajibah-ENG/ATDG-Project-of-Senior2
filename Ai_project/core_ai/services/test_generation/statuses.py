@@ -19,6 +19,8 @@ class JobStage:
     PLANNED = "planned"
     GENERATING = "generating"
     GENERATED = "generated"
+    SANDBOX_RUN = "sandbox_run"      # S3: records run one by one in isolated containers
+    FINAL_RUN = "final_run"          # S3: every ready test together, for the official coverage
 
 
 class FileStatus:
@@ -74,3 +76,21 @@ class StopReason:
 # Record statuses shown in progress.by_status.
 RECORD_STATUSES = ("pending", "generated", "ready", "skipped", "generation_failed", "test_failed",
                    "environment_error")
+
+
+class RunReason:
+    """Why a run record did not become `ready` (S3)."""
+    ASSERTION = "assertion"
+    COLLECTION_ERROR = "collection_error"
+    NO_TESTS = "no_tests"
+    SKIPPED_TEST = "skipped_test"
+    TIMEOUT = "timeout"
+    FAILS_WITH_OTHERS = "fails_with_others"
+    MISSING_DEPENDENCY = "missing_dependency"
+    SANDBOX_UNAVAILABLE = "sandbox_unavailable"
+    NO_RESULT_FILE = "no_result_file"
+
+
+RUN_FAILED_REASONS = (RunReason.ASSERTION, RunReason.COLLECTION_ERROR, RunReason.NO_TESTS,
+                      RunReason.SKIPPED_TEST, RunReason.TIMEOUT, RunReason.FAILS_WITH_OTHERS)
+RUN_ENV_REASONS = (RunReason.MISSING_DEPENDENCY, RunReason.SANDBOX_UNAVAILABLE, RunReason.NO_RESULT_FILE)
