@@ -64,7 +64,10 @@ apiClient.interceptors.request.use(
 
         // /api/analysis/* endpoints are public — sending an invalid/expired token
         // causes a 401 even though no auth is required, so skip the header entirely.
-        const isAnalysisEndpoint = config.url?.includes('/api/analysis/');
+        // EXCEPTION: /api/analysis/tests/* (Test Generation, Feature 1) is JWT-protected,
+        // so it MUST receive the Authorization header.
+        const isAnalysisEndpoint =
+            !!config.url?.includes('/api/analysis/') && !config.url.includes('/api/analysis/tests/');
 
         // Add Authorization only for protected endpoints
         if (!isAuthEndpoint && !isAnalysisEndpoint) {

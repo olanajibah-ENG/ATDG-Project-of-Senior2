@@ -21,6 +21,7 @@ const DocumentGenerationPage = lazy(() => import('./DocumentGenerationPage'));
 const GeneratedFilesPage = lazy(() => import('./GeneratedFilesPage'));
 const ProjectFilesPage = lazy(() => import('./ProjectFilesPage'));
 const ProjectTreePage = lazy(() => import('./ProjectTreePage'));
+const ProjectTestsPage = lazy(() => import('./ProjectTestsPage'));
 const ProjectCodesPage = lazy(() => import('./ProjectCodesPage'));
 const ProjectDocumentsPage = lazy(() => import('./ProjectDocumentsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
@@ -76,6 +77,7 @@ function App() {
             <Route path="/dashboard/projects/:project_id/tree" element={<ProjectTreePage />} />
             <Route path="/dashboard/projects/:project_id/codes" element={<ProjectCodesPage />} />
             <Route path="/dashboard/projects/:project_id/documents" element={<ProjectDocumentsPage />} />
+            <Route path="/dashboard/projects/:project_id/tests" element={<ProjectTestsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             {/* يمكن إضافة مسارات أخرى هنا */}
           </Routes>

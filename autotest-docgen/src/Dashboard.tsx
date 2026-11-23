@@ -5,7 +5,7 @@ import {
     HelpCircle, Sun, Moon, Plus,
     Folder, ShieldAlert, Code,
     Menu, X, Edit, Trash2, Download, Eye, FileText,
-    AlertCircle, CheckCircle, GitCompare
+    AlertCircle, CheckCircle, GitCompare, FlaskConical
 } from 'lucide-react';
 
 import { type Project, type PaginatedResponse, type UpdateProjectData, formatApiError } from './services/api.service';
@@ -36,6 +36,7 @@ import './Dashboard.css';
 
 import EditProjectForm from './components/Dashboard/EditProjectForm';
 import CreateProjectForm from './components/Dashboard/CreateProjectForm';
+import TestsModalHost, { type TestsRequest } from './components/Tests/TestsModalHost';
 import DashProjectSection from './components/Dashboard/DashProjectSection';
 
 const Dashboard: React.FC = () => {
@@ -79,6 +80,28 @@ const Dashboard: React.FC = () => {
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [showAnalysis, setShowAnalysis] = useState(false);
+    const [testsRequest, setTestsRequest] = useState<TestsRequest | null>(null); // Test Generation popups
+
+    // Links like /dashboard?testproject=<id>[&testjob=<id>] open the Test Generation popup
+    // (old /dashboard/projects/:id/tests links and shared job links end up here).
+    const testsLinkHandled = React.useRef(false);
+    // Guided chain: Test -> create project -> upload files -> New test run popup.
+    const testsFlowRef = React.useRef(false);
+    useEffect(() => {
+        if (testsLinkHandled.current || isLoadingProjects) return;
+        const params = new URLSearchParams(window.location.search);
+        const projectId = params.get('testproject');
+        const jobId = params.get('testjob');
+        if (!projectId && !jobId) return;
+        testsLinkHandled.current = true;
+        if (projectId && jobId) {
+            setTestsRequest({ view: 'job', projectId, jobId });
+        } else if (projectId) {
+            const p = projects.find((x) => x.id === projectId);
+            setTestsRequest({ view: 'picker', project: p ? { id: p.id, title: p.title } : null });
+        }
+        window.history.replaceState({}, '', window.location.pathname);
+    }, [isLoadingProjects, projects]);
 
     // Theme handling
     useEffect(() => {
@@ -289,6 +312,15 @@ const Dashboard: React.FC = () => {
         }
     };
 
+    /** Guided chain, last step: after a successful upload open the New run popup instead of the diagram. */
+    const openTestsAfterUpload = (projectId: string): boolean => {
+        if (!testsFlowRef.current) return false;
+        testsFlowRef.current = false;
+        const title = projects.find((p) => p.id === projectId)?.title ?? codeProject?.title ?? '';
+        setTestsRequest({ view: 'newRun', project: { id: projectId, title } });
+        return true;
+    };
+
     const handleAddCode = (project: Project) => {
         setCodeProject(project);
         setShowCodeModal(true);
@@ -380,7 +412,8 @@ const Dashboard: React.FC = () => {
                 setCodeProject(null);
 
                 // Step 5: الانتقال لصفحة Class Diagram مع بيانات المشروع
-                navigate('/diagram', {
+                const goTests = openTestsAfterUpload(payload.projectId);
+                if (!goTests) navigate('/diagram', {
                     state: {
                         projectId: actualProjectId,
                         codeName: payload.zipFile.name.replace('.zip', ''),
@@ -453,7 +486,8 @@ const Dashboard: React.FC = () => {
                 setCodeProject(null);
 
                 // Step 4: Navigate to Class Diagram page with project data (same as ZIP)
-                navigate('/diagram', {
+                const goTests = openTestsAfterUpload(payload.projectId);
+                if (!goTests) navigate('/diagram', {
                     state: {
                         projectId: payload.projectId,
                         codeName: payload.codeName || 'GitHub Repository',
@@ -535,7 +569,8 @@ const Dashboard: React.FC = () => {
                 setCodeProject(null);
 
                 // Step 5: Navigate to Class Diagram page
-                navigate('/diagram', {
+                const goTests = openTestsAfterUpload(payload.projectId);
+                if (!goTests) navigate('/diagram', {
                     state: {
                         projectId: payload.projectId,
                         codeName: payload.codeName || 'Multi-file Project',
@@ -617,7 +652,8 @@ const Dashboard: React.FC = () => {
                 setCodeProject(null);
 
                 // Step 5: Navigate to Class Diagram page
-                navigate('/diagram', {
+                const goTests = openTestsAfterUpload(payload.projectId);
+                if (!goTests) navigate('/diagram', {
                     state: {
                         projectId: payload.projectId,
                         codeName: payload.codeName || payload.fileName,
@@ -707,6 +743,10 @@ const Dashboard: React.FC = () => {
         navigate(`/dashboard/projects/${project.id}/documents`);
     };
 
+    const handleViewTests = (project: Project) => {
+        setTestsRequest({ view: 'picker', project: { id: project.id, title: project.title } });
+    };
+
     const handleViewProjectFiles = (project: Project) => {
         navigate(`/dashboard/projects/${project.id}/tree`);
     };
@@ -753,6 +793,11 @@ const Dashboard: React.FC = () => {
                 title: 'Success',
                 message: 'Project created successfully'
             });
+            // Guided chain: go straight to uploading files for the new project.
+            if (testsFlowRef.current) {
+                setCodeProject(newProject);
+                setShowCodeModal(true);
+            }
         } catch (err: any) {
             const errorMessage = formatApiError(err);
             showAlert({
@@ -1005,6 +1050,13 @@ const Dashboard: React.FC = () => {
                                                             title={language === 'ar' ? 'عرض المستندات' : 'View Documents'}
                                                         >
                                                             <FileText size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleViewTests(project)}
+                                                            className="action-btn action-view"
+                                                            title={language === 'ar' ? 'توليد الاختبارات' : 'Generate Tests'}
+                                                        >
+                                                            <FlaskConical size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteProject(project)}
@@ -1298,6 +1350,13 @@ const Dashboard: React.FC = () => {
                         <GitCompare size={20} />
                         <span>{language === 'ar' ? 'كشف التناقضات' : 'Conflict Detection'}</span>
                     </button>
+                    <button
+                        onClick={() => setTestsRequest({ view: 'picker' })}
+                        className={`nav-item ${testsRequest ? 'active' : ''}`}
+                    >
+                        <FlaskConical size={20} />
+                        <span>{language === 'ar' ? 'توليد الاختبارات' : 'Test Generation'}</span>
+                    </button>
                 </nav>
 
                 <div className="sidebar-footer">
@@ -1357,11 +1416,28 @@ const Dashboard: React.FC = () => {
             {showCreateProjectModal && (
                 <CreateProjectForm
                     onSubmit={handleCreateProjectSubmit}
-                    onClose={() => setShowCreateProjectModal(false)}
+                    onClose={() => {
+                        testsFlowRef.current = false;
+                        setShowCreateProjectModal(false);
+                    }}
                     isLoading={false}
                     apiError={null}
                     isDark={isDarkMode}
                     lang={language}
+                />
+            )}
+
+            {testsRequest && (
+                <TestsModalHost
+                    request={testsRequest}
+                    projects={projects.map((p) => ({ id: p.id, title: p.title }))}
+                    projectsLoading={isLoadingProjects}
+                    onClose={() => setTestsRequest(null)}
+                    onCreateProject={() => {
+                        testsFlowRef.current = true;
+                        setTestsRequest(null);
+                        handleCreateProject();
+                    }}
                 />
             )}
 
@@ -1370,6 +1446,7 @@ const Dashboard: React.FC = () => {
                     project={codeProject}
                     onGenerateDiagram={handleCodeSubmit}
                     onClose={() => {
+                        testsFlowRef.current = false;
                         setShowCodeModal(false);
                         setCodeProject(null);
                     }}
