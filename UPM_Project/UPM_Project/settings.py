@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from datetime import timedelta
 import os
@@ -44,8 +43,6 @@ else:
         raise ValueError("❌ UPM_DJANGO_SECRET_KEY must be set in production environment")
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,web,upm_backend,upm_api_gateway,nginx,upm_django_app').split(',')
-
-
 
 
 INSTALLED_APPS = [
@@ -96,15 +93,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'UPM_Project.wsgi.application'
 
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_DATABASE', 'upm_mysql_db'),
-        'USER': os.environ.get('MYSQL_USER', 'admin3'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),  # ✅ بدون default value
+        'NAME': os.environ.get('DB_NAME') or os.environ.get('MYSQL_DATABASE', 'upm_mysql_db'),
+        'USER': os.environ.get('DB_USER') or os.environ.get('MYSQL_USER', 'admin3'),
+        'PASSWORD': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQL_PASSWORD'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': '3306',
+        'PORT': os.environ.get('DB_PORT', '3306'),
         # (إضافة Charset لضمان دعم اللغة العربية)
         'OPTIONS': {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"},
         'CHARSET': 'utf8mb4',
@@ -117,7 +113,7 @@ if not DATABASES['default']['PASSWORD']:
         DATABASES['default']['PASSWORD'] = 'dev_password'
         print("⚠️ WARNING: Using default development database password")
     else:
-        raise ValueError("❌ MYSQL_PASSWORD must be set in production environment")
+        raise ValueError("❌ DB_PASSWORD or MYSQL_PASSWORD must be set in production environment")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -130,8 +126,6 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20
 }
       
-  
-
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -150,7 +144,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -158,7 +151,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
 
 
 STATIC_URL = '/static/upm/'

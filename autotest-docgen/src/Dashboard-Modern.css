@@ -101,9 +101,7 @@
 
 /* ─── SHARED TOKENS ──────────────────────────────────────────────── */
 .dashboard {
-  --uds-primary:     var(--uds-primary);
-  --uds-secondary:   var(--uds-secondary);
-  --uds-accent:      var(--uds-accent);
+  
   --uds-gradient:    linear-gradient(135deg, var(--uds-secondary) 0%, var(--uds-primary) 100%);
   --uds-radius:      14px;
   --uds-radius-sm:   8px;

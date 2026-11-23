@@ -24,7 +24,7 @@
   --uds-border-header:    rgba(var(--uds-primary-rgb), 0.12);
   --uds-shadow-sm:        0 4px 20px rgba(var(--uds-primary-rgb), 0.15);
   --uds-shadow-md:        0 8px 30px rgba(var(--uds-primary-rgb), 0.25);
-  --uds-primary:          var(--uds-primary);
+  
   --uds-gradient:         linear-gradient(135deg, var(--uds-secondary) 0%, var(--uds-primary) 100%);
   --uds-radius:           14px;
   --uds-radius-sm:        8px;
@@ -45,7 +45,7 @@
   --uds-border-header:    rgba(var(--uds-primary-rgb), 0.26);
   --uds-shadow-sm:        0 4px 20px rgba(var(--uds-accent-rgb), 0.15);
   --uds-shadow-md:        0 8px 30px rgba(var(--uds-accent-rgb), 0.20);
-  --uds-primary:          var(--uds-primary);
+ 
   --uds-gradient:         linear-gradient(135deg, var(--uds-secondary) 0%, var(--uds-primary) 100%);
   --uds-radius:           14px;
   --uds-radius-sm:        8px;
