@@ -39,9 +39,9 @@ def test_next_pending_follows_plan_order_and_level():
     repo = _filled()
     first = repo.next_pending("job_1", "unit")
     assert first["unit_id"] == "a.py::f"
-    repo.update(first["record_id"], {"status": "generated"})
+    repo.transition(first["record_id"], "generated", "generate")
     assert repo.next_pending("job_1", "unit")["unit_id"] == "b.py::g"
-    repo.update(repo.next_pending("job_1", "unit")["record_id"], {"status": "generation_failed"})
+    repo.transition(repo.next_pending("job_1", "unit")["record_id"], "generation_failed", "generate")
     assert repo.next_pending("job_1", "unit") is None
     assert repo.next_pending("job_1", "edge") is not None
 
@@ -49,7 +49,7 @@ def test_next_pending_follows_plan_order_and_level():
 def test_get_update_and_counts():
     repo = _filled()
     record = repo.list("job_1")[0]
-    repo.update(record["record_id"], {"status": "generated", "test_path": "tests/generated/x.py"})
+    repo.transition(record["record_id"], "generated", "generate", {"test_path": "tests/generated/x.py"})
     assert repo.get(record["record_id"])["test_path"] == "tests/generated/x.py"
     assert repo.get("t_0000000000") is None
     counts = repo.counts("job_1")

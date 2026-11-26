@@ -187,3 +187,13 @@ def attempts():
     records_module.set_attempt_repo(instance)
     yield instance
     records_module.set_attempt_repo(None)
+
+
+@pytest.fixture(autouse=True)
+def snapshots_repo():
+    from core_ai.services.test_generation import snapshots
+
+    repo = snapshots.InMemorySnapshotRepo()
+    snapshots.set_snapshot_repo(repo)
+    yield repo
+    snapshots.set_snapshot_repo(None)

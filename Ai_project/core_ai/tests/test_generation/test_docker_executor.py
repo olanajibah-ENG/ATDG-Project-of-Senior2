@@ -8,7 +8,7 @@ import tarfile
 import pytest
 
 from core_ai.services.test_generation.sandbox.docker_executor import RUN_ENVIRONMENT, DockerSandboxExecutor
-from core_ai.services.test_generation.sandbox.executor import RunSpec
+from core_ai.services.test_generation.sandbox.executor import RunMode, RunRequest, RunSpec
 
 
 def _tar_of(name, text):
@@ -57,6 +57,9 @@ class FakeContainer:
     def remove(self, force=False):
         self.removed = True
 
+    def reload(self):
+        self.attrs = {"State": {"OOMKilled": self.client.oom}}
+
 
 class FakeVolume:
     def __init__(self, client, name):
@@ -67,8 +70,8 @@ class FakeVolume:
 
 
 class FakeClient:
-    def __init__(self, exit_code=0, hang=False, fail_start=False, out_files=None):
-        self.exit_code, self.hang, self.fail_start = exit_code, hang, fail_start
+    def __init__(self, exit_code=0, hang=False, fail_start=False, out_files=None, oom=False):
+        self.exit_code, self.hang, self.fail_start, self.oom = exit_code, hang, fail_start, oom
         self.out_files = out_files if out_files is not None else {"/out/junit.xml": "<testsuites/>",
                                                                   "/out/cov.json": "{}"}
         self.created, self.created_volumes, self.removed_volumes, self.wait_timeouts = [], [], [], []
@@ -110,7 +113,7 @@ def test_run_container_has_every_isolation_option():
     DockerSandboxExecutor(client).run(spec())
     (run,) = client.runs
     k = run.kwargs
-    assert k["image"] == "autotest-sandbox:py3.10-s3"
+    assert k["image"] == "autotest-sandbox:py3.10-s4"
     assert k["network_mode"] == "none"
     assert k["read_only"] is True
     assert k["tmpfs"] == {"/tmp": "rw,size=64m"}
@@ -130,6 +133,69 @@ def test_run_container_has_every_isolation_option():
     assert k["command"][:3] == ["timeout", "--signal=KILL", "60"]
     assert "--junitxml=/out/junit.xml" in k["command"] and "--cov-branch" in k["command"]
     assert "tests/generated/test_a.py" in k["command"]
+
+
+def test_run_request_full_mode_gives_the_s3_command_unchanged():
+    client = FakeClient()
+    request = RunRequest(run_id="sbx_job_x_t_1_1", job_id="job_x", src_volume="sbx_job_x_src",
+                         test_files={"generated/test_a.py": b"def test_a(): pass\n"},
+                         test_paths=["tests/generated/test_a.py"], timeout_s=60, mode=RunMode.FULL)
+    DockerSandboxExecutor(client).run(request)
+    DockerSandboxExecutor(client).run(spec())
+    first, second = client.runs
+    assert first.kwargs["command"] == second.kwargs["command"]
+
+
+def test_collect_only_omits_coverage():
+    client = FakeClient()
+    request = spec()
+    request.mode = RunMode.COLLECT_ONLY
+    output = DockerSandboxExecutor(client).run(request)
+    command = client.runs[0].kwargs["command"]
+    assert "--collect-only" in command and not any(arg.startswith("--cov") for arg in command)
+    assert output.cov_json is None
+
+
+def test_reaper_only_removes_expired_sandbox_leases(monkeypatch):
+    import time
+    from unittest.mock import Mock
+    from core_ai.services.test_generation.sandbox.docker_executor import EXPIRY_LABEL
+
+    client = Mock()
+    expired, live = Mock(), Mock()
+    expired.labels = {EXPIRY_LABEL: str(int(time.time()) - 2)}
+    live.labels = {EXPIRY_LABEL: str(int(time.time()) + 3600)}
+    client.containers.list.return_value = [expired, live]
+    executor = DockerSandboxExecutor(client)
+    executor.reap_expired()
+    executor.reap_expired()
+    client.containers.list.assert_called_once_with(all=True, filters={"label": ["autotest.sandbox=1", EXPIRY_LABEL]})
+    expired.remove.assert_called_once_with(force=True)
+    live.remove.assert_not_called()
+
+
+def test_an_unknown_run_mode_is_refused():
+    request = spec()
+    request.mode = "subset"
+    with pytest.raises(ValueError):
+        DockerSandboxExecutor(FakeClient()).run(request)
+
+
+def test_oom_killed_is_read_from_docker():
+    out = DockerSandboxExecutor(FakeClient(exit_code=137, oom=True)).run(spec())
+    assert out.exit_code == 137 and out.oom_killed is True
+    assert DockerSandboxExecutor(FakeClient(exit_code=137)).run(spec()).oom_killed is False
+
+
+def test_env_volume_is_mounted_read_only_and_on_the_path():
+    client = FakeClient()
+    request = spec()
+    request.env_volume = "sbx_env_abc"
+    DockerSandboxExecutor(client).run(request)
+    k = client.runs[0].kwargs
+    assert k["volumes"]["sbx_env_abc"] == {"bind": "/workspace/deps", "mode": "ro"}
+    assert k["environment"]["PYTHONPATH"] == "/workspace/src:/workspace/deps"
+    assert k["network_mode"] == "none"
 
 
 def test_no_secret_or_worker_setting_reaches_the_run():

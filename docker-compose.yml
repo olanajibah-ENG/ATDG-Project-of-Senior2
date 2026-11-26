@@ -171,7 +171,7 @@ services:
   # ── Feature 1, S3: image of the isolated test runs (build only; the command exits at once) ──
   testgen_sandbox_image:
     build: ./Ai_project/core_ai/services/test_generation/sandbox/image
-    image: autotest-sandbox:py3.10-s3
+    image: autotest-sandbox:py3.10-s4
     command: ["true"]
     restart: "no"
 
@@ -193,7 +193,7 @@ services:
       - REDIS_HOST=ai_redis
       - CELERY_BROKER_URL=redis://ai_redis:6379/0
       - CELERY_RESULT_BACKEND=redis://ai_redis:6379/0
-      - TESTGEN_SANDBOX_IMAGE=autotest-sandbox:py3.10-s3
+      - TESTGEN_SANDBOX_IMAGE=autotest-sandbox:py3.10-s4
     depends_on:
       mongodb:
         condition: service_started

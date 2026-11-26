@@ -69,6 +69,14 @@ def detect_language_robust(content: str, filename: str = "") -> str:
 
 
 # امتدادات مدعومة
+def is_support_file(path):
+    from pathlib import PurePosixPath
+
+    path = PurePosixPath(str(path).replace(chr(92), "/").lower())
+    return (path.name in {"pyproject.toml", "setup.cfg", "pytest.ini", "conftest.py"}
+            or path.suffix == ".txt" and (path.name.startswith("requirements") or "requirements" in path.parts[:-1]))
+
+
 SUPPORTED_EXTENSIONS = {'.py', '.js', '.ts', '.tsx', '.java', '.cs', '.cpp', '.c', 
                        '.go', '.rb', '.php', '.kt', '.rs'}
 
@@ -321,7 +329,7 @@ class FolderUploadView(APIView):
                     if entry.endswith('/') or any(entry.startswith(p) for p in IGNORED_PREFIXES):
                         continue
                     ext = os.path.splitext(entry)[1].lower()
-                    if ext in IGNORED_EXTENSIONS:
+                    if ext not in SUPPORTED_EXTENSIONS and not is_support_file(entry):
                         continue
                     try:
                         content = zf.read(entry).decode('utf-8', errors='ignore')
@@ -341,7 +349,7 @@ class FolderUploadView(APIView):
         result = []
         for f in files:
             ext = os.path.splitext(f.name)[1].lower()
-            if ext in IGNORED_EXTENSIONS:
+            if ext not in SUPPORTED_EXTENSIONS and not is_support_file((path_of or {}).get(id(f)) or f.name):
                 continue
 
             try:
@@ -397,7 +405,7 @@ class FolderUploadView(APIView):
             {'file_hash': file_hash, 'source_project_id': project_id, 'filepath': filepath},
             sort=[('version_number', -1)],
         )
-        if existing:
+        if existing and (not is_support_file(filepath) or existing.get("file_type") == "support"):
             logger.info(f"[FOLDER-UPLOAD] Reusing (unchanged): {filepath}")
             return {
                 "file_id":        str(existing['_id']),
@@ -408,7 +416,7 @@ class FolderUploadView(APIView):
             }
 
         # === الكشف عن اللغة ===
-        file_type = detect_language_robust(content, filepath)
+        file_type = "support" if is_support_file(filepath) else detect_language_robust(content, filepath)
         basename = os.path.basename(filepath)
 
         gridfs_id = save_to_gridfs(
@@ -426,7 +434,7 @@ class FolderUploadView(APIView):
             gridfs_id=gridfs_id, file_size=len(content.encode('utf-8')),
             source_project_id=project_id, project_name=project_name,
             version_number=version_number, user_email=user_email,
-            user_name=user_name, analysis_status="PENDING",
+            user_name=user_name, analysis_status="NOT_ANALYSED" if file_type == "support" else "PENDING",
         )
 
         data_to_insert = code_file.model_dump(by_alias=True, exclude_unset=True)
@@ -438,7 +446,8 @@ class FolderUploadView(APIView):
         file_id = str(result.inserted_id)
         logger.info(f"[FOLDER-UPLOAD] Saved new: {filepath} → {file_type} v{version_number}")
 
-        analyze_code_file_task.delay(file_id)
+        if file_type != "support":
+            analyze_code_file_task.delay(file_id)
 
         return {
             "file_id":        file_id,

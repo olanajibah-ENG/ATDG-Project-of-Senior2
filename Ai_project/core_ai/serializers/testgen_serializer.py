@@ -86,7 +86,11 @@ def status_response(job, records=None):
         "version_number": job["version_number"],
         "status": job["status"],
         "stage": job["stage"],
-        "progress": progress,
+        "progress": {"repaired": 0, **progress},
+        "llm_requests": job.get("llm_requests", 0),
+        "preflight": ({k: v for k, v in job["preflight"].items() if k not in ("volume", "failure")}
+                      if job.get("preflight") else None), "flaky": job.get("flaky"),
+        "notices": job.get("notices") or [], "snapshot_id": job.get("snapshot_id"),
         "files": files,
         "coverage": _coverage_totals(job),
         "error": job.get("error"),
@@ -157,7 +161,7 @@ def _record_item(record):
         "status": record["status"],
         "reason_code": record.get("reason_code"),
         "test_path": record.get("test_path"),
-        "executed": bool(record.get("executed")),
+        "executed": bool(record.get("executed")), "attempts_used": record.get("attempts_used", 0),
     }
 
 
@@ -170,6 +174,7 @@ def record_detail_response(record, version_number=None):
     run = record.get("run_result") or None
     item.update({
         "reason_detail": record.get("reason_detail"),
+        "attempts": record.get("attempts") or [], "explanation": record.get("explanation"),
         "test_code": record.get("test_code") if record["status"] in _SHOW_CODE else None,
         "notice": _notice(record, version_number),
         "run": ({"run_id": record.get("run_id"), "exit_code": run.get("exit_code"),

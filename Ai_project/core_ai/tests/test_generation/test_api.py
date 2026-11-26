@@ -147,7 +147,7 @@ def test_status_shape_right_after_start(repo, reader, make_project, enqueued):
 
     assert response.status_code == 200
     assert set(response.data) == {"job_id", "project_id", "version_number", "status", "stage",
-                                  "progress", "files", "coverage", "error"}
+                                  "progress", "files", "coverage", "error", "preflight", "flaky", "snapshot_id", "notices", "llm_requests"}
     assert (response.data["status"], response.data["stage"]) == ("pending", "queued")
     assert set(response.data["progress"]["by_status"]) == {
         "pending", "generated", "ready", "skipped", "generation_failed", "test_failed",

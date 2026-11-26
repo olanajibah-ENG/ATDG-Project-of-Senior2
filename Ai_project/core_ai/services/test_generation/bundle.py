@@ -51,7 +51,9 @@ def build_bundle(job, records, final_run):
         "reason_code": r.get("reason_code"), "reason_detail": r.get("reason_detail"),
         # the path inside this package (only ready tests are in it)
         "test_path": bundle_test_path(r) if r["status"] == "ready" and r.get("test_path") else None,
-        "run_id": r.get("run_id"),
+        "run_id": r.get("run_id"), "explanation": r.get("explanation"),
+        "attempts": [{k: a.get(k) for k in ("n", "purpose", "outcome", "cause")} for a in r.get("attempts") or []],
+        "changed_assertions": [c for a in r.get("attempts") or [] for c in a.get("changed_assertions") or []],
     } for r in records])
     files["pytest.ini"] = PYTEST_INI.encode("utf-8")
 

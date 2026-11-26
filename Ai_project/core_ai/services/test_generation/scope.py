@@ -50,6 +50,7 @@ def resolve(data, reader):
     else:
         selected = list(all_files)
 
+    selected = [f for f in selected if f.get("file_type") != "support"]
     if not any(is_python(f.get("file_type"), f.get("path")) for f in selected):
         raise errors.no_python_files()
 

@@ -22,11 +22,41 @@ from __future__ import annotations
 import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
 
+_ENV_FILES = (Path(__file__).resolve().parents[3] / ".env", Path(__file__).resolve().parents[2] / ".env")
+
+
+def _api_key(name: str) -> Optional[str]:
+    """المتغير من البيئة، وإلا من ملف .env (جذر المشروع أو Ai_project)."""
+    if os.environ.get(name):
+        return os.environ[name]
+    for env in _ENV_FILES:
+        if env.is_file():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith(f"{name}="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'") or None
+    return None
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+# مزوّد غير OpenRouter: الموديل بيتكتب "<مزوّد>:<موديل>"، مثلاً "orcarouter:z-ai/glm-5.3-flash-free".
+# (OpenRouter شال موديلنا المجاني cohere/north-mini-code، و GLM-5.3-Flash مجاني على OrcaRouter.)
+PROVIDERS: Dict[str, Dict[str, str]] = {
+    "openrouter": {"url": OPENROUTER_URL, "key_env": "OPENROUTER_API_KEY"},
+    "orcarouter": {"url": "https://api.orcarouter.ai/v1/chat/completions", "key_env": "ORCAROUTER_API_KEY"},
+}
+
+
+def split_model(model: Optional[str]) -> tuple:
+    """'orcarouter:z-ai/x' → ('orcarouter', 'z-ai/x')؛ بدون بادئة → OpenRouter."""
+    prefix, sep, rest = (model or "").partition(":")
+    if sep and prefix in PROVIDERS and "/" in rest:
+        return prefix, rest
+    return "openrouter", model
 
 
 class LLMCallError(Exception):
@@ -39,7 +69,12 @@ class LLMClient:
     max_tokens: int = 4000
     # موديلات "بتفكّر" قبل ما تجاوب: التفكير بيصرف من نفس الحد، وبـ 4000 بيخلص قبل الجواب
     # (cohere: حوالي 14 ألف token تفكير على طلب CASCADE واحد → جواب فاضي، finish = length)
-    MAX_TOKENS_BY_MODEL: Dict[str, int] = {"cohere/north-mini-code:free": 16000}
+    MAX_TOKENS_BY_MODEL: Dict[str, int] = {"cohere/north-mini-code:free": 16000,
+                                           "orcarouter:z-ai/glm-5.3-flash-free": 16000}
+    # بارامترات إضافية لموديل معيّن: GLM بيدعم "JSON مضمون"، وهيك ما بيكسر الجواب بكلام زيادة
+    EXTRA_BY_MODEL: Dict[str, Dict[str, Any]] = {
+        "orcarouter:z-ai/glm-5.3-flash-free": {"response_format": {"type": "json_object"}},
+    }
     transport_retries: int = 3          # أخطاء شبكة / 429 / 5xx فقط — نفس الموديل
     offline: bool = False               # True → أي استدعاء بيفشل (لتشغيل الأجزاء الحتمية بس)
     daily_limit_hit: bool = False       # True بعد أول رفض "free-models-per-day" → الباقي بيفشل فوراً
@@ -63,7 +98,12 @@ class LLMClient:
             raise ValueError(f"{model} راوتر بيختار موديل متغيّر — اختار موديل محدد")
         # موديل مجاني محدد مسموح (قرار المشروع) — الممنوع بس الراوتر يلي بيبدّل الموديل.
         # الموديلات المجانية ممكن تختفي، فمنسجّل نسختها ومنحفظ كل رد خام.
-        cls.model_info = cls._fetch_model_info(model)
+        provider, api_model = split_model(model)
+        if provider == "openrouter":
+            cls.model_info = cls._fetch_model_info(model)
+        else:
+            cls.model_info = {"id": api_model, "provider": provider,
+                              "fetched_at": datetime.now(timezone.utc).isoformat()}
 
     @staticmethod
     def _fetch_model_info(model: str) -> Dict[str, Any]:
@@ -124,13 +164,15 @@ class LLMClient:
             record.update(ok=False, error="daily free limit reached (skipped)")
             raise LLMCallError("daily free limit reached")
 
-        api_key = os.environ.get("OPENROUTER_API_KEY")
+        provider, api_model = split_model(cls.model)
+        url, key_env = PROVIDERS[provider]["url"], PROVIDERS[provider]["key_env"]
+        api_key = _api_key(key_env)
         if not api_key:
-            record.update(ok=False, error="OPENROUTER_API_KEY missing")
-            raise LLMCallError("OPENROUTER_API_KEY missing")
+            record.update(ok=False, error=f"{key_env} missing")
+            raise LLMCallError(f"{key_env} missing")
 
         payload = {
-            "model": cls.model,
+            "model": api_model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -138,9 +180,11 @@ class LLMClient:
             "max_tokens": cls.max_tokens,
             "temperature": 0.0,
             "seed": cls.seed,
-            # ممنوع الـ fallback لموديل تاني من جهة OpenRouter
-            "provider": {"allow_fallbacks": False},
+            **cls.EXTRA_BY_MODEL.get(cls.model or "", {}),
         }
+        if provider == "openrouter":
+            # ممنوع الـ fallback لموديل تاني من جهة OpenRouter
+            payload["provider"] = {"allow_fallbacks": False}
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -151,14 +195,15 @@ class LLMClient:
         last_error = ""
         for attempt in range(1, cls.transport_retries + 1):
             try:
-                resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=180)
+                resp = requests.post(url, headers=headers, json=payload, timeout=180)
+                # حد يومي نهائي (OpenRouter بس). OrcaRouter free_rate_limited = ازدحام مؤقت: بينعاد
                 if resp.status_code == 429 and "free-models-per-day" in resp.text:
                     cls.daily_limit_hit = True
                     record.update(ok=False, error=f"HTTP 429 daily limit: {resp.text[:200]}")
                     raise LLMCallError("daily free limit reached")
                 if resp.status_code == 429 or resp.status_code >= 500:
                     last_error = f"HTTP {resp.status_code}: {resp.text[:300]}"
-                    time.sleep(10 * attempt)
+                    time.sleep((30 if "free_rate_limited" in resp.text else 10) * attempt)
                     continue
                 if resp.status_code != 200:
                     last_error = f"HTTP {resp.status_code}: {resp.text[:300]}"

@@ -35,6 +35,14 @@ from core_upm.celery_tasks.upload_tasks import process_upload_task
 
 logger = logging.getLogger(__name__)
 
+def is_support_file(path):
+    from pathlib import PurePosixPath
+
+    path = PurePosixPath(str(path).replace(chr(92), "/").lower())
+    return (path.name in {"pyproject.toml", "setup.cfg", "pytest.ini", "conftest.py"}
+            or path.suffix == ".txt" and (path.name.startswith("requirements") or "requirements" in path.parts[:-1]))
+
+
 SUPPORTED_EXTENSIONS = (
     '.py', '.java', '.js', '.ts', '.cs',
     '.cpp', '.c', '.h', '.hpp', '.rb', '.go', '.kt',
@@ -95,7 +103,7 @@ class FolderUploadProxyView(APIView):
         path_of = {id(f): p for f, p in zip(loose, paths)} if paths else {}
 
         for f in all_files:
-            file_info = self._read_file(f)
+            file_info = self._read_file(f, path_of.get(id(f)))
             if file_info:
                 if id(f) in path_of and not file_info.get('is_zip'):
                     file_info['path'] = path_of[id(f)]
@@ -150,7 +158,7 @@ class FolderUploadProxyView(APIView):
                 out.append(value)
         return [str(v).replace('\\', '/').lstrip('/') for v in out]
 
-    def _read_file(self, uploaded_file):
+    def _read_file(self, uploaded_file, path=None):
         """
         يقرأ محتوى ملف واحد ويرجعه كـ dict.
         ZIP → يُرسل كـ binary مباشرة للـ AI
@@ -173,7 +181,7 @@ class FolderUploadProxyView(APIView):
                 logger.warning(f"[FOLDER-UPLOAD] Failed to read ZIP {name}: {e}")
                 return None
 
-        if ext not in SUPPORTED_EXTENSIONS:
+        if ext not in SUPPORTED_EXTENSIONS and not is_support_file(path or name):
             return None
 
         try:

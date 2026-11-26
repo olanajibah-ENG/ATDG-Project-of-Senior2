@@ -70,6 +70,18 @@ class FakeSandboxExecutor(SandboxExecutor):
         self.specs = []                            # every RunSpec received
         self.prepared = []                         # (job_id, files) of prepare_source calls
         self.discarded = []
+        self.installs = []
+
+    def install(self, request):
+        from core_ai.services.test_generation.sandbox.executor import InstallOutput
+        self.installs.append(request)
+        entry = self.script.get("install")
+        if isinstance(entry, list):
+            entry = entry.pop(0)
+        return entry or InstallOutput(True, volume="env_" + request.env_key)
+
+    def probe_imports(self, request):
+        return self.script.get("probe", {name: {"ok": True} for name in request.modules})
 
     def prepare_source(self, job_id, files):
         self.prepared.append((job_id, dict(files)))
@@ -83,9 +95,13 @@ class FakeSandboxExecutor(SandboxExecutor):
         if self.start_error:
             return RunOutput(run_id=spec.run_id, started=False, start_error=self.start_error)
         key = "final" if "_final_" in spec.run_id else (spec.test_paths[0] if spec.test_paths else "")
+        if spec.mode == "collect_only":
+            key = ("collect_only", key)
         entry = self.script.get(key)
         if isinstance(entry, list):
             entry = entry.pop(0) if entry else None
+        if isinstance(entry, RunOutput):
+            return entry
         if entry is None:
             entry = {"exit_code": 0, "junit": junit_pass(_names_in(spec.test_files))}
         if entry.get("start_error"):

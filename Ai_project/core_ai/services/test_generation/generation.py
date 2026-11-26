@@ -10,12 +10,15 @@ tasks short, shows progress after every unit, and loses at most one unit if the 
 Nothing here can set a record to `ready`.
 """
 from core_ai.services.test_generation import assembler
+from core_ai.services.test_generation.acceptance import test_sha256
 from core_ai.services.test_generation.languages.base import adapter_for
 from core_ai.services.test_generation.languages.python_adapter import is_python, split_unit_id
 from core_ai.services.test_generation.llm_facade import ModelUnavailable
 from core_ai.services.test_generation.records import new_record
 from core_ai.services.test_generation.runner import PassResult
-from core_ai.services.test_generation.statuses import JobStage, JobStatus, Level, RecordStatus, StopReason
+from core_ai.services.test_generation.statuses import (
+    Actor, JobStage, JobStatus, Level, RecordStatus, StopReason,
+)
 from core_ai.services.test_generation.strategies.unit import UnitStrategy
 from core_ai.services.test_generation.validation import validator
 
@@ -59,7 +62,7 @@ def _analyses_for(unit, job, reader):
 
 def _finish(job, repo, record_repo, *, stop_reason=None):
     counts = record_repo.counts(job["job_id"])
-    if counts.get(RecordStatus.GENERATED, 0):
+    if counts.get(RecordStatus.GENERATED, 0) or record_repo.next_repairable(job['job_id']):
         # S3: generated tests are run next. A stop reason is kept on the job and shown at the end.
         repo.update(job["job_id"], {
             "progress": progress_from_records(counts, job["plan"]),
@@ -95,8 +98,8 @@ def run_generation_pass(job_id, repo, record_repo, attempt_repo, reader, llm, no
     context = strategy.build_context(unit, _analyses_for(unit, job, reader), adapter) if unit else None
 
     if context is None:
-        record_repo.update(record["record_id"], {
-            "status": RecordStatus.GENERATION_FAILED, "reason_code": "no_code",
+        record_repo.transition(record["record_id"], RecordStatus.GENERATION_FAILED, Actor.GENERATE, {
+            "reason_code": "no_code",
             "reason_detail": "the unit's stored details could not be found, so nothing was asked",
         })
     else:
@@ -124,21 +127,29 @@ def run_generation_pass(job_id, repo, record_repo, attempt_repo, reader, llm, no
 
         python_paths = [f["path"] for f in job["files"] if is_python(f.get("file_type"), f.get("path"))]
         checked = validator.validate(result.text, unit_id=record["unit_id"], level=Level.UNIT,
-                                     allowed_roots=adapter.allowed_import_roots(python_paths))
+                                     allowed_roots=adapter.allowed_import_roots(python_paths), context=context)
         attempt_repo.set_validation(result.attempt_id, checked.as_dict())
 
         fields = {"model": result.model, "prompt_version": strategy.prompt_version, "reused": result.reused}
         if checked.ok:
+            to_status = RecordStatus.GENERATED
             fields.update(
-                status=RecordStatus.GENERATED, reason_code=None, reason_detail=None,
+                reason_code=None, reason_detail=None,
                 test_path=assembler.test_path(record["unit_id"], Level.UNIT),
                 test_code=assembler.assemble(checked.code, unit_id=record["unit_id"],
                                              body_hash=record.get("body_hash"), job_id=job_id),
             )
         else:
-            fields.update(status=RecordStatus.GENERATION_FAILED, reason_code=checked.reason_code,
-                          reason_detail=checked.reason_detail)
-        record_repo.update(record["record_id"], fields)
+            to_status = RecordStatus.GENERATION_FAILED
+            fields.update(reason_code=checked.reason_code, reason_detail=checked.reason_detail)
+        fields["attempts"] = [{
+            "n": 1, "purpose": "generate", "attempt_id": result.attempt_id, "run_id": None,
+            "outcome": "written" if checked.ok else "invalid",
+            "cause": None if checked.ok else checked.reason_code,
+            "test_sha256": test_sha256(fields.get("test_code") or checked.code or result.text),
+            "changed_assertions": [], "created_at": now,
+        }]
+        record_repo.transition(record["record_id"], to_status, Actor.GENERATE, fields)
 
     repo.update(job_id, {
         "status": JobStatus.RUNNING, "stage": JobStage.GENERATING,

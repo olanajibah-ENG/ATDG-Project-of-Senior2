@@ -135,19 +135,35 @@ TESTGEN_QUEUE_TIMEOUT_SECONDS = 120
 TEST_RECORDS_COLLECTION = 'test_records'
 TEST_ATTEMPTS_COLLECTION = 'test_attempts'
 # One job may not spend more model requests than this (reused answers do not count).
-TESTGEN_MAX_REQUESTS_PER_JOB = 20
+# S4: generation and repair share this limit.
+TESTGEN_MAX_REQUESTS_PER_JOB = 30
 # Free models spend part of this on their own reasoning; 2000 cut real answers off mid-file.
 TESTGEN_LLM_MAX_TOKENS = 4000
 # None = the client's own model order.
 TESTGEN_LLM_MODEL = None
 # S3 — isolated run. Only the testgen_sandbox_worker (queue test_sandbox) starts containers.
 TEST_RUNS_COLLECTION = 'test_runs'
-TESTGEN_SANDBOX_IMAGE = os.environ.get('TESTGEN_SANDBOX_IMAGE', 'autotest-sandbox:py3.10-s3')
-TESTGEN_SANDBOX_TIMEOUT_SECONDS = 60          # one record's run
+TESTGEN_SANDBOX_IMAGE = os.environ.get('TESTGEN_SANDBOX_IMAGE', 'autotest-sandbox:py3.10-s4')
+TESTGEN_SANDBOX_TIMEOUT_SECONDS = 60          # one record's run (S4: grows with the number of test cases)
 TESTGEN_SANDBOX_FINAL_MAX_SECONDS = 300       # the final run: 60 + 15 x ready tests, capped here
 TESTGEN_SANDBOX_MEMORY = '512m'
 TESTGEN_SANDBOX_PIDS = 128
 TESTGEN_SANDBOX_OUTPUT_LIMIT = 20000          # characters of printed output kept per run
+# S4 — repair, failure classes, flaky check, snapshot, preflight
+TESTGEN_MAX_REPAIR_ATTEMPTS = 2
+TESTGEN_REPAIR_OUTPUT_CHARS = 3000
+TESTGEN_PER_TEST_TIMEOUT_SECONDS = 30
+TESTGEN_FLAKY_RERUNS = 2
+TESTGEN_INSTALL_TIMEOUT_SECONDS = 300
+TESTGEN_INSTALL_MEMORY = '2g'                 # the 1g /tmp tmpfs counts inside this
+TESTGEN_INSTALL_TMPFS = '1g'
+TESTGEN_PROBE_TIMEOUT_SECONDS = 60
+TESTGEN_PROBE_MEMORY = '1g'
+TESTGEN_ENV_LOCK_STALE_SECONDS = 900
+TESTGEN_ENV_FAILED_TTL_SECONDS = 3600
+TESTGEN_ENV_KEEP_DAYS = 7
+TEST_COVERAGE_SNAPSHOTS_COLLECTION = 'test_coverage_snapshots'
+TEST_ENVS_COLLECTION = 'test_envs'
 
 AUTH_PASSWORD_VALIDATORS = [
     {

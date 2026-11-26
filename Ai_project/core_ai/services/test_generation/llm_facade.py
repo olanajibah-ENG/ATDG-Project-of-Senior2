@@ -40,9 +40,11 @@ class LLMFacade:
         self._model = model
 
     def complete(self, *, job_id, record_id, unit_id, level, purpose, system, user,
-                 request_hash, prompt_version):
+                 request_hash, prompt_version, repair_of=None):
         attempt = new_attempt(job_id=job_id, record_id=record_id, unit_id=unit_id, level=level,
                               purpose=purpose, prompt_version=prompt_version, request_hash=request_hash)
+        if repair_of is not None:
+            attempt['repair_of'] = repair_of
         started = time.monotonic()
         try:
             answer = self._client(system, user, model=self._model, temperature=0.0,
@@ -68,10 +70,12 @@ class LLMFacade:
                          completion_tokens=attempt["completion_tokens"],
                          attempt_id=attempt["attempt_id"])
 
-    def reuse(self, earlier, *, job_id, record_id, unit_id, level, purpose, request_hash, prompt_version):
+    def reuse(self, earlier, *, job_id, record_id, unit_id, level, purpose, request_hash, prompt_version, repair_of=None):
         """Records that an earlier answer was used again. No request is sent."""
         attempt = new_attempt(job_id=job_id, record_id=record_id, unit_id=unit_id, level=level,
                               purpose=purpose, prompt_version=prompt_version, request_hash=request_hash)
+        if repair_of is not None:
+            attempt['repair_of'] = repair_of
         attempt.update(reused=True, outcome="answered", model=earlier.get("model"),
                        answer_text=earlier.get("answer_text"))
         self._attempts.add(attempt)

@@ -57,7 +57,18 @@ class FakeModel:
                            "temperature": temperature, "max_tokens": max_tokens})
         if self.fail_from is not None and len(self.calls) >= self.fail_from:
             raise RuntimeError("All free models are busy or rate-limited.")
-        context = context_in(user_prompt)
-        local = context["unit"]["id"].partition("::")[2]
-        text = self.answers.get(local, good_answer(context))
+        if isinstance(self.answers, list):
+            text = self.answers[len(self.calls) - 1]
+        else:
+            context = context_in(user_prompt)
+            local = context["unit"]["id"].partition("::")[2]
+            text = self.answers.get(local, good_answer(context))
         return {"text": text, "model": "fake/model", "prompt_tokens": 11, "completion_tokens": 22}
+
+
+def repair_fix(code, reason):
+    return f"VERDICT: fix_test\nREASON: {reason}\n```python\n{code.rstrip()}\n```"
+
+
+def repair_suspect(location, expected, explanation):
+    return f"VERDICT: suspect_code\nLOCATION: {location}\nEXPECTED: {expected}\nEXPLANATION: {explanation}"

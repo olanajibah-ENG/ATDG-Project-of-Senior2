@@ -5,6 +5,16 @@ import os
 SOURCES_DIR = os.path.join(os.path.dirname(__file__), "fixtures", "sources")
 
 
+def put_record(repo, status="pending", **fields):
+    from core_ai.models.testgen import new_record
+
+    unit = {"id": "a.py::f", "file": "a.py", "body_hash": "h1"}
+    record = new_record("job_1", unit, "unit")
+    record.update(fields, status=status)
+    repo.create_many([record])
+    return record["record_id"]
+
+
 def load_source(name):
     with open(os.path.join(SOURCES_DIR, name), encoding="utf-8") as handle:
         return handle.read()

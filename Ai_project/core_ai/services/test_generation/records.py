@@ -8,7 +8,9 @@ Each has a Mongo implementation for the service and an in-memory one for tests.
 import copy
 from datetime import datetime
 
-from core_ai.services.test_generation.statuses import RECORD_STATUSES, RecordStatus
+from core_ai.services.test_generation.statuses import (
+    RECORD_STATUSES, REPAIRABLE_CAUSES, Actor, IllegalTransition, RecordStatus, sources_of,
+)
 
 
 from core_ai.models.testgen import new_attempt, new_record  # noqa: F401  (re-exported)
@@ -18,13 +20,43 @@ def empty_counts():
     return {name: 0 for name in RECORD_STATUSES}
 
 
+def max_repair_attempts():
+    try:
+        from django.conf import settings
+
+        return int(getattr(settings, "TESTGEN_MAX_REPAIR_ATTEMPTS", 2))
+    except Exception:
+        return 2
+
+
 class ReadyNotAllowed(ValueError):
     """`ready` is written only through accept_ready(), which only the acceptance gate calls."""
+
+
+class StatusNotAllowed(ValueError):
+    """A status is changed only through transition() (or accept_ready() for `ready`)."""
 
 
 def _refuse_ready(fields):
     if fields.get("status") == RecordStatus.READY:
         raise ReadyNotAllowed("a record becomes ready only through the acceptance gate")
+    if "status" in fields:
+        raise StatusNotAllowed("change a record's status through transition()")
+
+
+def _matches_transition(item, to_status, actor):
+    if item["status"] not in sources_of(to_status, actor):
+        return False
+    if actor == Actor.REPAIR and to_status == RecordStatus.GENERATED:
+        return int(item.get("attempts_used") or 0) < max_repair_attempts()
+    return True
+
+
+def _repairable(item):
+    return (item["status"] in (RecordStatus.TEST_FAILED, RecordStatus.GENERATION_FAILED)
+            and item.get("reason_code") in REPAIRABLE_CAUSES
+            and int(item.get("attempts_used") or 0) < max_repair_attempts()
+            and not item.get("repair_closed"))
 
 
 # ── records ─────────────────────────────────────────────────────────────────
@@ -68,13 +100,45 @@ class InMemoryRecordRepo:
 
     def accept_ready(self, record_id, fields):
         """Only the acceptance gate calls this."""
-        self._write(record_id, dict(fields, status=RecordStatus.READY))
+        self.transition(record_id, RecordStatus.READY, Actor.GATE, fields, _gate=True)
+
+    def transition(self, record_id, to_status, actor, fields=None, _gate=False):
+        """Change the status if the table allows it from the record's current status; else raise."""
+        if to_status == RecordStatus.READY and not _gate:
+            raise ReadyNotAllowed("a record becomes ready only through the acceptance gate")
+        for item in self._items:
+            if item["record_id"] == record_id:
+                if not _matches_transition(item, to_status, actor):
+                    raise IllegalTransition(f"{record_id}: {item['status']} → {to_status} by {actor}")
+                item.update(copy.deepcopy(dict(fields or {}, status=to_status)))
+                item["updated_at"] = datetime.utcnow()
+                return
+        raise IllegalTransition(f"{record_id}: no such record")
+
+    def push_attempt(self, record_id, attempt):
+        for item in self._items:
+            if item["record_id"] == record_id:
+                item.setdefault("attempts", []).append(copy.deepcopy(attempt))
+
+    def update_attempt(self, record_id, n, fields):
+        for item in self._items:
+            if item["record_id"] == record_id:
+                for attempt in item.get("attempts") or []:
+                    if attempt.get("n") == n:
+                        attempt.update(copy.deepcopy(fields))
+
+    def next_repairable(self, job_id):
+        for item in self._items:
+            if item["job_id"] == job_id and item["level"] == "unit" and _repairable(item):
+                return copy.deepcopy(item)
+        return None
 
     def _write(self, record_id, fields):
         for item in self._items:
             if item["record_id"] == record_id:
                 item.update(copy.deepcopy(fields))
                 item["updated_at"] = datetime.utcnow()
+                return
 
     def counts(self, job_id):
         out = empty_counts()
@@ -141,7 +205,36 @@ class MongoRecordRepo:
 
     def accept_ready(self, record_id, fields):
         """Only the acceptance gate calls this."""
-        self._write(record_id, dict(fields, status=RecordStatus.READY))
+        self.transition(record_id, RecordStatus.READY, Actor.GATE, fields, _gate=True)
+
+    def transition(self, record_id, to_status, actor, fields=None, _gate=False):
+        """Atomic: the filter holds the allowed source statuses (and the attempt limit for repair)."""
+        if to_status == RecordStatus.READY and not _gate:
+            raise ReadyNotAllowed("a record becomes ready only through the acceptance gate")
+        query = {"record_id": record_id, "status": {"$in": sorted(sources_of(to_status, actor))}}
+        if actor == Actor.REPAIR and to_status == RecordStatus.GENERATED:
+            query["$or"] = [{"attempts_used": {"$lt": max_repair_attempts()}},
+                            {"attempts_used": {"$exists": False}}]
+        update = dict(fields or {}, status=to_status, updated_at=datetime.utcnow())
+        result = self._col().update_one(query, {"$set": update})
+        if result.matched_count != 1:
+            raise IllegalTransition(f"{record_id}: not allowed → {to_status} by {actor}")
+
+    def push_attempt(self, record_id, attempt):
+        self._col().update_one({"record_id": record_id}, {"$push": {"attempts": copy.deepcopy(attempt)}})
+
+    def update_attempt(self, record_id, n, fields):
+        self._col().update_one({"record_id": record_id, "attempts.n": n},
+                               {"$set": {f"attempts.$.{k}": v for k, v in fields.items()}})
+
+    def next_repairable(self, job_id):
+        for doc in self._col().find(
+                {"job_id": job_id, "level": "unit",
+                 "status": {"$in": [RecordStatus.TEST_FAILED, RecordStatus.GENERATION_FAILED]},
+                 "reason_code": {"$in": list(REPAIRABLE_CAUSES)}}, sort=[("_id", 1)]):
+            if _repairable(doc):
+                return self._clean(doc)
+        return None
 
     def _write(self, record_id, fields):
         fields = dict(fields)

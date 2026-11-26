@@ -15,6 +15,7 @@ from core_ai.services.test_generation.statuses import RECORD_STATUSES, FileStatu
 @dataclass
 class PassResult:
     done: bool
+    countdown: int = 0
     handover: bool = False       # S3: generation finished and the run stage must start
 
 
@@ -40,7 +41,7 @@ def run_pass(job_id, repo, reader, request_analysis, now, max_wait_seconds=600,
     gate_state["passes"] = int(gate_state.get("passes") or 0) + 1
     deadline = gate_state["deadline_at"]
 
-    files = job["files"]
+    files = [entry for entry in job["files"] if entry.get("file_type") != "support"]
     ready, skipped_files, waiting = [], [], 0
     python_total = 0
 
@@ -74,7 +75,20 @@ def run_pass(job_id, repo, reader, request_analysis, now, max_wait_seconds=600,
             waiting += 1
         else:  # SKIP
             entry["status"], entry["reason"] = FileStatus.SKIPPED, decision.reason
-            skipped_files.append({"path": entry["path"], "reason": decision.reason})
+            if decision.reason == SkipReason.ANALYSIS_FAILED:
+                source = reader.content_of(entry["file_id"])
+                if source is not None:
+                    if not source.strip():
+                        entry["reason"] = SkipReason.EMPTY_FILE
+                    elif (b"\x00" if isinstance(source, bytes) else "\x00") in source:
+                        entry["reason"] = SkipReason.BINARY_FILE
+                    else:
+                        import ast
+                        try:
+                            ast.parse(source)
+                        except (SyntaxError, ValueError):
+                            entry["reason"] = SkipReason.SYNTAX_ERROR
+            skipped_files.append({"path": entry["path"], "reason": entry["reason"]})
 
     file_graphs = [loader.load_file(path, analysis) for path, analysis in ready]
     project_graph = resolver.resolve_calls(merge.merge(file_graphs), file_graphs)
@@ -100,7 +114,7 @@ def run_pass(job_id, repo, reader, request_analysis, now, max_wait_seconds=600,
         if not job.get("records_created"):
             generation.create_records(job, record_repo)
         fields.update(
-            status=JobStatus.RUNNING, stage=JobStage.GENERATING, error=None,
+            status=JobStatus.RUNNING, stage=JobStage.PREFLIGHT, error=None,
             records_created=True, llm_requests=int(job.get("llm_requests") or 0),
             progress=generation.progress_from_records(record_repo.counts(job_id), plan),
         )

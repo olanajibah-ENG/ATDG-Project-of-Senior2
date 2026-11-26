@@ -33,5 +33,13 @@ class TestKindStrategy(ABC):
         )
         return system, user
 
+    def build_repair_prompt(self, context, failure, adapter):
+        from ..prompts.repair import build
+        return build(context, failure, adapter)
+
+    def parse_repair_answer(self, text):
+        from ..prompts.repair import parse
+        return parse(text)
+
     def request_hash(self, context):
         return context_module.context_hash(context, self.prompt_version)

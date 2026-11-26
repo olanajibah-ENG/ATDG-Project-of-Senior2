@@ -13,9 +13,11 @@ from xml.etree import ElementTree
 from core_ai.services.test_generation.statuses import RecordStatus, RunReason
 
 MAX_RESULT_BYTES = 1_000_000
-TIMEOUT_EXIT_CODES = (124, 137)              # `timeout` itself (124) or KILL (128 + 9)
+TIMEOUT_EXIT_CODES = (124, 137)              # `timeout` itself (124) or KILL (128 + 9); OOM is also 137
 _MISSING_MODULE = re.compile(r"No module named ['\"]([A-Za-z0-9_.]+)['\"]")
 _PARAM_SUFFIX = re.compile(r"\[.*\]$")
+_ERROR_LINE = re.compile(r"^E\s+([A-Za-z_][\w.]*(?:Error|Exception|Exit|Interrupt|Blocked\w*))\b", re.M)
+_PER_TEST_TIMEOUT = "Failed: Timeout"
 _STDLIB = set(getattr(sys, "stdlib_module_names", ())) | set(sys.builtin_module_names)
 
 
@@ -45,17 +47,33 @@ def parse_junit(text):
         return None
     cases = []
     for case in root.iter("testcase"):
-        outcome, message, body = "passed", None, None
+        outcome, message, body, error_type = "passed", None, None, None
         for tag in ("failure", "error", "skipped"):
             child = case.find(tag)
             if child is not None:
                 outcome = {"failure": "failed", "error": "error", "skipped": "skipped"}[tag]
                 message = child.get("message")
                 body = (child.text or "").strip() or None
+                if tag != "skipped":
+                    error_type = _error_type(child.get("type"), message, body)
                 break
         cases.append({"name": case.get("name") or "", "classname": case.get("classname") or "",
-                      "outcome": outcome, "message": message, "text": body})
+                      "outcome": outcome, "message": message, "text": body, "error_type": error_type})
     return cases
+
+
+def _error_type(type_attr, message, body):
+    """`type=` when pytest writes it, else the last `E   Name:` line, else Timeout for pytest-timeout."""
+    if (message or "").startswith(_PER_TEST_TIMEOUT) or (body or "").find("Timeout >") >= 0:
+        return "Timeout"
+    if type_attr:
+        return type_attr.rsplit(".", 1)[-1]
+    found = _ERROR_LINE.findall(body or "") or _ERROR_LINE.findall(message or "")
+    if found:
+        return found[-1].rsplit(".", 1)[-1]
+    if (message or "").lstrip().startswith("assert"):
+        return "AssertionError"
+    return None
 
 
 def _short(text, limit=500):
@@ -88,14 +106,16 @@ def verdict(output, expected_names, project_names):
 
     if not output.started:
         return Verdict(env, RunReason.SANDBOX_UNAVAILABLE, _short(output.start_error))
+    if getattr(output, "oom_killed", False):
+        return Verdict(env, RunReason.OUT_OF_MEMORY, "the run was killed for using too much memory")
     if output.timed_out or output.exit_code in TIMEOUT_EXIT_CODES:
-        return Verdict(failed, RunReason.TIMEOUT, "the run was stopped at its time limit")
+        return Verdict(env, RunReason.RUN_TIMEOUT, "the whole run was stopped at its time limit")
 
     cases = parse_junit(output.junit_xml)
     if cases is None:
         return Verdict(env, RunReason.NO_RESULT_FILE, "the run left no readable result file")
-    tests = [{"name": c["name"], "outcome": c["outcome"], "message": _short(c["message"] or c["text"])}
-             for c in cases]
+    tests = [{"name": c["name"], "outcome": c["outcome"], "message": _short(c["message"] or c["text"]),
+              "error_type": c.get("error_type")} for c in cases]
 
     missing = _missing_module(cases, output.output)
     if missing and output.exit_code != 0:
@@ -109,6 +129,10 @@ def verdict(output, expected_names, project_names):
     if output.exit_code == 5 or not cases:
         return Verdict(failed, RunReason.NO_TESTS, "no test was collected", tests)
 
+    hung = next((c for c in cases if c.get("error_type") == "Timeout"), None)
+    if hung is not None:
+        return Verdict(failed, RunReason.TIMEOUT, f"{hung['name']}: " + (_short(hung["message"]) or "timed out"),
+                       tests)
     bad = next((c for c in cases if c["outcome"] in ("failed", "error")), None)
     if bad is not None:
         return Verdict(failed, RunReason.ASSERTION, _short(bad["message"] or bad["text"]), tests)

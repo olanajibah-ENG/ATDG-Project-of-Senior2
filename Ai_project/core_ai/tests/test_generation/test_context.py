@@ -82,7 +82,7 @@ def test_unknown_unit_or_missing_analysis_gives_no_context():
 def test_hash_is_stable_and_follows_the_body_and_the_prompt_version():
     first, second = _game_context(), _game_context()
     assert context.context_hash(first, "unit-v1") == context.context_hash(second, "unit-v1")
-    assert context.context_hash(first, "unit-v1") != context.context_hash(first, "unit-v2")
+    assert context.context_hash(first, "unit-v1") != context.context_hash(first, "unit-v3")
     second["unit"]["body"] += "\npass"
     assert context.context_hash(first, "unit-v1") != context.context_hash(second, "unit-v1")
 
@@ -119,10 +119,11 @@ def test_prompt_holds_the_context_and_the_rules_and_nothing_else_from_the_projec
 
 def test_prompt_version_and_request_hash():
     strategy = UnitStrategy()
-    assert strategy.prompt_version == unit_prompt.PROMPT_VERSION == "unit-v2"
+    assert strategy.prompt_version == unit_prompt.PROMPT_VERSION == "unit-v3"
     assert strategy.level == "unit"
     ctx = _game_context()
-    assert strategy.request_hash(ctx) == context.context_hash(ctx, "unit-v2")
+    assert strategy.request_hash(ctx) == context.context_hash(ctx, "unit-v3")
+    assert strategy.request_hash(ctx) != context.context_hash(ctx, "unit-v2")
 
 
 # ── assembler ────────────────────────────────────────────────────────────────
@@ -201,5 +202,5 @@ def test_positional_only_marker_for_a_module_function():
 
 
 def test_prompt_says_defaults_are_code_and_version_moved():
-    assert unit_prompt.PROMPT_VERSION == "unit-v2"
+    assert unit_prompt.PROMPT_VERSION == "unit-v3"
     assert "not the text" in unit_prompt.USER_TEMPLATE

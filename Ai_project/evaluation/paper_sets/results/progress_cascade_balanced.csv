@@ -8,3 +8,6 @@ fix 2: lenient JSON (replay only),current,2026-11-12T07:12:17,5e79bc6f6a8c,coher
 fix 1+2: lenient JSON + real retries,current,2026-11-12T07:24:21,5e79bc6f6a8c,cohere/north-mini-code:free,142,0.579,0.465,0.516,0.662,33,24,38,47,0,166,137,3,0,0.401,0.0,0.606
 fix 1+2: lenient JSON + real retries (complete),current,2026-11-13T09:18:43,22069f9b4d0b,cohere/north-mini-code:free,142,0.586,0.479,0.527,0.662,34,24,37,47,0,166,151,2,0,0.408,0.0,0.618
 evidence fix (replay only),current,2026-11-19T20:33:07,869001935edb,cohere/north-mini-code:free,142,0.586,0.479,0.527,0.662,34,24,37,47,0,166,154,2,0,0.408,0.0,0.618
+GLM-5.3-flash,current,2026-11-22T09:18:05,869001935edb,orcarouter:z-ai/glm-5.3-flash-free,142,1.0,0.07,0.132,1.0,5,0,66,71,0,386,0,116,0,0.035,0.0,1.0
+GLM-5.3-flash rerun (fixed 429),current,2026-11-22T16:38:56,78f664473d63,orcarouter:z-ai/glm-5.3-flash-free,142,,0.0,,1.0,0,0,71,71,0,0,0,0,142,0.0,,
+GLM-5.3-flash rerun (docker),current,2026-11-22T16:50:59,869001935edb,orcarouter:z-ai/glm-5.3-flash-free,142,1.0,0.07,0.132,1.0,5,0,66,71,0,386,26,116,0,0.035,0.0,1.0

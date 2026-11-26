@@ -1,0 +1,115 @@
+{
+  "info": {
+    "name": "Feature 1 - S4 manual checks",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "project_id",
+      "value": ""
+    },
+    {
+      "key": "job_id",
+      "value": ""
+    },
+    {
+      "key": "record_id",
+      "value": ""
+    },
+    {
+      "key": "case_path",
+      "value": "s4_case.py"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Start unit tests",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/analysis/tests/jobs/",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"paths\": [\n    \"{{case_path}}\"\n  ],\n  \"levels\": [\n    \"unit\"\n  ]\n}"
+        },
+        "description": "For the isolated S4 ZIPs use case_path=s4_case.py. For earlier demo_s4 ZIPs use demo/s4_checks.py. Uses the latest uploaded version unless version_number is supplied."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 202 || pm.response.code === 201) {",
+              "  pm.collectionVariables.set('job_id', pm.response.json().job_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Check job status",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/",
+        "header": []
+      }
+    },
+    {
+      "name": "3. List unit records",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/records/?level=unit",
+        "header": []
+      }
+    },
+    {
+      "name": "4. Inspect selected record",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/records/{{record_id}}/",
+        "header": []
+      }
+    },
+    {
+      "name": "5. View final coverage",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/coverage/",
+        "header": []
+      }
+    },
+    {
+      "name": "6. Download test bundle",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/analysis/tests/jobs/{{job_id}}/bundle/",
+        "header": []
+      }
+    }
+  ]
+}

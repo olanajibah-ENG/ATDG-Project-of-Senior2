@@ -7,8 +7,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 
+class RunMode:
+    FULL = "full"
+    COLLECT_ONLY = "collect_only"
+
+
 @dataclass
-class RunSpec:
+class RunRequest:
     run_id: str
     job_id: str
     src_volume: str                       # from prepare_source(); mounted read-only
@@ -16,6 +21,36 @@ class RunSpec:
     test_paths: list                      # paths given to pytest, relative to /workspace
     timeout_s: int
     with_coverage: bool = True
+    mode: str = RunMode.FULL
+    env_volume: object = None             # S4 preflight environment, mounted read-only when given
+
+
+RunSpec = RunRequest                      # S3 name, kept for existing callers
+
+
+@dataclass
+class InstallRequest:
+    env_key: str
+    requirements_text: str
+    timeout_s: int
+
+
+@dataclass
+class InstallOutput:
+    ok: bool
+    volume: object = None
+    exit_code: object = None
+    output: str = ""
+    missing: bool = False
+    temporary: bool = False
+    size_bytes: int = 0
+
+
+@dataclass
+class ProbeRequest:
+    src_volume: str
+    env_volume: object
+    modules: list
 
 
 @dataclass
@@ -30,9 +65,13 @@ class RunOutput:
     start_error: object = None            # str when started is False
     duration_s: float = 0.0
     options: dict = field(default_factory=dict)   # image and limits used, for the run record
+    oom_killed: bool = False              # Docker's State.OOMKilled: exit 137 is shared with a KILL timeout
 
 
 class SandboxExecutor(ABC):
+    def reap_expired(self):
+        """Clean up expired resources when the backend allocates persistent containers."""
+
     @abstractmethod
     def prepare_source(self, job_id, files):
         """Make the version's files ({path: bytes}) available read-only; → a volume name."""

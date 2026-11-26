@@ -54,6 +54,13 @@ def new_record(job_id, unit, level, now=None):
         "model": None,
         "prompt_version": None,
         "reused": False,
+        # S4: every write of the test, and the repair bookkeeping
+        "attempts": [],
+        "attempts_used": 0,
+        "explanation": None,
+        "fwo_repaired": False,
+        "last_rejection": None,
+        "repair_closed": False,
         "created_at": now,
         "updated_at": now,
     }

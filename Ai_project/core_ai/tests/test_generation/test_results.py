@@ -40,9 +40,50 @@ def test_not_started_is_sandbox_unavailable():
 
 
 @pytest.mark.parametrize("kw", [{"exit_code": 137}, {"exit_code": 124}, {"exit_code": None, "timed_out": True}])
-def test_killed_at_the_time_limit_is_timeout(kw):
+def test_killed_at_the_time_limit_is_run_timeout(kw):
+    # S4: the real S3 whole-run kill is `timeout --signal=KILL` → exit 137, no OOM flag
     v = results.verdict(out(junit_text=junit_pass(NAMES), **kw), NAMES, PROJECT)
+    assert (v.status, v.reason) == ("environment_error", "run_timeout")
+
+
+def test_real_kill_without_junit_and_without_oom_is_run_timeout():
+    v = results.verdict(out(exit_code=137, junit_text=None, oom_killed=False), NAMES, PROJECT)
+    assert (v.status, v.reason) == ("environment_error", "run_timeout")
+
+
+def test_oom_killed_is_out_of_memory():
+    v = results.verdict(out(exit_code=137, junit_text=None, oom_killed=True), NAMES, PROJECT)
+    assert (v.status, v.reason) == ("environment_error", "out_of_memory")
+
+
+def test_one_hanging_test_is_a_repairable_timeout_with_its_name():
+    text = junit([(NAMES[0], "passed", None), (NAMES[1], "failed", "Failed: Timeout >30.0s")])
+    v = results.verdict(out(exit_code=1, junit_text=text), NAMES, PROJECT)
     assert (v.status, v.reason) == ("test_failed", "timeout")
+    assert NAMES[1] in v.detail
+    assert v.tests[1]["error_type"] == "Timeout"
+
+
+def test_error_type_from_the_type_attribute_or_the_e_line():
+    typed = ('<testsuites><testsuite><testcase classname="c" name="a"><failure type="builtins.ValueError" '
+             'message="bad">x</failure></testcase><testcase classname="c" name="b"><failure message="m">'
+             'def t():\n&gt;   f()\nE   KeyError: 3</failure></testcase><testcase classname="c" name="c">'
+             '<failure message="assert 1 == 2">assert 1 == 2</failure></testcase></testsuite></testsuites>')
+    cases = results.parse_junit(typed)
+    assert [c["error_type"] for c in cases] == ["ValueError", "KeyError", "AssertionError"]
+
+
+def test_network_blocked_stays_an_assertion_with_a_clear_message():
+    text = junit_fail(NAMES, NAMES[0], "pytest_socket.SocketBlockedError: A test tried to use socket.socket.")
+    v = results.verdict(out(exit_code=1, junit_text=text), NAMES, PROJECT)
+    assert (v.status, v.reason) == ("test_failed", "assertion")
+    assert "SocketBlockedError" in v.detail
+
+
+def test_missing_third_party_module_wins_over_collection_error_on_exit_2():
+    text = junit_collection_error("ModuleNotFoundError: No module named 'requests.adapters'")
+    v = results.verdict(out(exit_code=2, junit_text=text), NAMES, PROJECT)
+    assert (v.status, v.reason, v.detail) == ("environment_error", "missing_dependency", "requests.adapters")
 
 
 def test_no_result_file():

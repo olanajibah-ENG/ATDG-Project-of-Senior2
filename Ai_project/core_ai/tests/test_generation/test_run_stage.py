@@ -7,6 +7,7 @@ from core_ai.models.testgen import new_job, new_record
 from core_ai.services.test_generation import acceptance, results
 from core_ai.services.test_generation.records import InMemoryRecordRepo, ReadyNotAllowed
 from core_ai.services.test_generation.run_stage import RunLimits, run_sandbox_pass
+from core_ai.services.test_generation.statuses import Actor
 from core_ai.tests.test_generation.conftest import PROJECT_ID
 from core_ai.tests.test_generation.fake_sandbox import (FakeSandboxExecutor, cov_json, junit,
                                                        junit_collection_error, junit_fail)
@@ -21,7 +22,11 @@ def make_test_code(unit, n=2, body="    assert True\n"):
 
 
 @pytest.fixture
-def setup(repo, reader, runs):
+def setup(repo, reader, runs, monkeypatch):
+    # Exercise the original S3 run in isolation. S4 scenarios enable both budgets.
+    from django.conf import settings
+    monkeypatch.setattr(settings, 'TESTGEN_MAX_REPAIR_ATTEMPTS', 0)
+    monkeypatch.setattr(settings, 'TESTGEN_FLAKY_RERUNS', 0)
     reader.add_file("f1", "demo/course.py", content=COURSE)
     reader.add_file("f2", "demo/student.py", content="from demo.course import Course\n")
     reader.add_file("f3", "config.json", file_type="json", content="{}")
@@ -87,7 +92,7 @@ def test_edge_and_generation_failed_records_are_never_run(setup, repo, runs, rea
     make, records = setup
     job_id = make(statuses={"Course.is_full": "generation_failed"})
     run_all(job_id, repo, records, runs, reader, sandbox)
-    assert len([s for s in sandbox.specs if "_final_" not in s.run_id]) == 2
+    assert len([s for s in sandbox.specs if "_final_" not in s.run_id and s.mode == "full"]) == 2
     assert unit_record(records, job_id, "Course.is_full")["status"] == "generation_failed"
     assert {r["status"] for r in records.list(job_id) if r["level"] == "edge"} == {"pending"}
     assert repo.get(job_id)["status"] == "completed_with_issues"
@@ -97,7 +102,7 @@ def test_one_record_per_pass_and_the_source_is_prepared_once(setup, repo, runs, 
     make, records = setup
     job_id = make()
     run_sandbox_pass(job_id, repo, records, runs, reader, sandbox, datetime.utcnow())
-    assert len(sandbox.specs) == 1 and len(sandbox.prepared) == 1
+    assert [s.mode for s in sandbox.specs] == ["collect_only", "full"] and len(sandbox.prepared) == 1
     assert repo.get(job_id)["progress"]["by_status"]["ready"] == 1
     run_all(job_id, repo, records, runs, reader, sandbox)
     assert len(sandbox.prepared) == 1 and sandbox.discarded == [f"sbx_{job_id}_src"]
@@ -116,8 +121,8 @@ def test_run_spec_carries_the_test_file_and_limits(setup, repo, runs, reader, sa
     make, records = setup
     job_id = make(units=("Course.__init__",))
     run_all(job_id, repo, records, runs, reader, sandbox)
-    spec = sandbox.specs[0]
-    assert spec.timeout_s == 60 and spec.with_coverage and spec.src_volume == f"sbx_{job_id}_src"
+    spec = sandbox.specs[1]
+    assert spec.timeout_s == 90 and spec.with_coverage and spec.src_volume == f"sbx_{job_id}_src"
     assert spec.test_paths == ["tests/generated/test_demo_course_Course___init____unit.py"]
     assert set(spec.test_files) == {"pytest.ini", "generated/test_demo_course_Course___init____unit.py"}
 
@@ -220,6 +225,32 @@ def test_a_job_with_nothing_generated_finishes_without_runs(setup, repo, runs, r
 
 # ── the gate ─────────────────────────────────────────────────────────────────
 
+def test_collection_error_skips_full_execution(setup, repo, runs, reader, sandbox):
+    make, records = setup
+    job_id = make(units=("Course.__init__",))
+    path = "tests/generated/test_demo_course_Course___init____unit.py"
+    sandbox.script["collect_only", path] = {
+        "exit_code": 2, "junit": junit_collection_error("ModuleNotFoundError: No module named 'requests'")}
+    run_sandbox_pass(job_id, repo, records, runs, reader, sandbox, datetime.utcnow())
+    rec = unit_record(records, job_id, "Course.__init__")
+    assert rec["reason_code"] == "missing_dependency" and rec["evidence"] is None
+    assert [s.mode for s in sandbox.specs] == ["collect_only"]
+    assert rec["run_id"] == sandbox.specs[0].run_id
+
+
+def test_record_start_backoff_recovers_without_repair(setup, repo, runs, reader, sandbox):
+    make, records = setup
+    job_id = make(units=("Course.__init__",))
+    sandbox.start_error = "engine unavailable"
+    for delay in (5, 10):
+        result = run_sandbox_pass(job_id, repo, records, runs, reader, sandbox, datetime.utcnow())
+        assert result.countdown == delay
+        assert unit_record(records, job_id, "Course.__init__")["status"] == "generated"
+    sandbox.start_error = None
+    run_all(job_id, repo, records, runs, reader, sandbox)
+    assert unit_record(records, job_id, "Course.__init__")["evidence"]["repaired"] is False
+
+
 def test_ready_cannot_be_written_outside_the_gate():
     records = InMemoryRecordRepo()
     records.create_many([{"record_id": "t_1", "job_id": "j", "level": "unit", "status": "generated"}])
@@ -245,7 +276,8 @@ def test_reject_clears_evidence_of_a_ready_record():
     ok = results.Verdict("ready", None, None, [{"name": "test_a", "outcome": "passed", "message": None}])
     acceptance.accept(records, rec, job={"version_number": 1}, run_id="r", verdict=ok, duration_s=0.1)
     assert records.get("t_1")["evidence"]["passed"] == 1
-    acceptance.reject(records, rec, verdict=results.Verdict("test_failed", "fails_with_others", "x"))
+    acceptance.reject(records, rec, actor=Actor.FINAL_RUN,
+                      verdict=results.Verdict("test_failed", "fails_with_others", "x"))
     after = records.get("t_1")
     assert (after["status"], after["reason_code"], after["evidence"]) == ("test_failed", "fails_with_others", None)
 
@@ -271,8 +303,8 @@ INIT_NAMES = ["test_Course___init____unit_1", "test_Course___init____unit_2"]
     ({"exit_code": 5, "junit": junit([])}, "test_failed", "no_tests"),
     ({"exit_code": 0, "junit": junit([(INIT_NAMES[0], "passed", None), (INIT_NAMES[1], "skipped", "why")])},
      "test_failed", "skipped_test"),
-    ({"exit_code": 137, "junit": None}, "test_failed", "timeout"),
-    ({"exit_code": None, "timed_out": True, "junit": None}, "test_failed", "timeout"),
+    ({"exit_code": 137, "junit": None}, "environment_error", "run_timeout"),
+    ({"exit_code": None, "timed_out": True, "junit": None}, "environment_error", "run_timeout"),
 ])
 def test_each_failure_kind_through_the_run_stage(setup, repo, runs, reader, sandbox, entry, status, reason):
     make, records = setup

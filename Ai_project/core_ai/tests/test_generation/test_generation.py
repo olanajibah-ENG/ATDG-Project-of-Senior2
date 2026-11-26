@@ -43,7 +43,7 @@ def test_planning_hands_over_to_generation(repo, reader, records, make_project):
 
     job = repo.get(job_id)
     assert result.done is False
-    assert (job["status"], job["stage"]) == ("running", "generating")
+    assert (job["status"], job["stage"]) == ("running", "preflight")
     assert len(records.list(job_id)) == 42
     assert len(records.list(job_id, level="unit")) == 14
     assert {r["status"] for r in records.list(job_id)} == {"pending"}
@@ -76,7 +76,7 @@ def test_one_unit_per_pass_until_all_are_generated(repo, reader, records, attemp
     for record in unit_records:
         ast.parse(record["test_code"])
         assert record["test_path"].startswith("tests/generated/test_game_") and record["test_path"].endswith("__unit.py")
-        assert (record["model"], record["prompt_version"], record["reused"]) == ("fake/model", "unit-v2", False)
+        assert (record["model"], record["prompt_version"], record["reused"]) == ("fake/model", "unit-v3", False)
         assert "NOT RUN YET" in record["test_code"]
     enroll = next(r for r in unit_records if r["unit_id"] == "game.py::Student.enroll")
     assert "def test_Student_enroll__unit_1():" in enroll["test_code"]

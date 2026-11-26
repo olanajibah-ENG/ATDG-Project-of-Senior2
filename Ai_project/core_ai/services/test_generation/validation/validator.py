@@ -16,6 +16,7 @@ from typing import Optional
 from core_ai.services.test_generation.context import test_name_stem
 from core_ai.services.test_generation.languages.python_adapter import split_unit_id
 from core_ai.services.test_generation.statuses import FailReason
+from core_ai.services.test_generation.validation.examples import documented_test
 from core_ai.services.test_generation.validation.safety_lint import find_unsafe
 
 _FENCE = re.compile(r"```[ \t]*(?:python|py)?[ \t]*\r?\n(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -140,7 +141,7 @@ def _rename(code, functions, stem, level):
     return "\n".join(lines)
 
 
-def validate(answer, *, unit_id, allowed_roots, level="unit"):
+def validate(answer, *, unit_id, allowed_roots, level="unit", context=None):
     code = extract_code(answer)
     if code is None:
         return _fail(FailReason.NO_CODE, "the answer holds no Python code")
@@ -170,6 +171,16 @@ def validate(answer, *, unit_id, allowed_roots, level="unit"):
             return _fail(FailReason.WEAK_TEST, f"{func.name} has no assert")
         if not _calls_unit(func, tree, class_name, unit_name):
             return _fail(FailReason.WEAK_TEST, f"{func.name} never calls {unit_name}")
+
+    extra = documented_test(context) if context else ""
+    if extra:
+        example = ast.parse(extra).body[0]
+        statements = [ast.dump(node) for node in example.body]
+        if not any(isinstance(node, ast.FunctionDef) and node.name.startswith("test_")
+                   and not node.decorator_list and not node.args.args
+                   and [ast.dump(stmt) for stmt in node.body] == statements for node in tree.body):
+            code = code.rstrip() + "\n\n\n" + extra
+            return validate(code, unit_id=unit_id, allowed_roots=allowed_roots, level=level)
 
     renamed = _rename(code, functions, test_name_stem(unit_id), level)
     try:

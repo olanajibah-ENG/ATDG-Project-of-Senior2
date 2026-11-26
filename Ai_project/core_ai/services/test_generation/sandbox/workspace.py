@@ -7,7 +7,9 @@ import tarfile
 import time
 
 RUN_UID = 10001
-PYTEST_INI = b"[pytest]\naddopts = -p no:cacheprovider\n"
+# Per-test timeout (signal method keeps junit.xml) and no network; unix sockets stay for asyncio.
+PYTEST_INI = (b"[pytest]\naddopts = -p no:cacheprovider --timeout=30 --timeout-method=signal "
+              b"--disable-socket --allow-unix-socket\n")
 
 
 def version_files(reader, job):
@@ -34,7 +36,8 @@ def tests_dir_path(test_path):
 
 def record_test_files(records):
     """The test files of the given records, plus the runner config, keyed by path in the tests volume."""
-    files = {"pytest.ini": PYTEST_INI}
+    from django.conf import settings
+    files = {"pytest.ini": PYTEST_INI.replace(b"--timeout=30", f"--timeout={settings.TESTGEN_PER_TEST_TIMEOUT_SECONDS}".encode())}
     for record in records:
         files[tests_dir_path(record["test_path"])] = (record.get("test_code") or "").encode("utf-8")
     return files

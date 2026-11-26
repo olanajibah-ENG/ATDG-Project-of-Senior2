@@ -40,7 +40,14 @@ class LanguageAdapter(ABC):
     def expected_test_names(self, test_code): ...
 
 
+    def install_spec(self, files):
+        raise NotImplementedError
+
+
 class PythonAdapter(LanguageAdapter):
+    def install_spec(self, files):
+        from .manifests import install_spec
+        return install_spec(files)
     name = "python"
     test_framework = "pytest"
 
