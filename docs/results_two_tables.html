@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>النتائج: كشف التناقض والشرح المنطقي</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root { --ink: #1c2430; --muted: #5a6573; --line: #d9dee5; --accent: #1f5fa8; --accent-bg: #eef4fb; --ok: #1e7d4f; --bad: #b3261e; --hl: #f3f8f4; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: var(--ink); background: #fff; font-size: 10.5pt; line-height: 1.7; margin: 0; }
+  h1 { font-size: 17pt; color: var(--accent); margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 9.5pt; border-bottom: 3px solid var(--accent); padding-bottom: 8px; margin-bottom: 14px; }
+  h2 { font-size: 13pt; color: var(--accent); margin: 18px 0 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.6pt; margin: 4px 0 8px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 7px; text-align: center; font-variant-numeric: tabular-nums; }
+  th { background: var(--accent-bg); font-weight: 600; border-bottom: 1px solid #c8d4e3; }
+  td.l, th.l { text-align: right; }
+  tr.hl td { background: var(--hl); font-weight: 700; }
+  tr.ref td { color: var(--muted); }
+  .up { color: var(--ok); font-weight: 700; } .down { color: var(--bad); font-weight: 700; }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  p { margin: 4px 0; }
+  .note { font-size: 9.5pt; border-right: 3px solid var(--accent); background: #f7f9fc; padding: 6px 10px; }
+</style>
+</head>
+<body>
+<h1>النتائج: كشف التناقضات والشرح المنطقي</h1>
+<div class="sub">AutoTest &amp; DocGen Manager · 2026-11-15</div>
+
+<h2>1. كشف التناقض بين الكود والتوثيق (Code vs Doc)</h2>
+<table>
+  <tr><th class="l">النظام</th><th>Precision</th><th>Recall</th><th>F1</th><th>Specificity</th><th>PFP</th></tr>
+  <tr><td class="l">النظام الأصلي</td><td>0.50</td><td>0.69</td><td>0.58</td><td>0.31</td><td>0.00</td></tr>
+  <tr class="hl"><td class="l">بعد التحسينات</td><td>0.59</td><td>0.48</td><td>0.53</td><td>0.66</td><td>0.62</td></tr>
+  <tr class="ref"><td class="l">أداة CASCADE (الورقة)</td><td>0.88</td><td>0.21</td><td>—</td><td>0.97</td><td>—</td></tr>
+  <tr class="ref"><td class="l">LLM-A (الورقة)</td><td><span class="ltr">0.55–0.59</span></td><td><span class="ltr">0.29–0.46</span></td><td>—</td><td><span class="ltr">0.64–0.81</span></td><td>—</td></tr>
+</table>
+<p class="note">على كامل بيانات CASCADE (71 زوجًا، 142 حالة)، وبموديل <span class="ltr">cohere/north-mini-code</span>. الكشف أكثر من ضعف أداة الورقة، والدقة بمستوى أفضل طريقة ذكاء اصطناعي فيها. أرقام النظام الأصلي مضلّلة: كان ينبّه على التوثيق المتناقض والمصحَّح بالقدر نفسه (PFP = 0). أما الآن، فيختفي التنبيه بعد تصحيح التوثيق في 62% من الحالات المكتشفة.</p>
+
+<h2>2. دقة الشرح المنطقي: قبل وبعد إضافة الـ Graph</h2>
+<table>
+  <tr><th class="l">المقياس</th><th>قبل</th><th>بعد الـ Graph</th><th>الفرق</th><th>تحسّن</th><th>بقي كما هو</th><th>تراجع</th></tr>
+  <tr><td class="l">HighLevel: Precision</td><td>0.889</td><td>0.902</td><td class="up">+0.013</td><td>20</td><td>98</td><td>2</td></tr>
+  <tr><td class="l">HighLevel: Recall</td><td>0.721</td><td>0.790</td><td class="up">+0.069</td><td>37</td><td>70</td><td>13</td></tr>
+  <tr class="hl"><td class="l">HighLevel: F1</td><td>0.768</td><td>0.818</td><td class="up">+0.050</td><td>38</td><td>70</td><td>12</td></tr>
+  <tr><td class="l">LowLevel: Precision</td><td>0.901</td><td>0.903</td><td class="up">+0.003</td><td>17</td><td>89</td><td>14</td></tr>
+  <tr><td class="l">LowLevel: Recall</td><td>0.922</td><td>0.850</td><td class="down">−0.071</td><td>21</td><td>58</td><td>41</td></tr>
+  <tr class="hl"><td class="l">LowLevel: F1</td><td>0.904</td><td>0.850</td><td class="down">−0.053</td><td>21</td><td>57</td><td>42</td></tr>
+</table>
+<p class="note">على 120 حالة من CodeSumEval (ETF). الـ Graph حسّن الشرح العام (HighLevel) بوضوح، لأنه صار يذكر علاقات وكيانات كان يُغفلها. أما الشرح المفصّل (LowLevel) فتراجع، والسبب الأساسي انخفاض الـ Recall، أي أنه صار يُغفل كيانات صحيحة، بينما بقيت الدقة ثابتة. للمرجعية: ورقة ETF تذكر F1 ≈ 0.73 لأداتها.</p>
+</body>
+</html>

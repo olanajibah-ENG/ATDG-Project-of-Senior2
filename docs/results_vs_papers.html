@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>النتائج مقارنة بالأوراق</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root { --ink: #1c2430; --muted: #5a6573; --line: #d9dee5; --accent: #1f5fa8; --accent-bg: #eef4fb; --hl: #f3f8f4; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: var(--ink); background: #fff; font-size: 10.5pt; line-height: 1.7; margin: 0; }
+  h1 { font-size: 17pt; color: var(--accent); margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 9.5pt; border-bottom: 3px solid var(--accent); padding-bottom: 8px; margin-bottom: 14px; }
+  h2 { font-size: 13pt; color: var(--accent); margin: 18px 0 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.6pt; margin: 4px 0 8px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 7px; text-align: center; font-variant-numeric: tabular-nums; }
+  th { background: var(--accent-bg); font-weight: 600; border-bottom: 1px solid #c8d4e3; }
+  td.l, th.l { text-align: right; }
+  tr.hl td { background: var(--hl); font-weight: 700; }
+  tr.ref td { color: var(--muted); }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  .note { font-size: 9.5pt; border-right: 3px solid var(--accent); background: #f7f9fc; padding: 6px 10px; margin-top: 4px; }
+  .note p { margin: 3px 0; }
+</style>
+</head>
+<body>
+<h1>النتائج مقارنة بأرقام الأوراق</h1>
+<div class="sub">كشف التناقضات · AutoTest &amp; DocGen Manager · 2026-11-19</div>
+
+<h2>1. Code vs Doc (بيانات CASCADE، 71 زوجًا)</h2>
+<table>
+  <tr><th class="l">النظام</th><th>Precision</th><th>Recall</th><th>F1</th><th>Specificity</th><th>PFP</th></tr>
+  <tr><td class="l">النظام الأصلي</td><td>0.50</td><td>0.69</td><td>0.58</td><td>0.31</td><td>0.00</td></tr>
+  <tr class="hl"><td class="l">بعد التحسينات</td><td>0.59</td><td>0.48</td><td>0.53</td><td>0.66</td><td>0.62</td></tr>
+  <tr class="ref"><td class="l">أداة CASCADE (الورقة)</td><td>0.88</td><td>0.21</td><td>—</td><td>0.97</td><td>—</td></tr>
+  <tr class="ref"><td class="l">LLM-A (الورقة)</td><td><span class="ltr">0.55–0.59</span></td><td><span class="ltr">0.29–0.46</span></td><td>—</td><td><span class="ltr">0.64–0.81</span></td><td>—</td></tr>
+  <tr class="ref"><td class="l">LLM-S (الورقة)</td><td><span class="ltr">0.53–0.56</span></td><td><span class="ltr">0.54–0.67</span></td><td>—</td><td><span class="ltr">0.42–0.58</span></td><td>—</td></tr>
+</table>
+
+<h2>2. Code vs Code (بيانات NPM)</h2>
+<table>
+  <tr><th class="l">النظام</th><th class="l">البيانات</th><th>Precision</th><th>Recall</th><th>Specificity</th></tr>
+  <tr><td class="l">النظام الأصلي</td><td class="l">الاختبار (1,321 تعديلًا)</td><td>0.91</td><td>0.22</td><td>0.89</td></tr>
+  <tr class="hl"><td class="l">بعد التحسينات</td><td class="l">الاختبار (1,321 تعديلًا)</td><td>0.92</td><td>0.38</td><td>0.83</td></tr>
+  <tr class="hl"><td class="l">بعد التحسينات: تحليل الذكاء الاصطناعي للتعديلات التي لم تُكتشف</td><td class="l">عينة: 34 تكسر + 16 سليم</td><td>0.71</td><td>0.59</td><td>0.50</td></tr>
+  <tr class="ref"><td class="l">ورقة NPM: tests المطوّرين</td><td class="l">2,724 تعديلًا</td><td>—</td><td>0.81</td><td>—</td></tr>
+</table>
+
+<div class="note">
+  <p>ورقة NPM لا تقدّم أداة كشف. رقمها (0.81) هو نسبة التعديلات التي كشفها تشغيل tests المطوّرين أنفسهم، وهي طريقة مختلفة لا تُقارن مباشرة.</p>
+  <p>السطر الأخير محسوب على عينة من التعديلات التي لم يكتشفها التحليل البنيوي. معناه أن الذكاء الاصطناعي صار يكتشف 59% من التغييرات التي كانت تضيع، ومعظمها تغييرات في سلوك الدوال، لكنه ينبّه خطأً على نصف التعديلات السليمة.</p>
+</div>
+</body>
+</html>

@@ -67,8 +67,9 @@ def analyze_code_file_task(code_file_id_str):
             {"$set": {"analysis_status": "IN_PROGRESS"}}
         )
 
-        # اختيار المعالج
-        processor = PythonProcessor() if code_file.file_type == 'python' else JavaProcessor()
+        # اختيار المعالج باستخدام ProcessorFactory
+        from core_ai.language_processors.processor_factory import ProcessorFactory
+        processor = ProcessorFactory.get(code_file.file_type)
 
         # التحليل — نمرر المحتوى المجلوب من GridFS
         analyzer = ProjectAnalyzer(processor)

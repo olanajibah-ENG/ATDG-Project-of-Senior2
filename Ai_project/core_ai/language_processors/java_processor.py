@@ -1319,127 +1319,248 @@ class JavaProcessor(ILanguageProcessorStrategy):
     # ═══════════════════════════════════════════════════════
     def generate_dependency_graph_data(self, ast_data: Dict[str, Any], features: Dict[str, Any]) -> Dict[str, Any]:
         """
-        توليد بيانات رسم الاعتماديات
-        ✅ يتتبع الاستخدام الفعلي للـ dependencies داخل كل class
-        """
-        logger.info("Generating Java dependency graph data...")
+        🔥 Graphify Unified Schema Implementation for Java
+        توليد بيانات dependency_graph بالشكل الموحد
         
-        # ✅ إعادة parse من الكود
+        الهدف: استخراج علاقات calls من جسم الميثودات بناءً على AST
+        
+        ✅ nodes: class/method/external مع id ثابت
+        ✅ edges: calls من جسم الدالة + imports + inherits
+        ✅ confidence: EXTRACTED (واضح) / INFERRED (مخمن)
+        
+        مسار البيانات:
+        Java Code → tree-sitter AST → dependency_graph → MongoDB → 
+        → graph_to_prompt_summary → detailed_analysis → LowLevelAgent
+        
+        قواعد ID:
+        - Class: "ClassName"
+        - Method: "ClassName.methodName"
+        - External: "ext.PackageName"
+        
+        Returns:
+            dict: {nodes: [...], edges: [...], meta: {source, total_nodes, total_edges}}
+        """
+        logger.info("[Graphify] Generating unified dependency graph for Java...")
+        
         code_content = ast_data.get("code_content", "")
         
         if not code_content or not self._java_language or not self._internal_java_parser:
-            return {"nodes": [], "edges": []}
+            return {"nodes": [], "edges": [], "meta": {"total_nodes": 0, "total_edges": 0, "source": "java-ast"}}
         
         try:
             tree = self._internal_java_parser.parse(code_content.encode('utf8'))
         except Exception as e:
-            logger.error(f"Failed to parse code in generate_dependency_graph_data: {e}")
-            return {"nodes": [], "edges": []}
+            logger.error(f"Failed to parse code: {e}")
+            return {"nodes": [], "edges": [], "meta": {"total_nodes": 0, "total_edges": 0, "source": "java-ast"}}
         
         if not tree or not tree.root_node:
-            return {"nodes": [], "edges": []}
+            return {"nodes": [], "edges": [], "meta": {"total_nodes": 0, "total_edges": 0, "source": "java-ast"}}
         
         nodes = []
         edges = []
-        classes_found = set()
-        imports_found = set()
-        class_dependencies = {}  # ✅ تتبع dependencies لكل class
+        node_ids = set()
         
-        # جمع الكلاسات وتتبع استخدامهم للـ types
-        cursor = tree.walk()
-        reached_root = False
-        current_class = None
+        # Step 1: جمع الكلاسات والميثودات  nodes
+        classes_map = {}  # {class_name: {methods: [], inherits: []}}
         
-        while not reached_root:
-            node = cursor.node
-            
-            # تتبع الكلاس الحالي
+        for node in self._walk_tree(tree.root_node):
+            # جمع Classes
             if node.type in ['class_declaration', 'interface_declaration']:
                 class_name = self._get_identifier(node)
-                if class_name and class_name not in classes_found:
-                    classes_found.add(class_name)
-                    current_class = class_name
-                    class_dependencies[class_name] = set()
+                if class_name and class_name not in node_ids:
+                    node_ids.add(class_name)
                     nodes.append({
                         "id": class_name,
                         "label": class_name,
                         "type": "class",
                         "local": True
                     })
-            
-            # تتبع استخدام الـ types داخل كل class
-            if current_class and node.type == 'type_identifier':
-                type_name = node.text.decode('utf-8') if node.text else ""
-                # تحقق إذا كان Type من الـ imports
-                for dep in self.extract_dependencies(ast_data):
-                    # مثلاً: إذا استخدمنا ArrayList وعندنا java.util.ArrayList
-                    if dep.endswith('.' + type_name) or dep == type_name:
-                        class_dependencies[current_class].add(dep)
-            
-            # تتبع object_creation (new ArrayList())
-            if current_class and node.type == 'object_creation_expression':
-                for child in node.children:
-                    if child.type == 'type_identifier':
-                        type_name = child.text.decode('utf-8') if child.text else ""
-                        for dep in self.extract_dependencies(ast_data):
-                            if dep.endswith('.' + type_name) or dep == type_name:
-                                class_dependencies[current_class].add(dep)
-            
+                    classes_map[class_name] = {"methods": [], "inherits": [], "body_node": node}
+                    
+                    # استخراج الوراثة
+                    superclass = self._extract_superclass_from_node(node)
+                    if superclass:
+                        classes_map[class_name]["inherits"].append(superclass)
+                    
+                    # استخراج interfaces
+                    interfaces = self._extract_interfaces_from_node(node)
+                    classes_map[class_name]["inherits"].extend(interfaces)
+        
+        # Step 2: جمع الميثودات لكل كلاس
+        for class_name, class_info in classes_map.items():
+            class_node = class_info["body_node"]
+            for node in self._walk_tree(class_node):
+                if node.type == 'method_declaration':
+                    method_name = self._extract_method_name(node)
+                    if method_name:
+                        method_id = f"{class_name}.{method_name}"
+                        if method_id not in node_ids:
+                            node_ids.add(method_id)
+                            nodes.append({
+                                "id": method_id,
+                                "label": f"{method_name}()",
+                                "type": "method",
+                                "parent": class_name,
+                                "local": True
+                            })
+                            class_info["methods"].append({"id": method_id, "node": node})
+        
+        # Step 3: جمع imports  external nodes + edges
+        dependencies = self.extract_dependencies(ast_data)
+        for dep in dependencies:
+            dep_id = f"ext.{dep}"
+            if dep_id not in node_ids:
+                node_ids.add(dep_id)
+                nodes.append({
+                    "id": dep_id,
+                    "label": dep,
+                    "type": "external",
+                    "local": False
+                })
+        
+        # Step 4: إنشاء edges للـ imports (من الكلاس للـ external)
+        for class_name in classes_map.keys():
+            for dep in dependencies:
+                dep_id = f"ext.{dep}"
+                edges.append({
+                    "from": class_name,
+                    "to": dep_id,
+                    "relation": "imports",
+                    "confidence": "EXTRACTED"
+                })
+        
+        # Step 5: إنشاء edges للـ inherits
+        for class_name, class_info in classes_map.items():
+            for superclass in class_info["inherits"]:
+                # تحقق إذا كان superclass محلي
+                target_id = superclass if superclass in node_ids else f"ext.{superclass}"
+                if target_id not in node_ids and not target_id.startswith("ext."):
+                    # إضافة كـ external إذا لم يكن موجود
+                    node_ids.add(target_id)
+                    nodes.append({
+                        "id": target_id,
+                        "label": superclass,
+                        "type": "external",
+                        "local": False
+                    })
+                
+                edges.append({
+                    "from": class_name,
+                    "to": target_id,
+                    "relation": "inherits",
+                    "confidence": "EXTRACTED"
+                })
+        
+        # Step 6: 🔥 استخراج calls من جسم كل method
+        for class_name, class_info in classes_map.items():
+            for method_info in class_info["methods"]:
+                method_id = method_info["id"]
+                method_node = method_info["node"]
+                
+                # البحث عن method_invocation داخل جسم الميثود
+                for node in self._walk_tree(method_node):
+                    if node.type == 'method_invocation':
+                        callee = self._extract_method_invocation_name(node)
+                        if callee:
+                            # تحديد الـ target
+                            confidence = "EXTRACTED"
+                            target_id = None
+                            
+                            # حالة 1: this.method() أو method() بدون prefix → نفس الكلاس
+                            if '.' not in callee or callee.startswith('this.'):
+                                clean_name = callee.replace('this.', '')
+                                target_id = f"{class_name}.{clean_name}"
+                                confidence = "EXTRACTED"
+                            # حالة 2: ClassName.staticMethod()
+                            elif callee.split('.')[0] in classes_map:
+                                target_id = callee
+                                confidence = "EXTRACTED"
+                            # حالة 3: obj.method() → INFERRED
+                            else:
+                                # محاولة تحديد النوع
+                                obj_name = callee.split('.')[0]
+                                # بحث في الميثودات المعروفة
+                                found = False
+                                for other_class in classes_map.keys():
+                                    potential_target = f"{other_class}.{callee.split('.')[-1]}"
+                                    if potential_target in node_ids:
+                                        target_id = potential_target
+                                        confidence = "INFERRED"
+                                        found = True
+                                        break
+                                
+                                if not found:
+                                    # حفظ كـ external
+                                    target_id = f"ext.{callee}"
+                                    confidence = "INFERRED"
+                                    if target_id not in node_ids:
+                                        node_ids.add(target_id)
+                                        nodes.append({
+                                            "id": target_id,
+                                            "label": callee,
+                                            "type": "external",
+                                            "local": False
+                                        })
+                            
+                            # إضافة الـ edge
+                            if target_id and target_id != method_id:  # تجنب self-loop
+                                edges.append({
+                                    "from": method_id,
+                                    "to": target_id,
+                                    "relation": "calls",
+                                    "confidence": confidence
+                                })
+        
+        # إرجاع الشكل الموحد
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "meta": {
+                "total_nodes": len(nodes),
+                "total_edges": len(edges),
+                "source": "java-ast"
+            }
+        }
+    
+    def _walk_tree(self, root_node):
+        """مساعد للمشي في الشجرة"""
+        cursor = root_node.walk()
+        reached_root = False
+        while not reached_root:
+            yield cursor.node
             if cursor.goto_first_child():
                 continue
             if cursor.goto_next_sibling():
                 continue
-            
-            # عند الخروج من class، نصفّر current_class
             while cursor.goto_parent():
-                if cursor.node.type in ['class_declaration', 'interface_declaration']:
-                    current_class = None
                 if cursor.goto_next_sibling():
                     break
             else:
                 reached_root = True
-        
-        # جمع الاعتماديات
-        dependencies = self.extract_dependencies(ast_data)
-        
-        for dep in dependencies:
-            if dep not in imports_found:
-                imports_found.add(dep)
-                nodes.append({
-                    "id": dep,
-                    "label": dep,
-                    "type": "module",
-                    "local": False
-                })
-        
-        # ✅ إنشاء Edges بناءً على الاستخدام الفعلي فقط
-        for class_name, used_deps in class_dependencies.items():
-            for dep in used_deps:
-                edges.append({
-                    "source": class_name,
-                    "target": dep,
-                    "type": "dependency"
-                })
-        
-        # ✅ إذا لم نجد أي استخدام فعلي، نضيف edge واحد فقط للـ imports المستخدمة
-        if not edges and dependencies:
-            # على الأقل نربط الـ imports بكلاس واحد (مثلاً أول class)
-            if classes_found:
-                first_class = list(classes_found)[0]
-                for dep in dependencies:
-                    edges.append({
-                        "source": first_class,
-                        "target": dep,
-                        "type": "dependency"
-                    })
-        
-        return {
-            "nodes": nodes,
-            "edges": edges,
-            "statistics": {
-                "total_nodes": len(nodes),
-                "total_edges": len(edges),
-                "local_classes": len([n for n in nodes if n.get('local', False)]),
-                "external_modules": len([n for n in nodes if not n.get('local', True)])
-            }
-        }
+    
+    def _extract_superclass_from_node(self, class_node):
+        """استخراج الـ superclass من node الكلاس"""
+        for child in class_node.children:
+            if child.type == 'superclass':
+                return self._extract_superclass(child)
+        return None
+    
+    def _extract_interfaces_from_node(self, class_node):
+        """استخراج الـ interfaces من node الكلاس"""
+        interfaces = []
+        for child in class_node.children:
+            if child.type == 'super_interfaces':
+                interfaces.extend(self._extract_super_interfaces(child))
+            elif child.type == 'extends_interfaces':
+                interfaces.extend(self._extract_extends_interfaces(child))
+        return interfaces
+    
+    def _extract_method_invocation_name(self, invocation_node):
+        """استخراج اسم الميثود المستدعى من method_invocation node"""
+        for child in invocation_node.children:
+            if child.type == 'identifier':
+                return child.text.decode('utf-8') if child.text else None
+            elif child.type == 'field_access':
+                # obj.method() → نريد obj.method
+                return self._extract_field_access_name(child)
+        return None

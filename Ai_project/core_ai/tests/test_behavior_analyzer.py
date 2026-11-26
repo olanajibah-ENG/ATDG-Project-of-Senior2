@@ -125,6 +125,19 @@ def test_quote_with_line_numbers_accepted(monkeypatch):
     assert len(run(monkeypatch).semantic_conflicts) == 1
 
 
+def test_quote_with_escaped_newlines_and_line_numbers_accepted(monkeypatch):
+    # متل حالات NPM الحقيقية (pnpm، slonik): الموديل كتب نهاية السطر كنص "\n"، وترك "N |" بالنص
+    quote = "   2 |   const data = read(path)\\n   3 |   if (!data) throw new Error('missing')"
+    fake_llm(monkeypatch, finding(new_snippet=quote))
+    res = run(monkeypatch)
+    assert len(res.semantic_conflicts) == 1 and res.behavior_analysis["dropped_quote"] == 0
+
+
+def test_escaped_newline_does_not_accept_invented_text(monkeypatch):
+    fake_llm(monkeypatch, finding(new_snippet="const data = read(path)\\nreturn cache.get(data)"))
+    assert run(monkeypatch).semantic_conflicts == []
+
+
 @pytest.mark.parametrize("kw, stat", [
     ({"breaking": False}, "non_breaking"),
     ({"confidence": 0.5}, "below_threshold"),

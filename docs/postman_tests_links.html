@@ -1,0 +1,373 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>روابط توليد الاختبارات</title>
+<style>
+  @page { size: A4; margin: 14mm 12mm; }
+  body { margin:0; color:#1b2330; font-family:"Segoe UI",Tahoma,Arial,sans-serif; font-size:12.5px; line-height:1.7; background:#fff; }
+  main { max-width:900px; margin:0 auto; padding:0 4px; }
+  h1 { font-size:21px; color:#2f5fb3; margin:8px 0 2px; }
+  .sub { color:#5b6578; margin-bottom:6px; }
+  h2 { font-size:16px; color:#2f5fb3; border-bottom:2px solid #2f5fb3; padding-bottom:3px; margin:20px 0 6px; break-after:avoid; }
+  h3 { font-size:13px; margin:12px 0 4px; break-after:avoid; }
+  section { border:1px solid #d6dce6; border-radius:8px; padding:8px 10px; margin:8px 0; }
+  .num { display:inline-block; min-width:28px; text-align:center; background:#2f5fb3; color:#fff; border-radius:10px; font-size:11.5px; padding:0 6px; }
+  .req { direction:ltr; text-align:left; margin:2px 0; }
+  .lbl { color:#5b6578; font-size:11.5px; margin-top:4px; }
+  .st { background:#e9eef7; border-radius:4px; padding:0 5px; color:#1b2330; }
+  .src { color:#a8650f; font-size:11px; }
+  .lock { background:#fff3e0; color:#a8650f; border-radius:4px; padding:0 5px; font-size:10.5px; }
+  code, pre { font-family:Consolas,"Courier New",monospace; direction:ltr; unicode-bidi:embed; }
+  code { background:#f4f6fa; padding:0 3px; border-radius:3px; font-size:11.5px; }
+  pre { background:#f4f6fa; border:1px solid #d6dce6; border-radius:6px; padding:6px 9px; font-size:10.3px; line-height:1.4;
+         text-align:left; white-space:pre-wrap; word-break:break-word; margin:3px 0; }
+</style></head><body><main>
+<h1>روابط توليد الاختبارات (S1 و S2) وخرجها</h1>
+<div class="sub">كل رابط بجملة وحدة، والطلب، والخرج. مشروع demo3 = <code>c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77</code>. الطلبات المعلّمة <span class="lock">Bearer</span>
+بدها التوكن من تسجيل الدخول (<code>POST /api/upm/login/</code>). 19/11/2026.</div>
+<h2>S1: test job والخطة</h2><section><h3><span class="num">4.1</span> بدء test job على آخر نسخة من المشروع: 202 مع <code>job_id</code>، والشغل بيكمّل بالخلفية.</h3><div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code> <span class="lock">Bearer</span></div><div class="lbl">Body (raw JSON):</div><pre>{&quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;}</pre><div class="lbl">الخرج <span class="st">HTTP 202</span> <span class="src">من تشغيلي (ما بعتلي خرجه)</span></div><pre>{
+  &quot;job_id&quot;: &quot;job_5685f7818776&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 10
+}</pre></section><section><h3><span class="num">4.2</span> حالة الـ job: خلص (<code>completed / generated</code>)، 5 اختبارات unit انكتبوا، و edge و integration لسا <code>pending</code>.</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_8fb2c99e2ca4/</code> <span class="lock">Bearer</span></div><div class="lbl">الخرج <span class="st">HTTP 200</span> <span class="src">خرجك من Postman</span></div><pre>{
+  &quot;job_id&quot;: &quot;job_8fb2c99e2ca4&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 10,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;stage&quot;: &quot;generated&quot;,
+  &quot;progress&quot;: {
+    &quot;total&quot;: 15,
+    &quot;done&quot;: 5,
+    &quot;by_status&quot;: {
+      &quot;pending&quot;: 10,
+      &quot;generated&quot;: 5,
+      &quot;ready&quot;: 0,
+      &quot;skipped&quot;: 0,
+      &quot;generation_failed&quot;: 0,
+      &quot;test_failed&quot;: 0,
+      &quot;environment_error&quot;: 0
+    }
+  },
+  &quot;files&quot;: [
+    {
+      &quot;path&quot;: &quot;demo/course.py&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;levels&quot;: {
+        &quot;unit&quot;: &quot;generated&quot;,
+        &quot;edge&quot;: &quot;pending&quot;,
+        &quot;integration&quot;: &quot;pending&quot;
+      }
+    },
+    {
+      &quot;path&quot;: &quot;demo/student.py&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;levels&quot;: {
+        &quot;unit&quot;: &quot;generated&quot;,
+        &quot;edge&quot;: &quot;pending&quot;,
+        &quot;integration&quot;: &quot;pending&quot;
+      }
+    }
+  ],
+  &quot;error&quot;: null
+}</pre></section><section><h3><span class="num">4.3</span> خطة الـ job: الوحدات (5 ميثودات من ملفين) يلي رح ينكتبلها اختبارات، و 15 عنصر شغل (5 × 3 مستويات).</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_8fb2c99e2ca4/plan/</code> <span class="lock">Bearer</span></div><div class="lbl">الخرج <span class="st">HTTP 200</span> <span class="src">خرجك من Postman</span></div><pre>{
+  &quot;units&quot;: [
+    {
+      &quot;id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;kind&quot;: &quot;method&quot;
+    },
+    {
+      &quot;id&quot;: &quot;demo/course.py::Course.is_full&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;kind&quot;: &quot;method&quot;
+    },
+    {
+      &quot;id&quot;: &quot;demo/course.py::Course.add_student&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;kind&quot;: &quot;method&quot;
+    },
+    {
+      &quot;id&quot;: &quot;demo/student.py::Student.__init__&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;kind&quot;: &quot;method&quot;
+    },
+    {
+      &quot;id&quot;: &quot;demo/student.py::Student.enroll&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;kind&quot;: &quot;method&quot;
+    }
+  ],
+  &quot;skipped&quot;: [],
+  &quot;work_items_count&quot;: 15
+}</pre></section><section><h3><span class="num">4.4</span> بدء job على ملف واحد ونسخة محددة ومستوى unit بس.</h3><div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code> <span class="lock">Bearer</span></div><div class="lbl">Body (raw JSON):</div><pre>{&quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;, &quot;version_number&quot;: 8, &quot;paths&quot;: [&quot;demo/course.py&quot;], &quot;levels&quot;: [&quot;unit&quot;]}</pre><div class="lbl">الخرج <span class="st">HTTP 202</span> <span class="src">خرجك من Postman</span></div><pre>{
+  &quot;job_id&quot;: &quot;job_7f810bda56d7&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;,
+  &quot;version_number&quot;: 8
+}</pre></section><h2>S1: أخطاء متوقعة</h2><section><h3><span class="num">5.1</span> بدون توكن: 401.</h3><div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code> </div><div class="lbl">Body (raw JSON):</div><pre>{&quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;}</pre><div class="lbl">الخرج <span class="st">HTTP 401</span> <span class="src">من تشغيلي (ما بعتلي خرجه)</span></div><pre>{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;unauthorized&quot;,
+    &quot;message&quot;: &quot;Authentication credentials were not provided.&quot;,
+    &quot;details&quot;: {}
+  }
+}</pre></section><section><h3><span class="num">5.2</span> مع <code>snapshot</code> (محتوى ملفات): 400، لأنو الكود ما بينبعت أبداً.</h3><div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code> <span class="lock">Bearer</span></div><div class="lbl">Body (raw JSON):</div><pre>{&quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;, &quot;snapshot&quot;: {&quot;a.py&quot;: &quot;x=1&quot;}}</pre><div class="lbl">الخرج <span class="st">HTTP 400</span> <span class="src">من تشغيلي (ما بعتلي خرجه)</span></div><pre>{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;validation_error&quot;,
+    &quot;message&quot;: &quot;File content is never sent. Use project_id, version_number and paths.&quot;,
+    &quot;details&quot;: {
+      &quot;fields&quot;: [
+        &quot;snapshot&quot;
+      ]
+    }
+  }
+}</pre></section><section><h3><span class="num">5.3</span> نسخة مش موجودة: 400.</h3><div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code> <span class="lock">Bearer</span></div><div class="lbl">Body (raw JSON):</div><pre>{&quot;project_id&quot;: &quot;c0e34dfa-e04a-4f6f-a5d9-72cf3d5ffe77&quot;, &quot;version_number&quot;: 999}</pre><div class="lbl">الخرج <span class="st">HTTP 400</span> <span class="src">من تشغيلي (ما بعتلي خرجه)</span></div><pre>{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;validation_error&quot;,
+    &quot;message&quot;: &quot;Version 999 does not exist for this project.&quot;,
+    &quot;details&quot;: {
+      &quot;version_number&quot;: 999,
+      &quot;latest_version&quot;: 10
+    }
+  }
+}</pre></section><section><h3><span class="num">5.4</span> مشروع مش إلك: UPM بيقول لأ، فـ 404 وما بينعمل job.</h3><div class="req"><b>POST</b> <code>http://localhost/api/analysis/tests/jobs/</code> <span class="lock">Bearer</span></div><div class="lbl">Body (raw JSON):</div><pre>{&quot;project_id&quot;: &quot;00000000-0000-0000-0000-000000000000&quot;}</pre><div class="lbl">الخرج <span class="st">HTTP 404</span> <span class="src">من تشغيلي (ما بعتلي خرجه)</span></div><pre>{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;not_found&quot;,
+    &quot;message&quot;: &quot;Project not found.&quot;,
+    &quot;details&quot;: {}
+  }
+}</pre></section><section><h3><span class="num">5.5</span> job مش موجود: 404.</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_does_not_exist/</code> <span class="lock">Bearer</span></div><div class="lbl">الخرج <span class="st">HTTP 404</span> <span class="src">من تشغيلي (ما بعتلي خرجه)</span></div><pre>{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;not_found&quot;,
+    &quot;message&quot;: &quot;No job with that id.&quot;,
+    &quot;details&quot;: {}
+  }
+}</pre></section><h2>S2: الاختبارات المولّدة</h2><section><h3><span class="num">6.1</span> لستة الـ records: وحدة × مستوى، بدون كود، مع حالة كل واحد ومسار ملف الاختبار.</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_8fb2c99e2ca4/records/</code> <span class="lock">Bearer</span></div><div class="lbl">الخرج <span class="st">HTTP 200</span> <span class="src">خرجك من Postman</span></div><pre>{
+  &quot;items&quot;: [
+    {
+      &quot;id&quot;: &quot;t_e5936ca5b4&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course___init____unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_1e0860eaae&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+      &quot;level&quot;: &quot;edge&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_12a3eea680&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+      &quot;level&quot;: &quot;integration&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_06036a83f5&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.is_full&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_is_full__unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_53edc5df15&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.is_full&quot;,
+      &quot;level&quot;: &quot;edge&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_d23cdb12e1&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.is_full&quot;,
+      &quot;level&quot;: &quot;integration&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_7de1657379&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.add_student&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_add_student__unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_b9f1316bd0&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.add_student&quot;,
+      &quot;level&quot;: &quot;edge&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_f65f243af6&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.add_student&quot;,
+      &quot;level&quot;: &quot;integration&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_fc3df0ec31&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.__init__&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_student_Student___init____unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_0f1ad7cd67&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.__init__&quot;,
+      &quot;level&quot;: &quot;edge&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_1f8c4464e1&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.__init__&quot;,
+      &quot;level&quot;: &quot;integration&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_51d62220b0&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.enroll&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_student_Student_enroll__unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_f028c16fb4&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.enroll&quot;,
+      &quot;level&quot;: &quot;edge&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;t_7254bdf2c6&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.enroll&quot;,
+      &quot;level&quot;: &quot;integration&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: null
+    }
+  ],
+  &quot;total&quot;: 15
+}</pre></section><section><h3><span class="num">6.2</span> نفس اللستة مفلترة على <code>generated</code> بس.</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_8fb2c99e2ca4/records/?status=generated</code> <span class="lock">Bearer</span></div><div class="lbl">الخرج <span class="st">HTTP 200</span> <span class="src">خرجك من Postman</span></div><pre>{
+  &quot;items&quot;: [
+    {
+      &quot;id&quot;: &quot;t_e5936ca5b4&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course___init____unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_06036a83f5&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.is_full&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_is_full__unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_7de1657379&quot;,
+      &quot;file&quot;: &quot;demo/course.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/course.py::Course.add_student&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course_add_student__unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_fc3df0ec31&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.__init__&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_student_Student___init____unit.py&quot;
+    },
+    {
+      &quot;id&quot;: &quot;t_51d62220b0&quot;,
+      &quot;file&quot;: &quot;demo/student.py&quot;,
+      &quot;unit_id&quot;: &quot;demo/student.py::Student.enroll&quot;,
+      &quot;level&quot;: &quot;unit&quot;,
+      &quot;status&quot;: &quot;generated&quot;,
+      &quot;reason_code&quot;: null,
+      &quot;test_path&quot;: &quot;tests/generated/test_demo_student_Student_enroll__unit.py&quot;
+    }
+  ],
+  &quot;total&quot;: 5
+}</pre></section><section><h3><span class="num">6.3</span> record واحد مع كود الاختبار: بهالخرج توقّع <code>capacity == "2"</code> كنص (غلط من الـ context)، وانصلح بـ <code>unit-v2</code> وصار <code>capacity == 2</code>.</h3><div class="req"><b>GET</b> <code>http://localhost/api/analysis/tests/jobs/job_8fb2c99e2ca4/records/t_e5936ca5b4/</code> <span class="lock">Bearer</span></div><div class="lbl">الخرج <span class="st">HTTP 200</span> <span class="src">خرجك من Postman</span></div><pre>{
+  &quot;id&quot;: &quot;t_e5936ca5b4&quot;,
+  &quot;file&quot;: &quot;demo/course.py&quot;,
+  &quot;unit_id&quot;: &quot;demo/course.py::Course.__init__&quot;,
+  &quot;level&quot;: &quot;unit&quot;,
+  &quot;status&quot;: &quot;generated&quot;,
+  &quot;reason_code&quot;: null,
+  &quot;test_path&quot;: &quot;tests/generated/test_demo_course_Course___init____unit.py&quot;,
+  &quot;reason_detail&quot;: null,
+  &quot;test_code&quot;: &quot;[الكود تحت]&quot;,
+  &quot;executed&quot;: false,
+  &quot;notice&quot;: &quot;This test was generated and checked for form only. It has not been run.&quot;,
+  &quot;model&quot;: &quot;cohere/north-mini-code:free&quot;,
+  &quot;prompt_version&quot;: &quot;unit-v1&quot;
+}</pre><div class="lbl">test_code:</div><pre># Generated by AutoTest &amp; DocGen Manager — Feature 1 (Generate Trusted Tests)
+# unit:      demo/course.py::Course.__init__
+# level:     unit
+# body hash: d828b89195fb2bcc
+# job:       job_8fb2c99e2ca4
+# status:    generated and checked for form only — NOT RUN YET
+
+import pytest
+from demo.course import Course
+
+def test_Course___init____unit_1():
+    # Test with explicit title and capacity
+    title = &quot;Python 101&quot;
+    capacity = 30
+    course = Course(title, capacity)
+    assert course.title == title
+    assert course.capacity == capacity
+    assert course.students == []
+
+def test_Course___init____unit_2():
+    # Test with default capacity
+    title = &quot;Advanced Python&quot;
+    course = Course(title)
+    assert course.title == title
+    # default capacity is &quot;2&quot; (string) per context
+    assert course.capacity == &quot;2&quot;
+    assert course.students == []
+</pre></section>
+</main></body></html>

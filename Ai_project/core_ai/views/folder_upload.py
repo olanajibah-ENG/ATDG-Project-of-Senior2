@@ -11,6 +11,7 @@ import hashlib
 import zipfile
 import logging
 import re
+import json
 from datetime import datetime
 
 from bson import ObjectId
@@ -27,6 +28,7 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from core_ai.mongo_utils import get_mongo_db, save_to_gridfs
 from core_ai.models.codefile import CodeFile
 from core_ai.celery_tasks.analyze_task import analyze_code_file_task
+from core_ai.services import project_versioning
 
 logger = logging.getLogger(__name__)
 
@@ -91,14 +93,19 @@ class FolderUploadView(APIView):
         upm_project_id = request.data.get('upm_project_id', '').strip() or project_name
 
         try:
-            files_data = self._extract_files(request, project_name)
+            deleted_paths = self._read_list(request, 'deleted_paths')
+            files_data, has_zip = self._extract_files(request, project_name, allow_empty=bool(deleted_paths))
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"[FOLDER-UPLOAD] Extraction error: {e}")
             return Response({"error": "Failed to process uploaded files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        if not files_data:
+        # full    = the upload IS the project: a file that is not in it is deleted   (ZIP)
+        # partial = only the uploaded files change; deletions come in deleted_paths (loose files, GitHub)
+        upload_mode = project_versioning.infer_mode(request.data.get('upload_mode'), has_zip)
+
+        if not files_data and not deleted_paths:
             return Response({
                 "error": "No supported files found",
                 "supported_extensions": list(SUPPORTED_EXTENSIONS)
@@ -108,8 +115,32 @@ class FolderUploadView(APIView):
         if db is None:
             return Response({"error": "Database connection failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        version_number, prev_file_ids = self._get_next_version(db, upm_project_id)
-        logger.info(f"[FOLDER-UPLOAD] project_id={upm_project_id}, version={version_number}, prev_files={len(prev_file_ids)}")
+        version_number, prev_entries = self._get_next_version(db, upm_project_id)
+        logger.info(f"[FOLDER-UPLOAD] project_id={upm_project_id}, version={version_number}, "
+                    f"prev_files={len(prev_entries)}, mode={upload_mode}, deleted_paths={len(deleted_paths)}")
+
+        # Loose files sent by name only (the UI keeps no folders) go back to the path they had.
+        matched_paths = {}
+        bare = getattr(self, '_bare_names', {})
+        if not has_zip and bare:
+            matched_paths, ambiguous = project_versioning.match_bare_names(prev_entries, bare)
+            if ambiguous:
+                names = ", ".join(f"{n} ({' / '.join(ps)})" for n, ps in sorted(ambiguous.items()))
+                return Response({
+                    "error": (f"These file names match more than one file of the previous version: {names}. "
+                              f"Nothing was saved. Send each file's path in 'paths', or upload a zip."),
+                    "code": "ambiguous_name",
+                    "ambiguous": ambiguous,
+                }, status=status.HTTP_409_CONFLICT)
+            files_data = [(matched_paths.get(path, path), content) for path, content in files_data]
+            matched_paths = {bare[g]: real for g, real in matched_paths.items()}
+
+        # A full upload that would delete half the project or more is refused unless confirmed:
+        # it is usually the wrong zip, or a zip with a different top folder. Nothing is saved.
+        if upload_mode == project_versioning.FULL and not self._is_true(request.data.get('confirm_deletions')):
+            risk = project_versioning.check_deletions(prev_entries, [path for path, _ in files_data])
+            if risk:
+                return Response(self._mass_deletion_body(risk), status=status.HTTP_409_CONFLICT)
 
         try:
             file_ids_list, skipped = self._save_files(
@@ -119,9 +150,9 @@ class FolderUploadView(APIView):
             logger.error(f"[FOLDER-UPLOAD] Save error: {e}")
             return Response({"error": f"Failed to save files: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        self._save_project_version(
+        built = self._save_project_version(
             db, upm_project_id, project_name, version_number,
-            file_ids_list, prev_file_ids, request
+            file_ids_list, prev_entries, upload_mode, deleted_paths, request
         )
 
         logger.info(f"[FOLDER-UPLOAD] Completed — version={version_number}, saved={len(file_ids_list)}, skipped={skipped}")
@@ -134,139 +165,134 @@ class FolderUploadView(APIView):
             "file_ids":       [f["file_id"] for f in file_ids_list],
             "files":          file_ids_list,
             "skipped":        skipped,
+            "upload_mode":    upload_mode,
+            "version_files":  built["counts"]["total_files"],
+            "changes":        built["counts"],
+            "deleted":        [c["filepath"] for c in built["file_changes"] if c["status"] == project_versioning.DELETED],
+            "matched_paths":  matched_paths,
         }, status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def _is_true(value):
+        return str(value or '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+    @staticmethod
+    def _mass_deletion_body(risk):
+        message = (f"This upload would delete {risk['deleted_count']} of the {risk['previous_count']} files "
+                   f"of the previous version. Nothing was saved. If that is what you want, upload again "
+                   f"with confirm_deletions=true.")
+        hint = risk.get("top_folder")
+        if hint:
+            if hint["zip_has_it"]:
+                message += (f" The zip seems to have an extra top folder '{hint['top_folder']}' "
+                            f"that the previous version did not have.")
+            else:
+                message += (f" The zip seems to be missing the top folder '{hint['top_folder']}' "
+                            f"that the previous version had: zip the folder itself, not its contents.")
+        return {"error": message, "code": "mass_deletion", **risk}
+
+    @staticmethod
+    def _read_list(request, key):
+        """A list sent as repeated form fields, or as one JSON string."""
+        values = request.data.getlist(key) if hasattr(request.data, 'getlist') else request.data.get(key) or []
+        if isinstance(values, str):
+            values = [values]
+        out = []
+        for value in values:
+            if isinstance(value, str) and value.strip().startswith('['):
+                try:
+                    out.extend(json.loads(value))
+                    continue
+                except ValueError:
+                    raise ValueError(f"{key} is not valid JSON")
+            if value:
+                out.append(value)
+        return [str(v).replace('\\', '/') for v in out]
 
     # ── Versioning ─────────────────────────────────────────────────────────────
     def _get_next_version(self, db, upm_project_id):
         """
-        يرجع (version_number, prev_file_ids).
-        prev_file_ids = كل file_ids من آخر إصدار سابق (لنضمها لاحقاً).
+        يرجع (version_number, prev_entries).
+        prev_entries = ملفات آخر إصدار سابق، ملف واحد لكل مسار، بمساره بهداك الإصدار.
         """
         collection   = db[PROJECT_VERSIONS_COLLECTION]
         last_version = collection.find_one(
             {"project_id": upm_project_id},
             sort=[("version_number", -1)]
         )
-        if last_version:
-            v            = last_version["version_number"] + 1
-            prev_ids     = last_version.get("file_ids", [])
-            logger.info(f"[FOLDER-UPLOAD] Existing project → version {v}")
-            return v, prev_ids
-        logger.info("[FOLDER-UPLOAD] New project → version 1")
-        return 1, []
+        if not last_version:
+            logger.info("[FOLDER-UPLOAD] New project → version 1")
+            return 1, []
 
-    def _save_project_version(self, db, project_id, project_name,
-                               version_number, new_files_list, prev_file_ids, request):
-        """
-        يحفظ project_version document بـ:
-          - file_ids    : كل IDs (قديمة + جديدة/معدّلة) — للـ tree
-          - file_changes: تفاصيل كل ملف + إشارة التغيير — للـ UI
-
-        منطق الدمج:
-          1. الملفات الجديدة/المعدّلة (file_ids_list من الرفع الحالي)
-             → status = "new" أو "modified"
-          2. الملفات القديمة من prev_file_ids اللي مش موجودة في الرفع الحالي
-             → status = "unchanged"
-        """
-        collection = db[PROJECT_VERSIONS_COLLECTION]
-        code_files  = db[settings.CODE_FILES_COLLECTION]
-        user_email  = request.user.email if request.user.is_authenticated else request.data.get('user_email')
-
-        # الـ file_ids الجديدة/المعدّلة من الرفع الحالي
-        current_ids  = {f["file_id"] for f in new_files_list}
-
-        # ── بناء file_changes ───────────────────────────────────────────────
-        file_changes = []
-
-        # 1. الملفات الجديدة أو المعدّلة
-        for f in new_files_list:
-            # إذا كان الـ version_number في الملف يساوي الإصدار الحالي → جديد أو معدّل
-            # لو version_number أقل → unchanged (ملف قديم ما اتغيّر، جاء من content addressing)
-            if f.get("version_number") == version_number:
-                # ملف جديد أو معدّل — نحدد بالبحث في prev_file_ids
-                if f["file_id"] in set(str(x) for x in prev_file_ids):
-                    change_status = "modified"  # كان موجود بنفس الـ ID → ما يصير، لكن احتياطاً
-                else:
-                    change_status = "new" if version_number == 1 else "new_or_modified"
-            else:
-                # content addressing رجّع ملف قديم → unchanged
-                change_status = "unchanged"
-
-            file_changes.append({
-                "file_id"       : f["file_id"],
-                "filename"      : f["filename"],
-                "filepath"      : f["filepath"],
-                "file_type"     : f["file_type"],
-                "version_number": f.get("version_number", version_number),
-                "status"        : change_status,
-            })
-
-        # 2. الملفات من الإصدار السابق اللي مش في الرفع الحالي → unchanged
-        #    (ملفات ما رُفعت هاي المرة — بس لازم تظهر في الإصدار الجديد)
-        prev_ids_not_in_current = [
-            pid for pid in prev_file_ids
-            if str(pid) not in current_ids
-        ]
-
-        if prev_ids_not_in_current:
-            prev_obj_ids = []
-            for pid in prev_ids_not_in_current:
+        v = last_version["version_number"] + 1
+        entries = project_versioning.visible_files(last_version)
+        if entries is None:   # older document without file_changes
+            ids = []
+            for fid in last_version.get("file_ids", []):
                 try:
-                    prev_obj_ids.append(ObjectId(str(pid)))
-                except:
+                    ids.append(ObjectId(str(fid)))
+                except Exception:
                     pass
+            docs = db[settings.CODE_FILES_COLLECTION].find(
+                {"_id": {"$in": ids}},
+                {"_id": 1, "filename": 1, "filepath": 1, "file_type": 1, "version_number": 1},
+            )
+            entries = project_versioning.dedupe_by_path([{
+                "file_id": str(d["_id"]), "filename": d.get("filename", ""),
+                "filepath": d.get("filepath") or d.get("filename", ""),
+                "file_type": d.get("file_type", "unknown"), "version_number": d.get("version_number", 1),
+            } for d in docs])
+        logger.info(f"[FOLDER-UPLOAD] Existing project → version {v}")
+        return v, entries
 
-            unchanged_docs = list(code_files.find(
-                {"_id": {"$in": prev_obj_ids}},
-                {"_id": 1, "filename": 1, "filepath": 1, "file_type": 1, "version_number": 1}
-            ))
+    def _save_project_version(self, db, project_id, project_name, version_number,
+                              new_files_list, prev_entries, upload_mode, deleted_paths, request):
+        """
+        يبني الإصدار الجديد من السابق كجدول مسار ← ملف (core_ai/services/project_versioning.py):
+          - الملف المرفوع بياخد مكان يلي بنفس المسار، أو بينضاف
+          - full    : يلي ما انرفع بينحذف
+          - partial : يلي ما انرفع بينقل متل ما هو، إلا يلي بـ deleted_paths
+          - الحالة (new / modified / unchanged / deleted) بالمقارنة مع الإصدار السابق بنفس المسار
+        """
+        user_email = request.user.email if request.user.is_authenticated else request.data.get('user_email')
+        built = project_versioning.build_version(prev_entries, new_files_list, upload_mode, deleted_paths)
+        counts = built["counts"]
 
-            for doc in unchanged_docs:
-                file_changes.append({
-                    "file_id"       : str(doc["_id"]),
-                    "filename"      : doc.get("filename", ""),
-                    "filepath"      : doc.get("filepath", doc.get("filename", "")),
-                    "file_type"     : doc.get("file_type", "unknown"),
-                    "version_number": doc.get("version_number", 1),
-                    "status"        : "unchanged",
-                })
-
-        # كل الـ file_ids المجمّعة (جديدة + قديمة)
-        all_file_ids = list(current_ids) + [
-            str(pid) for pid in prev_file_ids if str(pid) not in current_ids
-        ]
-
-        collection.insert_one({
-            "project_id":     project_id,
-            "project_name":   project_name,
-            "version_number": version_number,
-            "file_ids":       all_file_ids,      # كل الملفات
-            "file_changes":   file_changes,       # مع إشارة التغيير
-            "total_files":    len(all_file_ids),
-            "new_files":      sum(1 for f in file_changes if f["status"] != "unchanged"),
-            "unchanged_files": sum(1 for f in file_changes if f["status"] == "unchanged"),
-            "user_email":     user_email,
-            "created_at":     datetime.utcnow(),
+        db[PROJECT_VERSIONS_COLLECTION].insert_one({
+            "project_id":      project_id,
+            "project_name":    project_name,
+            "version_number":  version_number,
+            "upload_mode":     upload_mode,
+            "file_ids":        built["file_ids"],        # ملفات الإصدار (بدون المحذوفة)، ملف لكل مسار
+            "file_changes":    built["file_changes"],    # نفسها مع الحالة، والمحذوفة بالآخر
+            "total_files":     counts["total_files"],
+            "new_files":       counts["new_files"],
+            "modified_files":  counts["modified_files"],
+            "unchanged_files": counts["unchanged_files"],
+            "deleted_files":   counts["deleted_files"],
+            "user_email":      user_email,
+            "created_at":      datetime.utcnow(),
         })
-        logger.info(
-            f"[FOLDER-UPLOAD] Version {version_number} saved: "
-            f"total={len(all_file_ids)}, "
-            f"new/modified={sum(1 for f in file_changes if f['status'] != 'unchanged')}, "
-            f"unchanged={sum(1 for f in file_changes if f['status'] == 'unchanged')}"
-        )
+        logger.info(f"[FOLDER-UPLOAD] Version {version_number} saved ({upload_mode}): {counts}")
+        return built
 
     # ── File Extraction ────────────────────────────────────────────────────────
-    def _extract_files(self, request, project_name):
+    def _extract_files(self, request, project_name, allow_empty=False):
+        """→ (files, has_zip). files = [(filepath, content)]
+        Files that came with their name only are listed in self._bare_names {guessed path: name}."""
+        self._bare_names = {}
         all_files = (
             list(request.FILES.getlist('file')) +
             list(request.FILES.getlist('files')) +
             list(request.FILES.getlist('folder'))
         )
         if not all_files:
+            if allow_empty:
+                return [], False          # a partial upload that only deletes
             raise ValueError("No files received. Send 'files' (multiple) or 'file' (single/ZIP).")
 
         if len(all_files) == 1 and all_files[0].name.lower().endswith('.zip'):
-            return self._extract_from_zip(all_files[0])
+            return self._extract_from_zip(all_files[0]), True
 
         archives = [f for f in all_files if f.name.lower().endswith('.zip')]
         if archives:
@@ -274,9 +300,16 @@ class FolderUploadView(APIView):
             for f in archives:
                 result.extend(self._extract_from_zip(f))
             if result:
-                return result
+                return result, True
 
-        return self._extract_from_files(all_files, project_name)
+        # Django keeps only the base name of an uploaded file. A caller that knows the real paths
+        # (GitHub sync) sends them in `paths`, in the same order as `files`.
+        paths = self._read_list(request, 'paths')
+        loose = list(request.FILES.getlist('files'))
+        if paths and len(paths) != len(loose):
+            raise ValueError("paths must have one entry per file in 'files'")
+        path_of = {id(f): p for f, p in zip(loose, paths)} if paths else {}
+        return self._extract_from_files(all_files, project_name, path_of), False
 
     def _extract_from_zip(self, uploaded_file):
         """استخراج من ZIP مع قراءة مرة واحدة"""
@@ -304,7 +337,7 @@ class FolderUploadView(APIView):
         logger.info(f"[FOLDER-UPLOAD] Extracted {len(result)} files from ZIP")
         return result
 
-    def _extract_from_files(self, files, project_name):
+    def _extract_from_files(self, files, project_name, path_of=None):
         result = []
         for f in files:
             ext = os.path.splitext(f.name)[1].lower()
@@ -313,7 +346,13 @@ class FolderUploadView(APIView):
 
             try:
                 content = f.read().decode('utf-8', errors='ignore')
-                filepath = f.name if os.path.dirname(f.name) else f"{project_name}/{f.name}"
+                given = (path_of or {}).get(id(f))
+                if given:
+                    filepath = given.replace('\\', '/').lstrip('/')
+                else:
+                    filepath = f.name if os.path.dirname(f.name) else f"{project_name}/{f.name}"
+                    if not os.path.dirname(f.name):
+                        self._bare_names[filepath] = f.name
                 result.append((filepath, content))
             except Exception as e:
                 logger.warning(f"[FOLDER-UPLOAD] Skipping {f.name}: {e}")
@@ -352,7 +391,12 @@ class FolderUploadView(APIView):
         """
         file_hash = hashlib.md5(content.encode()).hexdigest()
 
-        existing = collection.find_one({'file_hash': file_hash, 'source_project_id': project_id})
+        # same path + same content → the same file. Two paths with equal content (an empty
+        # __init__.py in two packages) stay two files, and a moved file gets its new path.
+        existing = collection.find_one(
+            {'file_hash': file_hash, 'source_project_id': project_id, 'filepath': filepath},
+            sort=[('version_number', -1)],
+        )
         if existing:
             logger.info(f"[FOLDER-UPLOAD] Reusing (unchanged): {filepath}")
             return {

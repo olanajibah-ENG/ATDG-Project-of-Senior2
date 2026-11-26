@@ -11,6 +11,8 @@ views/task_status_view.py  ← جديد كلياً
 """
 
 import logging
+import time
+
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
@@ -18,6 +20,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from celery.result import AsyncResult
+
+from core_upm import task_registry
+
+# Celery keeps a task's result this long (its default: one day). After that the id reads as PENDING.
+RESULT_KEEP_SECONDS = 24 * 3600
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +58,23 @@ class TaskStatusView(APIView):
         result = AsyncResult(task_id)
 
         if result.state == 'PENDING':
+            # Celery says PENDING for a task still in the queue, for an id it never saw, and for a
+            # task whose result has expired. UPM's own note of sent tasks tells them apart.
+            asked, sent = task_registry.sent_at(task_id)
+            if asked and sent is None:
+                return Response({
+                    "task_id": task_id,
+                    "status":  "unknown",
+                    "message": "No task with this id was sent, or it was sent before tasks were "
+                               "recorded and its result has expired (results are kept for one day).",
+                }, status=status.HTTP_404_NOT_FOUND)
+            if asked and time.time() - sent > RESULT_KEEP_SECONDS:
+                return Response({
+                    "task_id": task_id,
+                    "status":  "expired",
+                    "message": "The task ran, but its result is no longer kept (results are kept for one day). "
+                               "Check the project's versions instead.",
+                }, status=status.HTTP_410_GONE)
             # الرسالة في Redis لسا ما أخذها أي worker
             return Response({
                 "task_id": task_id,
@@ -69,6 +93,16 @@ class TaskStatusView(APIView):
         elif result.state == 'SUCCESS':
             # خلص بنجاح
             task_result = result.result or {}
+            if isinstance(task_result, dict) and task_result.get('status') == 'rejected':
+                # the task ran, but the AI service refused the upload on purpose: nothing was saved
+                return Response({
+                    "task_id":      task_id,
+                    "status":       "rejected",
+                    "error":        task_result.get('reason'),
+                    "code":         task_result.get('code'),
+                    "would_delete": task_result.get('would_delete', []),
+                    "top_folder":   task_result.get('top_folder'),
+                }, status=status.HTTP_409_CONFLICT)
             return Response({
                 "task_id":        task_id,
                 "status":         "completed",
